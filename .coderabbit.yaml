@@ -1,0 +1,72 @@
+language: "ko-KR"
+
+reviews:
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - "dev"
+
+  path_instructions:
+    - path: "src/**/*.{ts,tsx}"
+      instructions: |
+        ## Review scope
+
+        This is a small, two-person Next.js MVP and portfolio project. Prioritize practical correctness and maintainability without introducing enterprise-level architecture.
+
+        Only leave a review comment when the current implementation has a concrete risk or meaningful maintenance cost. Do not comment merely because another implementation is possible or preferable.
+
+        Prefer fewer, higher-confidence comments over many low-confidence suggestions.
+
+        Review in this priority order:
+
+        1. Bugs and incorrect behavior
+        2. Type safety and data-flow problems
+        3. React, Next.js, and TanStack Query correctness
+        4. Clear architectural boundary violations or excessive responsibility
+        5. Meaningful UX, accessibility, performance, or security issues
+
+        Skip low-impact issues outside these priorities.
+
+        ## Guidelines
+
+        - Identify realistic bugs, incorrect conditions, missing error handling, race conditions, stale state, and unhandled loading, empty, or failure states.
+
+        - Flag weakened TypeScript safety when it can hide a real defect, including unsafe assertions, inappropriate `any`, unchecked nullable values, and API response assumptions. Do not request redundant explicit types when inference is sufficient.
+
+        - Treat Server Components as the default. Flag `"use client"` only when it unnecessarily expands the client boundary or sends sensitive/server-only logic to the client. Do not object when browser APIs, event handlers, client state, or client-only libraries genuinely require it.
+
+        - Flag clear React or Next.js App Router correctness problems, such as unstable list keys, render-time side effects, incorrect hook usage, hydration risks, client/server boundary violations, or misuse of route, layout, loading, and error entry points.
+
+        - Keep `src/app` focused on Next.js entry points and composition, feature-specific implementation in `src/features/<feature>`, and domain-independent reusable code in `src/shared`. Flag only clear violations, especially feature-to-feature coupling or shared code that depends on a specific domain.
+
+        - Suggest moving code to `shared` only when it is genuinely reused or clearly domain-independent. Do not request abstraction for one-off or merely similar-looking code.
+
+        - For TanStack Query, flag inconsistent query keys, incorrect invalidation, stale cache risks, duplicated server state, unsafe optimistic updates, and missing error handling. Prefer a feature-level query-key factory when multiple related queries need consistent keys; do not require one for a single simple query.
+
+        - Flag components or functions with multiple tightly mixed responsibilities only when this makes behavior difficult to understand, test, or change. Do not request splitting small, readable components or functions.
+
+        - Flag meaningful duplication only when repeated logic is likely to diverge or cause inconsistent behavior. Do not request helpers, hooks, wrappers, patterns, or abstractions solely for hypothetical future reuse.
+
+        - Report performance issues only when they can noticeably affect users, such as repeated network requests, unnecessary large client bundles, expensive repeated rendering, unoptimized large media, or avoidable request waterfalls. Ignore speculative micro-optimizations.
+
+        - Report accessibility or UX issues when they block or materially hinder users, including inaccessible interactive controls, missing labels, broken keyboard interaction, lost user input, or unclear failure feedback. Avoid cosmetic preferences.
+
+        - Report concrete security risks such as exposed secrets, unsafe handling of authentication data, injection risks, unsafe redirects, or trusting unvalidated external input. Do not raise vague security concerns without a plausible risk path.
+
+        ## Do not review
+
+        Do not leave comments for:
+
+        - Naming preferences when the current name is understandable
+        - Formatting, import ordering, or style handled by ESLint or Prettier
+        - Equivalent syntax or personal coding-style preferences
+        - One-off code that does not yet need reuse
+        - Hypothetical future scalability requirements
+        - Unnecessary design patterns or enterprise architecture
+        - Excessive component or function decomposition
+        - Minor performance improvements without user-visible impact
+        - Refactors that do not prevent a concrete problem
+        - Nitpicks added only to increase the number of review comments
+
+        If a change is correct, understandable, and appropriate for the current MVP scope, approve it without suggesting optional rewrites.
