@@ -1,0 +1,68 @@
+name: Discord PR notification
+
+on:
+  pull_request:
+    branches:
+      - dev
+    types:
+      - opened
+      - closed
+
+permissions: {}
+
+jobs:
+  notify:
+    name: Notify Discord
+    if: github.event.action == 'opened' || github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Send PR notification
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          EVENT_ACTION: ${{ github.event.action }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_MERGED: ${{ github.event.pull_request.merged }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: |
+          case "${PR_AUTHOR,,}" in
+            clacki)
+              AUTHOR_NAME="김광욱"
+              TARGET_DISCORD_ID="789496933554323497"
+              ;;
+            alstmd9902)
+              AUTHOR_NAME="오승연"
+              TARGET_DISCORD_ID="768360541995008010"
+              ;;
+            *)
+              echo "No Discord mapping for this PR author; notification skipped."
+              exit 0
+              ;;
+          esac
+
+          if [[ -z "$DISCORD_WEBHOOK_URL" ]]; then
+            echo "DISCORD_WEBHOOK_URL secret is not configured."
+            exit 1
+          fi
+
+          if [[ "$EVENT_ACTION" == "opened" ]]; then
+            MESSAGE="<@$TARGET_DISCORD_ID> ${AUTHOR_NAME}님이 PR 올렸습니다."
+          elif [[ "$EVENT_ACTION" == "closed" && "$PR_MERGED" == "true" ]]; then
+            MESSAGE="<@$TARGET_DISCORD_ID> ${AUTHOR_NAME}님의 PR이 병합되었습니다."
+          else
+            echo "This pull request event does not require a notification."
+            exit 0
+          fi
+
+          PAYLOAD=$(printf \
+            '{"content":"%s\\n%s","allowed_mentions":{"parse":[],"users":["%s"]}}' \
+            "$MESSAGE" \
+            "$PR_URL" \
+            "$TARGET_DISCORD_ID")
+
+          curl --fail --silent --show-error \
+            --request POST \
+            --header "Content-Type: application/json" \
+            --data "$PAYLOAD" \
+            "$DISCORD_WEBHOOK_URL"
