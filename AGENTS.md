@@ -8,6 +8,14 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 <!-- END:nextjs-agent-rules -->
 
+## GitHub PR 작성 규칙
+
+- PR 제목과 본문은 한국어로 작성한다.
+- PR 제목은 `type: 작업 내용 (#이슈번호)` 형식으로 작성한다. 예: `feat: 여행 일정 생성 기능 추가 (#15)`.
+- `type`은 작업 성격에 맞게 `feat`, `fix`, `refactor`, `chore`, `docs`, `test` 중 하나를 사용한다.
+- 코드, 명령어, 파일명, 라이브러리명처럼 영어 표기가 더 명확한 기술 용어는 그대로 사용한다.
+- PR 본문에는 변경 내용, 변경 이유, 영향 범위, 검증 결과를 간결하게 작성한다.
+
 ## PlanB UI 작업 규칙
 
 UI를 구현하거나 수정하기 전에는 반드시 `docs/design/design-system.md`를 확인하고, 그 문서의 기준(색상, radius, typography, spacing, 공통 컴포넌트 등)을 따른다.
