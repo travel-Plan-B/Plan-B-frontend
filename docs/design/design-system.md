@@ -10,7 +10,7 @@
 
 - 컴포넌트에서는 HEX 값 대신 `primary-500`, `neutral-900`, `rose-600`처럼 역할이 드러나는 토큰 이름을 사용한다.
 - Tailwind arbitrary value 예: `bg-[#00C0AB]`, `rounded-[13px]`는 사용하지 않는다.
-- Tailwind 기본 scale과 프로젝트 토큰을 우선 사용한다. 예: `max-w-7xl`, `px-6`, `rounded-2xl`
+- Tailwind 기본 scale과 프로젝트 토큰을 우선 사용한다. 예: `max-w-7xl`, `px-6`, `rounded-card`
 - `max-w-[1280px]`, `h-[47px]`, `px-[23px]`처럼 임의 값을 직접 박는 방식은 사용하지 않는다.
 - 새 토큰이 필요하면 기존 토큰으로 표현 가능한지 먼저 확인한다.
 - 문서에 없는 색상, radius, typography 값은 임의로 만들지 않고 TODO 또는 확인 필요 항목으로 남긴다.
