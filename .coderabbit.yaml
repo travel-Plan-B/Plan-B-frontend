@@ -1,6 +1,19 @@
 language: "ko-KR"
 
 reviews:
+  profile: quiet
+
+  estimate_code_review_effort: false
+  enable_prompt_for_ai_agents: false
+  in_progress_fortune: false
+
+  high_level_summary: true
+  high_level_summary_in_walkthrough: true
+  high_level_summary_instructions: |
+    모든 PR 요약, 변경사항 설명, 위험도 분석, 리뷰 결과 설명은 한국어로 작성하세요.
+    기술 용어, 코드 식별자, 파일명, 라이브러리명 등 번역이 부자연스러운 항목만 영어를 유지하세요.
+    생성형 설명 문장을 영어로 작성하지 마세요.
+
   auto_review:
     enabled: true
     drafts: false
@@ -10,63 +23,84 @@ reviews:
   path_instructions:
     - path: "src/**/*.{ts,tsx}"
       instructions: |
-        ## Review scope
+        모든 리뷰 코멘트와 설명은 한국어로 작성하세요.
 
-        This is a small, two-person Next.js MVP and portfolio project. Prioritize practical correctness and maintainability without introducing enterprise-level architecture.
+        ## 리뷰 범위
 
-        Only leave a review comment when the current implementation has a concrete risk or meaningful maintenance cost. Do not comment merely because another implementation is possible or preferable.
+        이 프로젝트는 소규모 2인 Next.js MVP 및 포트폴리오 프로젝트입니다.
+        엔터프라이즈 수준의 아키텍처를 요구하기보다 실제 동작의 정확성과 유지보수성을 우선하세요.
 
-        Prefer fewer, higher-confidence comments over many low-confidence suggestions.
+        현재 구현에 구체적인 위험이나 의미 있는 유지보수 비용이 있을 때만 리뷰 코멘트를 남기세요.
+        단순히 다른 구현 방식이 가능하거나 더 선호된다는 이유만으로 코멘트하지 마세요.
 
-        Review in this priority order:
+        많은 저확신 코멘트보다 적은 수의 고확신 코멘트를 우선하세요.
 
-        1. Bugs and incorrect behavior
-        2. Type safety and data-flow problems
-        3. React, Next.js, and TanStack Query correctness
-        4. Clear architectural boundary violations or excessive responsibility
-        5. Meaningful UX, accessibility, performance, or security issues
+        다음 순서로 리뷰하세요.
 
-        Skip low-impact issues outside these priorities.
+        1. 버그 및 잘못된 동작
+        2. 타입 안정성 및 데이터 흐름 문제
+        3. React, Next.js, TanStack Query 사용상의 문제
+        4. 명확한 아키텍처 경계 위반 또는 과도한 책임
+        5. 의미 있는 UX, 접근성, 성능 또는 보안 문제
 
-        ## Guidelines
+        위 우선순위 밖의 영향도가 낮은 문제는 리뷰하지 않아도 됩니다.
 
-        - Identify realistic bugs, incorrect conditions, missing error handling, race conditions, stale state, and unhandled loading, empty, or failure states.
+        ## 리뷰 가이드라인
 
-        - Flag weakened TypeScript safety when it can hide a real defect, including unsafe assertions, inappropriate `any`, unchecked nullable values, and API response assumptions. Do not request redundant explicit types when inference is sufficient.
+        - 실제 발생 가능한 버그, 잘못된 조건 처리, 누락된 오류 처리, race condition, stale state, 처리되지 않은 loading, empty, failure 상태를 확인하세요.
 
-        - Treat Server Components as the default. Flag `"use client"` only when it unnecessarily expands the client boundary or sends sensitive/server-only logic to the client. Do not object when browser APIs, event handlers, client state, or client-only libraries genuinely require it.
+        - 실제 결함을 숨길 수 있는 TypeScript 타입 안정성 저하를 지적하세요.
+          unsafe assertion, 부적절한 `any`, nullable 값 미검증, API 응답 구조를 검증 없이 가정하는 경우 등이 해당됩니다.
+          타입 추론으로 충분한 코드에 불필요한 명시적 타입을 요구하지 마세요.
 
-        - Flag clear React or Next.js App Router correctness problems, such as unstable list keys, render-time side effects, incorrect hook usage, hydration risks, client/server boundary violations, or misuse of route, layout, loading, and error entry points.
+        - Server Component를 기본으로 간주하세요.
+          `"use client"`가 불필요하게 Client Component 경계를 넓히거나 서버 전용/민감 로직을 클라이언트로 보내는 경우에만 지적하세요.
+          브라우저 API, 이벤트 핸들러, 클라이언트 상태, 클라이언트 전용 라이브러리가 필요한 경우에는 문제로 보지 마세요.
 
-        - Keep `src/app` focused on Next.js entry points and composition, feature-specific implementation in `src/features/<feature>`, and domain-independent reusable code in `src/shared`. Flag only clear violations, especially feature-to-feature coupling or shared code that depends on a specific domain.
+        - unstable list key, render 중 side effect, 잘못된 hook 사용, hydration 위험, client/server boundary 위반, route/layout/loading/error 진입점 오용 등 명확한 React 및 Next.js App Router 문제를 확인하세요.
 
-        - Suggest moving code to `shared` only when it is genuinely reused or clearly domain-independent. Do not request abstraction for one-off or merely similar-looking code.
+        - `src/app`은 Next.js 진입점과 composition에 집중하고,
+          기능별 구현은 `src/features/<feature>`,
+          도메인에 독립적인 공통 코드는 `src/shared`에 위치하도록 합니다.
+          feature 간 직접 결합이나 특정 도메인에 의존하는 shared 코드 등 명확한 경계 위반만 지적하세요.
 
-        - For TanStack Query, flag inconsistent query keys, incorrect invalidation, stale cache risks, duplicated server state, unsafe optimistic updates, and missing error handling. Prefer a feature-level query-key factory when multiple related queries need consistent keys; do not require one for a single simple query.
+        - 코드를 `shared`로 이동하라는 제안은 실제 여러 곳에서 재사용되거나 명확하게 도메인 독립적인 경우에만 하세요.
+          한 번만 사용되거나 단순히 비슷해 보이는 코드를 추상화하라고 요구하지 마세요.
 
-        - Flag components or functions with multiple tightly mixed responsibilities only when this makes behavior difficult to understand, test, or change. Do not request splitting small, readable components or functions.
+        - TanStack Query에서는 query key 불일치, 잘못된 invalidation, stale cache 위험, 서버 상태 중복 저장, 위험한 optimistic update, 오류 처리 누락을 확인하세요.
+          여러 관련 query가 존재해 일관된 key 관리가 필요한 경우 feature 단위 query key factory를 선호하되, 단순 query 하나에까지 강제하지 마세요.
 
-        - Flag meaningful duplication only when repeated logic is likely to diverge or cause inconsistent behavior. Do not request helpers, hooks, wrappers, patterns, or abstractions solely for hypothetical future reuse.
+        - 컴포넌트나 함수가 여러 책임을 섞고 있어 실제로 이해, 테스트, 변경이 어려운 경우에만 책임 분리를 제안하세요.
+          작고 읽기 쉬운 컴포넌트나 함수를 불필요하게 분리하지 마세요.
 
-        - Report performance issues only when they can noticeably affect users, such as repeated network requests, unnecessary large client bundles, expensive repeated rendering, unoptimized large media, or avoidable request waterfalls. Ignore speculative micro-optimizations.
+        - 반복 로직이 향후 서로 다르게 변경되어 버그나 일관성 문제를 만들 가능성이 있을 때만 중복을 지적하세요.
+          미래의 가상 재사용 가능성만을 이유로 helper, hook, wrapper, pattern, abstraction을 만들도록 요구하지 마세요.
 
-        - Report accessibility or UX issues when they block or materially hinder users, including inaccessible interactive controls, missing labels, broken keyboard interaction, lost user input, or unclear failure feedback. Avoid cosmetic preferences.
+        - 실제 사용자에게 체감될 수 있는 성능 문제만 지적하세요.
+          반복 네트워크 요청, 불필요하게 큰 클라이언트 번들, 비싼 반복 렌더링, 최적화되지 않은 대형 미디어, 피할 수 있는 request waterfall 등이 해당됩니다.
+          미세한 성능 최적화는 무시하세요.
 
-        - Report concrete security risks such as exposed secrets, unsafe handling of authentication data, injection risks, unsafe redirects, or trusting unvalidated external input. Do not raise vague security concerns without a plausible risk path.
+        - 접근성이나 UX 문제는 사용을 막거나 의미 있게 불편하게 만드는 경우에만 지적하세요.
+          접근 불가능한 인터랙션 요소, label 누락, 키보드 조작 불가, 사용자 입력 손실, 명확하지 않은 실패 피드백 등이 해당됩니다.
+          단순한 시각적 취향은 리뷰하지 마세요.
 
-        ## Do not review
+        - 노출된 secret, 인증 데이터의 위험한 처리, injection, unsafe redirect, 검증되지 않은 외부 입력 신뢰 등 구체적인 보안 위험을 확인하세요.
+          실제 위험 경로가 없는 추상적인 보안 우려는 제기하지 마세요.
 
-        Do not leave comments for:
+        ## 리뷰하지 않을 항목
 
-        - Naming preferences when the current name is understandable
-        - Formatting, import ordering, or style handled by ESLint or Prettier
-        - Equivalent syntax or personal coding-style preferences
-        - One-off code that does not yet need reuse
-        - Hypothetical future scalability requirements
-        - Unnecessary design patterns or enterprise architecture
-        - Excessive component or function decomposition
-        - Minor performance improvements without user-visible impact
-        - Refactors that do not prevent a concrete problem
-        - Nitpicks added only to increase the number of review comments
+        다음 항목에는 코멘트를 남기지 마세요.
 
-        If a change is correct, understandable, and appropriate for the current MVP scope, approve it without suggesting optional rewrites.
+        - 현재 이름으로 의미를 이해할 수 있는 경우의 네이밍 취향
+        - ESLint 또는 Prettier가 처리하는 formatting, import order, style
+        - 동일한 동작을 하는 다른 문법이나 개인적인 코드 스타일
+        - 아직 재사용할 필요가 없는 일회성 코드
+        - 가상의 미래 확장성 요구
+        - 불필요한 디자인 패턴 또는 엔터프라이즈 아키텍처
+        - 과도한 컴포넌트 또는 함수 분리
+        - 사용자에게 체감되지 않는 사소한 성능 개선
+        - 구체적인 문제를 예방하지 않는 리팩터링
+        - 리뷰 코멘트 수를 늘리기 위한 사소한 지적
+
+        변경사항이 현재 MVP 범위에서 올바르게 동작하고 이해하기 쉽다면,
+        선택적인 재작성이나 취향성 리팩터링을 제안하지 말고 그대로 승인하세요.
