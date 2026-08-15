@@ -10,6 +10,7 @@ import { ChevronDown, Clock } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
+import { useAnchoredPosition } from "@/shared/hooks/useAnchoredPosition";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "./Button";
 
@@ -61,10 +62,11 @@ export function TimePicker({
   // value로 반영되고, 취소하거나 바깥을 클릭하면 draft만 버려지고 value는
   // 그대로 유지됨 (네이티브 시간 선택 UI와 동일한 동작).
   const [draft, setDraft] = useState(value);
-  // rect: 트리거 버튼의 화면상 위치. 패널을 트리거 바로 아래에 붙이기 위해 필요.
-  const [rect, setRect] = useState<DOMRect | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+
+  // 뷰포트 밖으로 나가지 않게 보정된 패널 좌표 (자세한 설명은 훅 참고).
+  const panelPositionStyle = useAnchoredPosition(open, triggerRef, panelRef);
 
   useEffect(() => {
     if (!open) return;
@@ -82,21 +84,16 @@ export function TimePicker({
       }
     };
 
-    // 열려있는 동안 스크롤/리사이즈가 생기면 트리거 위치를 다시 측정한다.
-    // 처음 열 때 위치를 한 번만 저장하면, 그 사이 페이지 레이아웃이
-    // 바뀌었을 때(위쪽 콘텐츠가 늦게 로드되는 경우 등) 패널이 트리거에서
-    // 떨어져 보이는 버그가 생겨서 추가함.
-    const updateRect = () => {
-      setRect(triggerRef.current?.getBoundingClientRect() ?? null);
-    };
+    // 스크롤이 생기면(트리거가 화면에서 움직이면) 위치를 다시 계산하는 대신
+    // 그냥 패널을 닫는다 — 위치를 다시 맞추는 것보다 훨씬 간단하고, 많은
+    // 드롭다운/팝오버가 쓰는 흔한 패턴.
+    const handleScroll = () => setOpen(false);
 
     document.addEventListener("mousedown", handlePointerDown);
-    window.addEventListener("scroll", updateRect, true);
-    window.addEventListener("resize", updateRect);
+    window.addEventListener("scroll", handleScroll, true);
     return () => {
       document.removeEventListener("mousedown", handlePointerDown);
-      window.removeEventListener("scroll", updateRect, true);
-      window.removeEventListener("resize", updateRect);
+      window.removeEventListener("scroll", handleScroll, true);
     };
   }, [open]);
 
@@ -104,7 +101,6 @@ export function TimePicker({
     if (disabled) return;
     // 패널을 열 때마다 draft를 현재 value로 초기화 (이전에 취소했던 임시값이 남아있지 않도록).
     setDraft(value);
-    setRect(triggerRef.current?.getBoundingClientRect() ?? null);
     setOpen(true);
   };
 
@@ -130,19 +126,12 @@ export function TimePicker({
         <ChevronDown className="size-4 text-neutral-900" />
       </button>
       {open &&
-        rect &&
         // 패널은 document.body 최상위로 Portal 렌더링해서 모달/카드 같은
-        // 부모 요소의 overflow:hidden에 잘리지 않게 한다. 위치는 fixed +
-        // getBoundingClientRect()로 계산한 화면 좌표를 써서, 트리거가
-        // 화면 어디에 있든(스크롤 상태와 무관하게) 바로 아래에 붙는다.
+        // 부모 요소의 overflow:hidden에 잘리지 않게 한다.
         createPortal(
           <div
             ref={panelRef}
-            style={{
-              position: "fixed",
-              top: rect.bottom + 4,
-              left: rect.left,
-            }}
+            style={panelPositionStyle}
             className="z-50 w-64 rounded-2xl border border-neutral-200 bg-white p-6 shadow-lg"
           >
             <div className="mb-4 flex items-center gap-2">
