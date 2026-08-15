@@ -1,7 +1,7 @@
 <!--
 PR 제목 형식: type: 작업 내용 (#이슈번호)
 예시: feat: 여행 일정 생성 기능 추가 (#15)
-type: feat | fix | refactor | chore | docs | test
+type: feat | fix | refactor | chore | docs | style | test
 -->
 
 ## 작업 내용
