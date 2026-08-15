@@ -278,8 +278,8 @@ Shadow는 과하게 사용하지 않는다. 기본 UI는 border로 구분하고,
 | Size | Padding     | Usage       |
 | ---- | ----------- | ----------- |
 | `sm` | `8px 12px`  | 작은 버튼   |
-| `md` | `10px 16px` | 기본 버튼   |
-| `lg` | `14px 24px` | 큰 CTA 버튼 |
+| `md` | `14px 24px` | 기본 버튼   |
+| `lg` | `16px 40px` | 큰 CTA 버튼 |
 
 - State: `Default`, `Hover`, `Disabled`
 - Icon: `None`, `Left`, `Right`, `Icon Only`
