@@ -1,0 +1,39 @@
+<svg
+  width="25"
+  height="29"
+  viewBox="0 0 25 29"
+  fill="none"
+  xmlns="http://www.w3.org/2000/svg"
+>
+  <defs>
+    <mask
+      id="train-silhouette"
+      x="0"
+      y="0"
+      width="25"
+      height="29"
+      maskUnits="userSpaceOnUse"
+    >
+      <rect x="0" y="0" width="25" height="25.77" rx="5.15" fill="white" />
+      <path
+        d="M4.69006 24.75L3.16663 28.5"
+        stroke="white"
+        stroke-linecap="round"
+      />
+      <path
+        d="M20.3086 24.75L21.8333 28.5"
+        stroke="white"
+        stroke-linecap="round"
+      />
+      <rect x="1" y="7.6" width="23" height="7.35" rx="0.5" fill="black" />
+      <circle cx="5.64263" cy="20.3164" r="1.65" fill="black" />
+      <circle cx="19.3563" cy="20.3164" r="1.65" fill="black" />
+    </mask>
+  </defs>
+  <rect
+    width="25"
+    height="29"
+    fill="currentColor"
+    mask="url(#train-silhouette)"
+  />
+</svg>

@@ -1,0 +1,59 @@
+<svg
+  width="30"
+  height="21"
+  viewBox="0 0 30 21"
+  fill="none"
+  xmlns="http://www.w3.org/2000/svg"
+>
+  <defs>
+    <mask
+      id="car-silhouette"
+      x="0"
+      y="0"
+      width="30"
+      height="21"
+      maskUnits="userSpaceOnUse"
+    >
+      <path
+        d="M4.50024 13.466L6.75024 4.20072C7.20024 2.34767 8.70024 1 10.5002 1H19.5002C21.3002 1 22.8002 2.34767 23.2502 4.20072L25.5002 13.466"
+        stroke="white"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+      <rect x="0" y="9" width="30" height="10" rx="1" fill="white" />
+      <rect
+        x="2.14282"
+        y="16.5557"
+        width="6.42857"
+        height="4.44444"
+        rx="1"
+        fill="white"
+      />
+      <rect
+        x="21.4286"
+        y="16.5557"
+        width="6.42857"
+        height="4.44444"
+        rx="1"
+        fill="white"
+      />
+      <ellipse cx="7.5" cy="13.466" rx="1.5" ry="1.685" fill="black" />
+      <ellipse cx="22.5" cy="13.466" rx="1.5" ry="1.685" fill="black" />
+      <rect
+        x="11"
+        y="12.2812"
+        width="8"
+        height="2.36918"
+        rx="0.5"
+        fill="black"
+      />
+    </mask>
+  </defs>
+  <rect
+    width="30"
+    height="21"
+    fill="currentColor"
+    mask="url(#car-silhouette)"
+  />
+</svg>

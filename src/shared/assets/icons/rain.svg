@@ -1,0 +1,37 @@
+<svg
+  id="icon"
+  width="40"
+  height="40"
+  viewBox="0 0 40 40"
+  fill="none"
+  xmlns="http://www.w3.org/2000/svg"
+>
+  <path
+    d="M13.1042 30.6544H30.8225C32.7635 30.7088 34.6452 29.9396 36.0538 28.516C37.4624 27.0925 38.2824 25.1311 38.3335 23.0635C38.3846 20.9959 37.6625 18.9913 36.3262 17.4908C34.9898 15.9903 33.1486 15.1167 31.2077 15.0623C30.8303 12.7351 29.7769 10.5927 28.196 8.93702C26.6152 7.28131 24.5865 6.19571 22.3958 5.8332C20.2051 5.47069 17.9628 5.84953 15.9849 6.91636C14.007 7.98318 12.3932 9.68421 11.3709 11.7798C9.02128 12.0246 6.85923 13.2537 5.36034 15.1967C3.86146 17.1397 3.14852 19.6374 3.37838 22.1403C3.60823 24.6432 4.76204 26.9464 6.58598 28.5431C8.40993 30.1398 10.7546 30.8992 13.1042 30.6544Z"
+    stroke="currentColor"
+    stroke-width="3"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <path
+    d="M15 34.1667L13.6666 37.1667"
+    stroke="currentColor"
+    stroke-width="3"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <path
+    d="M20 34.1667L18.6666 37.1667"
+    stroke="currentColor"
+    stroke-width="3"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <path
+    d="M25 34.1667L23.6666 37.1667"
+    stroke="currentColor"
+    stroke-width="3"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+</svg>
