@@ -16,6 +16,9 @@ const meta = {
     disabled: {
       control: "boolean",
     },
+    clearable: {
+      control: "boolean",
+    },
   },
   args: {
     placeholder: "텍스트를 입력하세요",
@@ -27,6 +30,13 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {},
+};
+
+export const Clearable: Story = {
+  args: {
+    clearable: true,
+    defaultValue: "제주도 여행",
+  },
 };
 
 export const States: Story = {
