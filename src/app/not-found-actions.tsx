@@ -1,0 +1,32 @@
+"use client";
+
+import { ArrowLeft, Home } from "lucide-react";
+import { useRouter } from "next/navigation";
+
+import { Button } from "@/shared/components/ui/Button";
+
+export function NotFoundActions() {
+  const router = useRouter();
+
+  return (
+    <div className="flex w-full max-w-xs flex-col gap-3 lg:max-w-none lg:flex-row lg:justify-center lg:gap-6">
+      <Button
+        variant="outline"
+        className="w-full px-6 lg:w-auto"
+        size="sm"
+        onClick={() => router.push("/")}
+      >
+        <Home className="size-4" />
+        메인으로 이동
+      </Button>
+      <Button
+        size="sm"
+        className="w-full px-6 lg:w-auto"
+        onClick={() => router.back()}
+      >
+        <ArrowLeft className="size-4" />
+        이전 페이지로
+      </Button>
+    </div>
+  );
+}
