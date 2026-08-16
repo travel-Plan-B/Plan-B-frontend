@@ -5,6 +5,18 @@
   fill="none"
   xmlns="http://www.w3.org/2000/svg"
 >
+  <defs>
+    <mask id="calendar-x-cutout" maskUnits="userSpaceOnUse" x="25" y="25" width="13" height="13">
+      <rect x="25" y="25" width="13" height="13" fill="white" />
+      <path
+        d="M29.4999 29.5L33.8332 33.8333M33.8332 29.5L29.4999 33.8333"
+        stroke="black"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+    </mask>
+  </defs>
   <path
     d="M30.8333 6.66675H9.16667C6.86548 6.66675 5 8.53223 5 10.8334V30.8334C5 33.1346 6.86548 35.0001 9.16667 35.0001H30.8333C33.1345 35.0001 35 33.1346 35 30.8334V10.8334C35 8.53223 33.1345 6.66675 30.8333 6.66675Z"
     stroke="#252525"
@@ -37,11 +49,6 @@
     d="M31.667 25.5C35.0726 25.5002 37.833 28.2613 37.833 31.667C37.8328 35.0725 35.0725 37.8328 31.667 37.833C28.2613 37.833 25.5002 35.0726 25.5 31.667C25.5 28.2612 28.2612 25.5 31.667 25.5Z"
     fill="#252525"
     stroke="#252525"
-  />
-  <path
-    d="M29.4999 29.5L33.8332 33.8333M33.8332 29.5L29.4999 33.8333"
-    stroke="white"
-    stroke-linecap="round"
-    stroke-linejoin="round"
+    mask="url(#calendar-x-cutout)"
   />
 </svg>
