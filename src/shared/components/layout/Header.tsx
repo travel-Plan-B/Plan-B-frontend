@@ -1,0 +1,32 @@
+import Image from "next/image";
+import Link from "next/link";
+import type { HTMLAttributes, ReactNode } from "react";
+
+import { cn } from "@/shared/lib/cn";
+
+export interface HeaderProps extends HTMLAttributes<HTMLElement> {
+  children?: ReactNode;
+}
+
+export function Header({ children, className, ...props }: HeaderProps) {
+  return (
+    <header className={cn("w-full shadow-2xs", className)} {...props}>
+      <div className="mx-auto flex h-14 max-w-300 items-center justify-between px-6">
+        <Link
+          href="/"
+          className="rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
+        >
+          <Image
+            src="/images/PlanB_logo.png"
+            alt="PlanB"
+            width={863}
+            height={319}
+            className="h-7 w-auto"
+            priority
+          />
+        </Link>
+        {children}
+      </div>
+    </header>
+  );
+}
