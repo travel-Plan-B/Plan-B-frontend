@@ -2,6 +2,7 @@
 
 @theme {
   /* Primary */
+  --color-primary-25: #f5fbfa;
   --color-primary-50: #e6faf7;
   --color-primary-100: #def6f2;
   --color-primary-300: #80dfd3;
