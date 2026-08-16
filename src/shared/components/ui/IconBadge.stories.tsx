@@ -22,7 +22,7 @@ const meta = {
     },
     variant: {
       control: "select",
-      options: ["purple", "pink", "orange", "gray"],
+      options: ["mint", "purple", "pink", "orange", "gray"],
     },
     size: {
       control: "radio",
@@ -53,6 +53,7 @@ export const Default: Story = {};
 export const Variants: Story = {
   render: () => (
     <div className="flex items-center gap-4">
+      <IconBadge icon={rainIcon} variant="mint" aria-label="Mint" />
       <IconBadge icon={rainIcon} variant="purple" aria-label="Purple" />
       <IconBadge icon={rainIcon} variant="pink" aria-label="Pink" />
       <IconBadge icon={rainIcon} variant="orange" aria-label="Orange" />
