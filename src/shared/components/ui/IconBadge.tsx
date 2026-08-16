@@ -3,7 +3,7 @@ import type { CSSProperties, HTMLAttributes } from "react";
 
 import { cn } from "@/shared/lib/cn";
 
-export type IconBadgeVariant = "purple" | "pink" | "orange" | "gray";
+export type IconBadgeVariant = "mint" | "purple" | "pink" | "orange" | "gray";
 export type IconBadgeSize = "sm" | "md" | "lg";
 
 export interface IconBadgeProps extends Omit<
@@ -16,6 +16,7 @@ export interface IconBadgeProps extends Omit<
 }
 
 const variantStyles: Record<IconBadgeVariant, string> = {
+  mint: "bg-primary-100 text-primary-700",
   purple: "bg-purple-50 text-purple-600",
   pink: "bg-rose-50 text-rose-600",
   orange: "bg-yellow-50 text-yellow-700",
