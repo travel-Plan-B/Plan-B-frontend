@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 
+import { Header } from "@/shared/components/layout/Header";
 import { ToastProvider } from "@/shared/components/ui/Toast/ToastProvider";
 
 const pretendard = localFont({
@@ -20,6 +21,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${pretendard.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col font-sans">
+        <Header />
         {children}
         <ToastProvider />
       </body>
