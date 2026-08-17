@@ -4,6 +4,7 @@ import "./globals.css";
 
 import { Footer } from "@/shared/components/layout/Footer";
 import { Header } from "@/shared/components/layout/Header";
+import { PageContainer } from "@/shared/components/layout/PageContainer";
 import { ToastProvider } from "@/shared/components/ui/Toast/ToastProvider";
 
 const pretendard = localFont({
@@ -23,7 +24,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="en" className={`${pretendard.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col font-sans">
         <Header />
-        {children}
+        <PageContainer as="main" className="flex flex-1 flex-col">
+          {children}
+        </PageContainer>
         <Footer />
         <ToastProvider />
       </body>

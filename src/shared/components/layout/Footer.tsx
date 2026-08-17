@@ -4,6 +4,8 @@ import type { HTMLAttributes, SVGProps } from "react";
 
 import { cn } from "@/shared/lib/cn";
 
+import { PageContainer } from "./PageContainer";
+
 // Lucide는 브랜드 로고를 제공하지 않아 GitHub 마크만 커스텀 SVG로 추가.
 function GithubIcon(props: SVGProps<SVGSVGElement>) {
   return (
@@ -32,7 +34,7 @@ export function Footer({ className, ...props }: FooterProps) {
       className={cn("w-full border-t border-neutral-200", className)}
       {...props}
     >
-      <div className="mx-auto flex max-w-300 items-center justify-between px-6 py-4">
+      <PageContainer className="flex items-center justify-between py-4">
         <div className="flex flex-col items-start gap-2">
           <Image
             src="/images/PlanB_logo.png"
@@ -59,7 +61,7 @@ export function Footer({ className, ...props }: FooterProps) {
             </Link>
           ))}
         </nav>
-      </div>
+      </PageContainer>
     </footer>
   );
 }
