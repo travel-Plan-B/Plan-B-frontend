@@ -18,6 +18,8 @@ const ALLOWED_TOOLS = [
   "Bash(git add:*)",
   "Bash(gh issue list:*)",
   "Bash(gh issue view:*)",
+  "Bash(gh pr view:*)",
+  "Bash(gh pr diff:*)",
   "Bash(pnpm lint:*)",
   "Bash(pnpm typecheck:*)",
   "Bash(pnpm build:*)",
@@ -33,6 +35,7 @@ const DENIED_TOOLS = [
   "Bash(git checkout:*)",
   "Bash(git switch:*)",
   "Bash(gh pr create:*)",
+  "Bash(gh pr edit:*)",
 ].join(",");
 
 export function runAgent({ prompt, cwd }) {

@@ -11,6 +11,11 @@ export const TYPES = [
   "style",
   "test",
 ];
+const BRANCH_TYPE_PATTERN = TYPES.join("|");
+const BRANCH_PATTERN = new RegExp(
+  `^(${BRANCH_TYPE_PATTERN})/(\\d+)-([a-z0-9]+(?:-[a-z0-9]+)*)$`,
+  "u",
+);
 
 export const QUICK_ISSUE_MARKER = "<!-- planb:quick-issue -->";
 
@@ -117,10 +122,7 @@ export function validateSlug(value) {
 }
 
 export function parseBranch(branch) {
-  const match =
-    /^(feat|fix|refactor|chore|docs|style|test)\/(\d+)-([a-z0-9]+(?:-[a-z0-9]+)*)$/u.exec(
-      branch,
-    );
+  const match = BRANCH_PATTERN.exec(branch);
   return match
     ? { type: match[1], issue: Number(match[2]), slug: match[3] }
     : null;
@@ -213,19 +215,62 @@ export function issueInfo(number) {
   return issue;
 }
 
-export function assertNoExistingPr(branch) {
+export function findPrsForBranch(branch, state = "open") {
   const raw = outputOf("gh", [
     "pr",
     "list",
     "--head",
     branch,
     "--state",
-    "all",
+    state,
     "--json",
-    "number,state,url",
+    "number,state,url,title,body,baseRefName,headRefName",
   ]);
-  const pullRequests = JSON.parse(raw);
-  if (pullRequests.length > 0) {
-    fail(`브랜치 ${branch}의 PR이 이미 존재합니다: ${pullRequests[0].url}`);
+  return JSON.parse(raw);
+}
+
+export function findOpenPrForBranch(branch) {
+  const pullRequests = findPrsForBranch(branch, "open");
+  if (pullRequests.length > 1) {
+    fail(
+      `브랜치 ${branch}에 open PR이 여러 개 있어 대상을 확정할 수 없습니다: ${pullRequests
+        .map((pullRequest) => `#${pullRequest.number}`)
+        .join(", ")}`,
+    );
   }
+  return pullRequests[0] || null;
+}
+
+export function inspectPrsForBranch(branch) {
+  const pullRequests = findPrsForBranch(branch, "all");
+  const openPullRequests = pullRequests.filter(
+    (pullRequest) => pullRequest.state === "OPEN",
+  );
+  if (openPullRequests.length > 1) {
+    fail(
+      `브랜치 ${branch}에 open PR이 여러 개 있어 대상을 확정할 수 없습니다: ${openPullRequests
+        .map((pullRequest) => `#${pullRequest.number}`)
+        .join(", ")}`,
+    );
+  }
+  return {
+    openPr: openPullRequests[0] || null,
+    priorPr: pullRequests[0] || null,
+  };
+}
+
+export function assertNoPriorPrForBranch(branch) {
+  const pullRequests = findPrsForBranch(branch, "all");
+  if (pullRequests.length > 0) {
+    fail(
+      `브랜치 ${branch}에는 이미 ${pullRequests[0].state} PR이 있습니다. 기존 브랜치를 재사용해 새 PR을 만들 수 없습니다: ${pullRequests[0].url}`,
+    );
+  }
+}
+
+export function issueReferencesFromPr(body = "") {
+  const references = new Set();
+  const pattern = /\b(?:close[sd]?|fix(?:e[sd])?|refs?)\s+#(\d+)\b/giu;
+  for (const match of body.matchAll(pattern)) references.add(Number(match[1]));
+  return [...references];
 }

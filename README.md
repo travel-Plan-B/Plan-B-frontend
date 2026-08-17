@@ -87,6 +87,8 @@ pnpm pr --agent codex --issue 42
 
 `pnpm pr:finish`는 AI agent가 분석·검증·선별 staging을 마친 뒤 호출하는 내부 명령이다. branch 생성, Issue 갱신, commit, push와 PR 생성은 이 공통 실행기만 담당한다. 일반 작업자가 직접 사용할 필요는 없다.
 
+`pnpm pr`은 현재 작업 브랜치에 `dev` 대상 open PR이 있으면 자동으로 update mode를 사용한다. 이 모드에서는 새 브랜치나 PR을 만들지 않고 새 commit을 기존 upstream에 일반 push한다. Issue 결과나 PR 본문은 agent가 갱신이 필요하다고 판단해 Markdown 파일을 전달한 경우에만 수정한다.
+
 ## 프로젝트 구조
 
 현재 저장소는 필요한 폴더만 만드는 feature-based 구조를 사용합니다.

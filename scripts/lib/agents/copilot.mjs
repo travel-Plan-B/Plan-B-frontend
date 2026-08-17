@@ -17,6 +17,8 @@ const ALLOWED_TOOLS = [
   "shell(git add:*)",
   "shell(gh issue list:*)",
   "shell(gh issue view:*)",
+  "shell(gh pr view:*)",
+  "shell(gh pr diff:*)",
   "shell(pnpm lint:*)",
   "shell(pnpm typecheck:*)",
   "shell(pnpm build:*)",
@@ -32,6 +34,7 @@ const DENIED_TOOLS = [
   "shell(git checkout:*)",
   "shell(git switch:*)",
   "shell(gh pr create:*)",
+  "shell(gh pr edit:*)",
 ];
 
 export function runAgent({ prompt, cwd }) {
