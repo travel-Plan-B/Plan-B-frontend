@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 
+import { Footer } from "@/shared/components/layout/Footer";
 import { Header } from "@/shared/components/layout/Header";
 import { ToastProvider } from "@/shared/components/ui/Toast/ToastProvider";
 
@@ -23,6 +24,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col font-sans">
         <Header />
         {children}
+        <Footer />
         <ToastProvider />
       </body>
     </html>
