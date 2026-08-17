@@ -16,6 +16,20 @@ function normalizePath(file) {
   return file.replaceAll("\\", "/");
 }
 
+export function parseStagedNameStatus(output) {
+  return output
+    .split(/\r?\n/u)
+    .filter(Boolean)
+    .map((line) => {
+      const [rawStatus, ...paths] = line.split("\t");
+      const status = rawStatus[0];
+      const path = status === "R" || status === "C" ? paths.at(-1) : paths[0];
+      if (!path)
+        throw new TypeError(`staged status를 해석할 수 없습니다: ${line}`);
+      return { status, path: normalizePath(path) };
+    });
+}
+
 export function determineRequiredChecks(
   changedFiles,
   { mode = "create" } = {},
@@ -23,15 +37,27 @@ export function determineRequiredChecks(
   if (!new Set(["create", "update"]).has(mode)) {
     throw new TypeError(`지원하지 않는 PR mode입니다: ${mode}`);
   }
-  const files = changedFiles.map(normalizePath);
-  const codeFiles = files.filter((file) => CODE_EXTENSIONS.has(extname(file)));
+  const changes = changedFiles.map((change) =>
+    typeof change === "string"
+      ? { status: "M", path: normalizePath(change) }
+      : { status: change.status, path: normalizePath(change.path) },
+  );
+  const files = changes.map(({ path }) => path);
+  const codeFiles = changes
+    .filter(({ status }) => status !== "D")
+    .map(({ path }) => path)
+    .filter((file) => CODE_EXTENSIONS.has(extname(file)));
+  const hasCodeChanges = files.some((file) =>
+    CODE_EXTENSIONS.has(extname(file)),
+  );
   const needsBuild = files.some((file) =>
     HIGH_IMPACT_FILES.some((pattern) => pattern.test(file)),
   );
-  const needsTypecheck = codeFiles.length > 0 || needsBuild;
+  const needsTypecheck = hasCodeChanges || needsBuild;
 
   return {
     mode,
+    changes,
     files,
     codeFiles,
     checks: [

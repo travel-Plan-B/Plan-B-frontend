@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { relative, resolve } from "node:path";
 import {
   assertBranchContainsLatestDev,
@@ -26,7 +26,10 @@ import {
   validateSlug,
 } from "./lib/git-github.mjs";
 import { executePrTransaction } from "./lib/pr-transaction.mjs";
-import { runRequiredChecks } from "./lib/validation-policy.mjs";
+import {
+  parseStagedNameStatus,
+  runRequiredChecks,
+} from "./lib/validation-policy.mjs";
 
 const workflowStartedAt = performance.now();
 
@@ -85,6 +88,16 @@ if (gitCheckpointFile && existsSync(gitCheckpointFile)) {
     fail("Git checkpoint가 손상되었습니다. 파일을 확인해 주세요.");
   }
 }
+
+function logCheckpointRecovery() {
+  if (!gitCheckpointFile) return;
+  console.error(
+    `ℹ 실패 복구 checkpoint: ${gitCheckpointFile}\n` +
+      "  복구: 같은 pnpm pr:finish 명령을 다시 실행하세요.\n" +
+      "  초기화: 상태를 직접 확인한 뒤 이 checkpoint 파일만 삭제하고 pnpm pr을 다시 실행하세요.",
+  );
+}
+if (gitCheckpoint) logCheckpointRecovery();
 
 let branch = currentBranch();
 let branchData = parseBranch(branch);
@@ -191,7 +204,7 @@ if (gitCheckpoint) {
     gitCheckpoint.branch !== branch ||
     gitCheckpoint.issue !== issueNumber ||
     gitCheckpoint.prNumber !== expectedPrNumber ||
-    !["committed", "pushed"].includes(gitCheckpoint.phase)
+    !["started", "committed", "pushed"].includes(gitCheckpoint.phase)
   ) {
     fail(
       "Git checkpoint가 현재 mode/브랜치/Issue/PR과 일치하지 않습니다. 자동 재개하지 않습니다.",
@@ -233,18 +246,25 @@ if (mode === "update") {
   }
 }
 
-const staged = outputOf("git", ["diff", "--cached", "--name-only"]);
-if (gitCheckpoint && staged) {
+const stagedStatus = outputOf("git", [
+  "diff",
+  "--cached",
+  "--name-status",
+  "-M",
+]);
+const stagedChanges = parseStagedNameStatus(stagedStatus);
+const canResumeBeforeCommit = gitCheckpoint?.phase === "started";
+if (gitCheckpoint && !canResumeBeforeCommit && stagedStatus) {
   fail("재개 중에는 새 staged 변경사항이 없어야 합니다.");
 }
-if (!gitCheckpoint && !staged) {
+if ((!gitCheckpoint || canResumeBeforeCommit) && !stagedStatus) {
   fail(
     "staged 변경사항이 없습니다. AI 에이전트가 작업 범위를 검토해 관련 파일만 git add한 뒤 다시 실행해 주세요.",
   );
 }
 
-if (!gitCheckpoint) {
-  runRequiredChecks(staged.split(/\r?\n/u).filter(Boolean), { mode });
+if (!gitCheckpoint || canResumeBeforeCommit) {
+  runRequiredChecks(stagedChanges, { mode });
 }
 
 const subject = (args.subject || (await prompt("commit/PR 작업 요약"))).trim();
@@ -345,8 +365,13 @@ const transaction = executePrTransaction({
         `${JSON.stringify(checkpoint)}\n`,
         "utf8",
       );
+      if (checkpoint.phase === "started") logCheckpointRecovery();
     }
   },
+  clearCheckpoint: () => {
+    if (gitCheckpointFile) rmSync(gitCheckpointFile, { force: true });
+  },
+  onFailure: () => logCheckpointRecovery(),
   commit: () => {
     run("git", ["commit", "-m", commitMessage], { inherit: true });
     console.log("✓ commit 완료");

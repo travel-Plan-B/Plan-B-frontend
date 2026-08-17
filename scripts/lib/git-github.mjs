@@ -270,7 +270,8 @@ export function assertNoPriorPrForBranch(branch) {
 
 export function issueReferencesFromPr(body = "") {
   const references = new Set();
-  const pattern = /\b(?:close[sd]?|fix(?:e[sd])?|refs?)\s+#(\d+)\b/giu;
+  const pattern =
+    /\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?|refs?)\s+#(\d+)\b/giu;
   for (const match of body.matchAll(pattern)) references.add(Number(match[1]));
   return [...references];
 }
