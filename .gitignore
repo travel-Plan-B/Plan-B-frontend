@@ -42,3 +42,7 @@ next-env.d.ts
 
 *storybook.log
 storybook-static
+
+# local PR agent artifacts
+/.tmp/planb-pr/
+/.tmp/planb/

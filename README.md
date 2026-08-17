@@ -30,15 +30,62 @@ pnpm dev
 
 ## 주요 명령어
 
-| 명령어            | 설명                                                     |
-| ----------------- | -------------------------------------------------------- |
-| `pnpm dev`        | 로컬 개발 서버를 실행합니다.                             |
-| `pnpm build`      | 프로덕션 빌드를 생성합니다.                              |
-| `pnpm start`      | 생성된 프로덕션 빌드를 실행합니다.                       |
-| `pnpm lint`       | ESLint로 코드 품질을 검사합니다.                         |
-| `pnpm typecheck`  | Next.js route type을 생성하고 TypeScript를 검사합니다.   |
-| `pnpm commitlint` | 표준 입력 또는 옵션으로 전달한 커밋 메시지를 검사합니다. |
-| `pnpm prepare`    | Git hook을 사용할 수 있도록 Husky를 설정합니다.          |
+| 명령어            | 설명                                                              |
+| ----------------- | ----------------------------------------------------------------- |
+| `pnpm dev`        | 로컬 개발 서버를 실행합니다.                                      |
+| `pnpm build`      | 프로덕션 빌드를 생성합니다.                                       |
+| `pnpm start`      | 생성된 프로덕션 빌드를 실행합니다.                                |
+| `pnpm lint`       | ESLint로 코드 품질을 검사합니다.                                  |
+| `pnpm typecheck`  | Next.js route type을 생성하고 TypeScript를 검사합니다.            |
+| `pnpm commitlint` | 표준 입력 또는 옵션으로 전달한 커밋 메시지를 검사합니다.          |
+| `pnpm issue`      | GitHub Issue를 생성합니다. `--branch`로 작업 브랜치도 생성합니다. |
+| `pnpm pr`         | AI agent가 작업을 분석하고 `dev` 대상 PR 생성을 마무리합니다.     |
+| `pnpm prepare`    | Git hook을 사용할 수 있도록 Husky를 설정합니다.                   |
+
+`pnpm issue`는 실행 후 빠른 생성과 직접 작성 중 하나를 선택한다. 빠른 생성은 임시 Issue만 만들며 `--branch`와 함께 사용할 수 없다. 직접 작성에서만 `pnpm issue --branch`로 최신 `dev` 기반 작업 브랜치를 함께 만들 수 있다.
+
+빠른 생성 Issue는 `pnpm pr` 실행 시 실제 type, 제목, 작업 결과를 입력받아 정식 Issue로 갱신된다. 직접 작성한 Issue는 기존 요구사항을 유지하고 작업 결과만 추가한다.
+
+빠른 생성 Issue 번호는 Git에서 제외되는 `.tmp/planb/active-issue.json`에 현재 작업 Issue로 저장된다. `pnpm pr`은 브랜치에서 Issue 번호를 찾지 못하면 이 값을 보여 주고 확인받으며, 사용할 번호가 없거나 사용자가 거절하면 Issue 번호를 직접 입력받는다. PR 생성이 완료된 경우에만 일치하는 active Issue 정보를 삭제한다.
+
+### Issue와 PR 자동화
+
+일반 작업에서는 다음 명령만 사용한다.
+
+```bash
+# Issue 생성
+pnpm issue
+
+# 직접 작성 Issue와 작업 브랜치 생성
+pnpm issue --branch
+
+# 작업 완료 후 agent를 선택해 PR 생성
+pnpm pr
+```
+
+PR agent를 직접 지정할 수도 있다.
+
+```bash
+pnpm pr --agent codex
+pnpm pr --agent claude
+pnpm pr --agent copilot
+```
+
+팀원별 기본 agent는 저장소에 기록하지 않고 환경변수로 설정한다. 명령줄의 `--agent`가 환경변수보다 우선한다.
+
+```env
+PLANB_PR_AGENT=codex
+```
+
+관련 Issue가 브랜치명에서 확인되지 않는 경우 `--issue`로 안전하게 지정할 수 있다.
+
+```bash
+pnpm pr --agent codex --issue 42
+```
+
+#### 내부 PR 실행기
+
+`pnpm pr:finish`는 AI agent가 분석·검증·선별 staging을 마친 뒤 호출하는 내부 명령이다. branch 생성, Issue 갱신, commit, push와 PR 생성은 이 공통 실행기만 담당한다. 일반 작업자가 직접 사용할 필요는 없다.
 
 ## 프로젝트 구조
 
