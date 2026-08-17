@@ -4,6 +4,8 @@ import type { HTMLAttributes, ReactNode } from "react";
 
 import { cn } from "@/shared/lib/cn";
 
+import { PageContainer } from "./PageContainer";
+
 export interface HeaderProps extends HTMLAttributes<HTMLElement> {
   children?: ReactNode;
 }
@@ -11,7 +13,7 @@ export interface HeaderProps extends HTMLAttributes<HTMLElement> {
 export function Header({ children, className, ...props }: HeaderProps) {
   return (
     <header className={cn("w-full shadow-2xs", className)} {...props}>
-      <div className="mx-auto flex h-14 max-w-300 items-center justify-between px-6">
+      <PageContainer className="flex h-14 items-center justify-between">
         <Link
           href="/"
           className="rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
@@ -26,7 +28,7 @@ export function Header({ children, className, ...props }: HeaderProps) {
           />
         </Link>
         {children}
-      </div>
+      </PageContainer>
     </header>
   );
 }
