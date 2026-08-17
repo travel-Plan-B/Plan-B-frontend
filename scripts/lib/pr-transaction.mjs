@@ -12,6 +12,12 @@ export function executePrTransaction({
   let state = checkpoint;
 
   try {
+    if (state?.phase === "prCompleted") {
+      const pr = { prNumber: state.prNumber, prUrl: state.prUrl };
+      clearCheckpoint?.();
+      return { checkpoint: state, pr };
+    }
+
     if (!state) {
       state = { ...checkpointData(), phase: "started" };
       persistCheckpoint(state);
@@ -31,6 +37,13 @@ export function executePrTransaction({
 
     updateIssue();
     const pr = updatePr();
+    state = {
+      ...state,
+      phase: "prCompleted",
+      prNumber: pr.prNumber,
+      prUrl: pr.prUrl,
+    };
+    persistCheckpoint(state);
     clearCheckpoint?.();
     return { checkpoint: state, pr };
   } catch (error) {

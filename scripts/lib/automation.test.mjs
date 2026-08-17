@@ -54,7 +54,12 @@ for (const mode of ["create", "update"]) {
       updatePr: () => ({ prNumber: 49 }),
     });
 
-    assert.deepEqual(persisted, ["started", "committed", "pushed"]);
+    assert.deepEqual(persisted, [
+      "started",
+      "committed",
+      "pushed",
+      "prCompleted",
+    ]);
     assert.equal(cleared, true);
     assert.equal(result.pr.prNumber, 49);
   });
@@ -113,4 +118,76 @@ test("commit 실패 전에도 started checkpoint를 유지한다", () => {
 
   assert.deepEqual(persisted, ["started"]);
   assert.equal(cleared, false);
+});
+
+test("prCompleted 재실행은 기존 PR을 재사용하고 checkpoint만 삭제한다", () => {
+  let savedCheckpoint;
+  let updatePrCalls = 0;
+  let updateIssueCalls = 0;
+
+  assert.throws(() =>
+    executePrTransaction({
+      checkpoint: null,
+      checkpointData: () => ({
+        mode: "create",
+        branch: "feat/48-automation",
+        issue: 48,
+        commit: "abc",
+      }),
+      persistCheckpoint: (checkpoint) => {
+        savedCheckpoint = checkpoint;
+      },
+      clearCheckpoint: () => {
+        throw new Error("checkpoint 삭제 실패");
+      },
+      commit: () => {},
+      push: () => {},
+      updateIssue: () => {
+        updateIssueCalls += 1;
+      },
+      updatePr: () => {
+        updatePrCalls += 1;
+        return { prNumber: 49, prUrl: "https://example.test/pull/49" };
+      },
+    }),
+  );
+
+  assert.equal(savedCheckpoint.phase, "prCompleted");
+  assert.equal(savedCheckpoint.prNumber, 49);
+  assert.equal(savedCheckpoint.prUrl, "https://example.test/pull/49");
+
+  let cleared = false;
+  const recovered = executePrTransaction({
+    checkpoint: savedCheckpoint,
+    checkpointData: () => {
+      throw new Error("재실행에서 checkpointData를 호출하면 안 됩니다.");
+    },
+    persistCheckpoint: () => {
+      throw new Error("재실행에서 checkpoint를 다시 저장하면 안 됩니다.");
+    },
+    clearCheckpoint: () => {
+      cleared = true;
+    },
+    commit: () => {
+      throw new Error("재실행에서 commit하면 안 됩니다.");
+    },
+    push: () => {
+      throw new Error("재실행에서 push하면 안 됩니다.");
+    },
+    updateIssue: () => {
+      updateIssueCalls += 1;
+    },
+    updatePr: () => {
+      updatePrCalls += 1;
+      return {};
+    },
+  });
+
+  assert.equal(updateIssueCalls, 1);
+  assert.equal(updatePrCalls, 1);
+  assert.equal(cleared, true);
+  assert.deepEqual(recovered.pr, {
+    prNumber: 49,
+    prUrl: "https://example.test/pull/49",
+  });
 });

@@ -102,14 +102,36 @@ if (gitCheckpoint) logCheckpointRecovery();
 let branch = currentBranch();
 let branchData = parseBranch(branch);
 const openPr = branch === "dev" ? null : findOpenPrForBranch(branch);
+const isPrCompletedRecovery = gitCheckpoint?.phase === "prCompleted";
 const mode = args.mode || (openPr ? "update" : "create");
 if (!["create", "update"].includes(mode)) {
   fail("--mode는 create 또는 update여야 합니다.");
 }
-if (mode === "create" && args.pr) {
+if (mode === "create" && args.pr && !isPrCompletedRecovery) {
   fail("create mode에서는 --pr 옵션을 사용할 수 없습니다.");
 }
-if (mode === "update") {
+if (isPrCompletedRecovery) {
+  if (!openPr) {
+    fail(
+      "prCompleted checkpoint의 open PR을 현재 브랜치에서 찾을 수 없습니다.",
+    );
+  }
+  if (openPr.baseRefName !== "dev" || openPr.headRefName !== branch) {
+    fail(
+      `PR #${openPr.number}의 base/head가 예상한 dev ← ${branch}와 다릅니다.`,
+    );
+  }
+  if (
+    openPr.number !== gitCheckpoint.prNumber ||
+    openPr.url !== gitCheckpoint.prUrl ||
+    (args.pr && Number(args.pr) !== gitCheckpoint.prNumber)
+  ) {
+    fail(
+      `prCompleted checkpoint의 PR #${gitCheckpoint.prNumber}과 현재 PR #${openPr.number} 정보가 다릅니다.`,
+    );
+  }
+  console.log(`✓ prCompleted 복구: 기존 PR #${openPr.number} 확인`);
+} else if (mode === "update") {
   if (!openPr)
     fail("update mode이지만 현재 브랜치의 open PR을 찾을 수 없습니다.");
   if (openPr.baseRefName !== "dev" || openPr.headRefName !== branch) {
@@ -195,16 +217,24 @@ if (mode === "update") {
   assertBranchContainsLatestDev();
 }
 
-if (mode === "create") assertNoPriorPrForBranch(branch);
+if (mode === "create" && !isPrCompletedRecovery) {
+  assertNoPriorPrForBranch(branch);
+}
 
 if (gitCheckpoint) {
   const expectedPrNumber = openPr?.number;
+  const recoveredCreateAsUpdate =
+    isPrCompletedRecovery &&
+    gitCheckpoint.mode === "create" &&
+    mode === "update";
   if (
-    gitCheckpoint.mode !== mode ||
+    (gitCheckpoint.mode !== mode && !recoveredCreateAsUpdate) ||
     gitCheckpoint.branch !== branch ||
     gitCheckpoint.issue !== issueNumber ||
     gitCheckpoint.prNumber !== expectedPrNumber ||
-    !["started", "committed", "pushed"].includes(gitCheckpoint.phase)
+    !["started", "committed", "pushed", "prCompleted"].includes(
+      gitCheckpoint.phase,
+    )
   ) {
     fail(
       "Git checkpoint가 현재 mode/브랜치/Issue/PR과 일치하지 않습니다. 자동 재개하지 않습니다.",
@@ -216,7 +246,7 @@ if (gitCheckpoint) {
       "Git checkpoint의 commit이 현재 HEAD와 일치하지 않습니다. 자동 재개하지 않습니다.",
     );
   }
-  if (gitCheckpoint.phase === "pushed") {
+  if (["pushed", "prCompleted"].includes(gitCheckpoint.phase)) {
     const remoteHead = outputOf("git", ["rev-parse", `origin/${branch}`], {
       allowFailure: true,
     });
@@ -423,6 +453,7 @@ const transaction = executePrTransaction({
   },
 });
 const { prUrl, prNumber } = transaction.pr;
+const completedMode = transaction.checkpoint.mode || mode;
 console.log(`✓ ${prUrl}`);
 
 if (process.env.PLANB_PR_FINISHED_FILE) {
@@ -434,7 +465,7 @@ if (process.env.PLANB_PR_FINISHED_FILE) {
   }
   writeFileSync(
     finishedFile,
-    `${JSON.stringify({ issue: issueNumber, mode, prNumber, prUrl })}\n`,
+    `${JSON.stringify({ issue: issueNumber, mode: completedMode, prNumber, prUrl })}\n`,
     "utf8",
   );
 }
