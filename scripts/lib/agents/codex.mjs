@@ -15,7 +15,6 @@ export function runAgent({ prompt, cwd }) {
       "exec",
       "--sandbox",
       "workspace-write",
-      "--approve-for-me",
       "--ephemeral",
       "--cd",
       cwd,

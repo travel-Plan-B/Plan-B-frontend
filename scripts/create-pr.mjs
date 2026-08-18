@@ -26,7 +26,10 @@ import {
   run,
   validateSlug,
 } from "./lib/git-github.mjs";
-import { executePrTransaction } from "./lib/pr-transaction.mjs";
+import {
+  executePrTransaction,
+  getStartedCheckpointIntegrityError,
+} from "./lib/pr-transaction.mjs";
 import {
   parseStagedNameStatus,
   runRequiredChecks,
@@ -271,7 +274,16 @@ if (gitCheckpoint) {
       fail("push checkpoint의 commit이 원격 브랜치와 일치하지 않습니다.");
     }
   }
+  const startedCheckpointError = getStartedCheckpointIntegrityError(
+    gitCheckpoint,
+    {
+      stagedFingerprint: stagedFingerprint(),
+      workingTreeFingerprint: workingTreeFingerprint(),
+    },
+  );
+  if (startedCheckpointError) fail(startedCheckpointError);
   if (
+    gitCheckpoint.phase !== "started" &&
     gitCheckpoint.workingTreeFingerprint &&
     gitCheckpoint.workingTreeFingerprint !== workingTreeFingerprint()
   ) {
@@ -319,15 +331,6 @@ if ((!gitCheckpoint || canResumeBeforeCommit) && !stagedStatus) {
 }
 
 const currentStagedFingerprint = stagedStatus ? stagedFingerprint() : null;
-if (
-  canResumeBeforeCommit &&
-  gitCheckpoint.stagedFingerprint &&
-  gitCheckpoint.stagedFingerprint !== currentStagedFingerprint
-) {
-  fail(
-    "Git checkpoint의 staged 상태와 현재 staged diff가 다릅니다. 자동 재개하지 않습니다.",
-  );
-}
 const canReuseCompletedChecks = Boolean(
   canResumeBeforeCommit &&
     gitCheckpoint.checksCompleted &&

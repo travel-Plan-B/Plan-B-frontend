@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { issueReferencesFromPr, parseArgs } from "./git-github.mjs";
-import { executePrTransaction } from "./pr-transaction.mjs";
+import {
+  executePrTransaction,
+  getStartedCheckpointIntegrityError,
+} from "./pr-transaction.mjs";
 import {
   determineRequiredChecks,
   normalizeGitPath,
@@ -21,6 +24,52 @@ test("reset-checkpoint를 값 없는 복구 플래그로 파싱한다", () => {
     "reset-checkpoint": true,
     issue: "59",
   });
+});
+
+test("fingerprint가 없는 구버전 started checkpoint는 변경된 staged diff를 commit하지 않는다", () => {
+  for (const checkpoint of [
+    {
+      mode: "update",
+      phase: "started",
+      commit: "base",
+      workingTreeFingerprint: "old-working-tree",
+    },
+    {
+      mode: "update",
+      phase: "started",
+      commit: "base",
+      stagedFingerprint: "old-staged-diff",
+    },
+  ]) {
+    const error = getStartedCheckpointIntegrityError(checkpoint, {
+      stagedFingerprint: "changed-staged-diff",
+      workingTreeFingerprint: "changed-working-tree",
+    });
+    let committed = false;
+
+    if (!error) committed = true;
+
+    assert.match(error, /--reset-checkpoint/u);
+    assert.equal(committed, false);
+  }
+});
+
+test("fingerprint가 일치하는 started checkpoint는 정상 재개할 수 있다", () => {
+  const checkpoint = {
+    mode: "update",
+    phase: "started",
+    commit: "base",
+    stagedFingerprint: "staged",
+    workingTreeFingerprint: "working-tree",
+  };
+
+  assert.equal(
+    getStartedCheckpointIntegrityError(checkpoint, {
+      stagedFingerprint: "staged",
+      workingTreeFingerprint: "working-tree",
+    }),
+    null,
+  );
 });
 
 test("Issue 종료 및 내부 참조 키워드를 파싱하고 중복을 제거한다", () => {
@@ -88,6 +137,7 @@ for (const mode of ["create", "update"]) {
         commit: "base",
         checksCompleted: true,
         stagedFingerprint: "staged",
+        workingTreeFingerprint: "working-tree",
       },
       checkpointData: () => ({ mode, commit: "head" }),
       persistCheckpoint: (checkpoint) => calls.push(`save:${checkpoint.phase}`),
