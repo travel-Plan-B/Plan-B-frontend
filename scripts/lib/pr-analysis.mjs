@@ -8,8 +8,6 @@ const PLAN_FIELDS = [
   "type",
   "subject",
   "slug",
-  "scope",
-  "validation",
 ];
 
 export function fingerprintText(value) {
@@ -22,14 +20,11 @@ export function getAgentMutationError(before, after) {
     : "Agent 실행 중 작업 트리가 변경되었습니다. artifact 저장과 staging 전에 중단합니다.";
 }
 
-const RESULT_TEXT_FIELDS = ["issueResult", "prBody", "issueBody"];
-const PROTECTED_TOOLING_PATHS = [
-  /^scripts\//u,
-  /^\.github\//u,
-  /^(?:package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|\.npmrc)$/u,
-];
-const TOOLING_ISSUE_MARKER = "<!-- planb:tooling -->";
-const TOOLING_TITLE_PATTERN = /(?:자동화|툴링|automation|tooling)/iu;
+export function getBranchSwitchIntegrityError(before, after) {
+  return before === after
+    ? null
+    : "작업 브랜치 생성 전후 working tree가 달라졌습니다. staging과 commit 전에 중단합니다.";
+}
 
 export function parseAgentResult(output) {
   let result;
@@ -44,104 +39,49 @@ export function parseAgentResult(output) {
     throw new TypeError("Agent 결과는 JSON 객체여야 합니다.");
   }
 
-  const { plan } = result;
-  if (!plan || typeof plan !== "object" || Array.isArray(plan)) {
-    throw new TypeError("Agent 결과에 plan 객체가 없습니다.");
-  }
-  const requiredStrings = ["mode", "type", "subject", "slug", "scope", "validation"];
+  const requiredStrings = ["type", "subject", "slug", "prBody"];
   const missing = requiredStrings.filter(
-    (field) => typeof plan[field] !== "string" || !plan[field].trim(),
+    (field) => typeof result[field] !== "string" || !result[field].trim(),
   );
   if (missing.length > 0) {
     throw new TypeError(`Agent plan 필드가 없거나 비어 있습니다: ${missing.join(", ")}`);
   }
-  const multiline = requiredStrings.filter((field) => /[\r\n]/u.test(plan[field]));
+  const multiline = ["type", "subject", "slug"].filter((field) =>
+    /[\r\n]/u.test(result[field]),
+  );
   if (multiline.length > 0) {
     throw new TypeError(`Agent plan 문자열은 한 줄이어야 합니다: ${multiline.join(", ")}`);
   }
-  if (!Number.isInteger(plan.issue) || plan.issue <= 0) {
-    throw new TypeError("Agent plan issue는 양의 정수여야 합니다.");
-  }
-  if (!new Set(["create", "update"]).has(plan.mode)) {
-    throw new TypeError("Agent plan mode는 create 또는 update여야 합니다.");
-  }
-  if (!new Set(["all", "blocked"]).has(plan.scope)) {
-    throw new TypeError("Agent plan scope는 all 또는 blocked여야 합니다.");
-  }
-  if (
-    !Array.isArray(plan.unrelatedFiles) ||
-    plan.unrelatedFiles.some((file) => typeof file !== "string" || !file)
-  ) {
-    throw new TypeError("Agent plan unrelatedFiles는 경로 문자열 배열이어야 합니다.");
-  }
-  for (const field of RESULT_TEXT_FIELDS) {
-    if (result[field] !== null && typeof result[field] !== "string") {
-      throw new TypeError(`Agent 결과 ${field}는 문자열 또는 null이어야 합니다.`);
-    }
-  }
-  if (
-    plan.mode === "create" &&
-    ![result.issueResult, result.prBody].every(
-      (value) => typeof value === "string" && value.trim(),
-    )
-  ) {
-    throw new TypeError("create mode에는 비어 있지 않은 issueResult와 prBody가 필요합니다.");
-  }
-
   return {
-    plan: {
-      ...plan,
-      subject: plan.subject.trim(),
-      unrelatedFiles: [...new Set(plan.unrelatedFiles)].sort(),
-    },
-    issueResult: result.issueResult,
-    prBody: result.prBody,
-    issueBody: result.issueBody,
+    type: result.type.trim(),
+    subject: result.subject.trim(),
+    slug: result.slug.trim(),
+    prBody: result.prBody.trim(),
   };
 }
 
 export function renderPrPlan(plan) {
-  return `# PR plan\n\n- issue: ${plan.issue}\n- mode: ${plan.mode}\n- type: ${plan.type}\n- subject: ${plan.subject}\n- slug: ${plan.slug}\n- scope: ${plan.scope}\n- validation: ${plan.validation}\n`;
+  return `# PR plan\n\n- issue: ${plan.issue}\n- mode: ${plan.mode}\n- type: ${plan.type}\n- subject: ${plan.subject}\n- slug: ${plan.slug}\n`;
 }
 
 export function writeAgentArtifacts(
   result,
   directory,
+  context,
   { mkdir = mkdirSync, writeFile = writeFileSync, removeFile = rmSync } = {},
 ) {
   mkdir(directory, { recursive: true });
   const artifacts = [
-    ["pr-plan.md", renderPrPlan(result.plan)],
-    ["issue-result.md", result.issueResult],
+    ["pr-plan.md", renderPrPlan({ ...context, ...result })],
+    ["issue-result.md", null],
     ["pr-body.md", result.prBody],
-    ["issue-body.md", result.issueBody],
+    ["issue-body.md", null],
   ];
   for (const [name, content] of artifacts) {
     const path = resolve(directory, name);
     if (content === null) removeFile(path, { force: true });
     else writeFile(path, content.endsWith("\n") ? content : `${content}\n`, "utf8");
   }
-}
-
-export function findUnrelatedToolingChanges(changedFiles, issue) {
-  const isToolingIssue =
-    TOOLING_TITLE_PATTERN.test(issue?.title || "") ||
-    (issue?.body || "").includes(TOOLING_ISSUE_MARKER);
-  if (isToolingIssue) return [];
-  return [...new Set(changedFiles.map((file) => file.replaceAll("\\", "/")))]
-    .filter((file) => PROTECTED_TOOLING_PATHS.some((pattern) => pattern.test(file)))
-    .sort();
-}
-
-export function getScopeBlockReason(result, unrelatedToolingFiles = []) {
-  const files = [
-    ...new Set([
-      ...result.plan.unrelatedFiles,
-      ...unrelatedToolingFiles,
-    ]),
-  ].sort();
-  if (result.plan.scope === "all" && files.length === 0) return null;
-  return `현재 작업 트리에 Issue #${result.plan.issue}과 무관할 가능성이 높은 변경이 있습니다.\n\n${files.map((file) => `- ${file}`).join("\n") || "- Agent가 unrelated 변경을 감지했습니다."}\n\nPR 범위를 분리한 뒤 다시 실행해주세요.`;
 }
 
 export function parsePrPlan(content) {
@@ -163,11 +103,6 @@ export function parsePrPlan(content) {
   if (!new Set(["create", "update"]).has(values.mode)) {
     throw new TypeError("PR plan mode는 create 또는 update여야 합니다.");
   }
-  if (values.scope !== "all") {
-    throw new TypeError(
-      "PR plan scope가 all이 아닙니다. unrelated 변경사항을 정리한 뒤 다시 실행하세요.",
-    );
-  }
 
   return {
     issue,
@@ -175,8 +110,6 @@ export function parsePrPlan(content) {
     type: values.type,
     subject: values.subject,
     slug: values.slug,
-    scope: values.scope,
-    validation: values.validation,
   };
 }
 
@@ -197,6 +130,20 @@ export function normalizeSubjectIssueSuffix(subject, issue) {
 
   if (!normalized) throw new TypeError("subject는 비워둘 수 없습니다.");
   return normalized;
+}
+
+export function resolvePrMetadata(agentResult, branchData) {
+  return branchData
+    ? {
+        ...agentResult,
+        type: branchData.type,
+        slug: branchData.slug,
+      }
+    : agentResult;
+}
+
+export function getTargetBranch({ sourceBranch, issue, type, slug }) {
+  return sourceBranch === "dev" ? `${type}/${issue}-${slug}` : sourceBranch;
 }
 
 export function getAnalysisCheckpointIntegrityError(

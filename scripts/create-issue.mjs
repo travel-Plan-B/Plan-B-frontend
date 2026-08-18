@@ -19,6 +19,7 @@ import {
   parseArgs,
   prompt,
   QUICK_ISSUE_MARKER,
+  QUICK_ISSUE_TITLE,
   remoteBranchExists,
   run,
   validateSlug,
@@ -103,7 +104,7 @@ if (args.branch) {
 
 const typeLabel = type ? type[0].toUpperCase() + type.slice(1) : null;
 const issueTitle =
-  mode === "quick" ? "[WIP] 작업 예정" : `[${typeLabel}] ${title}`;
+  mode === "quick" ? QUICK_ISSUE_TITLE : `[${typeLabel}] ${title}`;
 const issueBody =
   mode === "quick"
     ? `${QUICK_ISSUE_MARKER}\n\n작업 완료 후 실제 작업 내용을 기준으로 업데이트합니다.`

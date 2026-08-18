@@ -32,7 +32,10 @@ import {
   executePrTransaction,
   getStartedCheckpointIntegrityError,
 } from "./lib/pr-transaction.mjs";
-import { normalizeSubjectIssueSuffix } from "./lib/pr-analysis.mjs";
+import {
+  getBranchSwitchIntegrityError,
+  normalizeSubjectIssueSuffix,
+} from "./lib/pr-analysis.mjs";
 import {
   parseStagedNameStatus,
   runRequiredChecks,
@@ -232,7 +235,13 @@ if (mode === "update") {
     fail(`동일한 로컬 브랜치가 이미 존재합니다: ${branch}`);
   if (remoteBranchExists(branch))
     fail(`동일한 원격 브랜치가 이미 존재합니다: origin/${branch}`);
+  const beforeBranchSwitch = workingTreeFingerprint();
   run("git", ["switch", "-c", branch], { inherit: true });
+  const branchSwitchError = getBranchSwitchIntegrityError(
+    beforeBranchSwitch,
+    workingTreeFingerprint(),
+  );
+  if (branchSwitchError) fail(branchSwitchError);
   console.log(`✓ ${branch} 브랜치 생성 및 기존 변경사항 유지`);
 } else if (!branchData) {
   fail(
@@ -394,11 +403,6 @@ if (args["issue-result-file"]) {
   issueResult = readFileSync(args["issue-result-file"], "utf8").trim();
 } else if (args["issue-result"]) {
   issueResult = args["issue-result"].trim();
-} else if (mode === "create" || treatAsQuickIssue) {
-  issueResult = (await prompt("Issue에 추가할 작업 결과")).trim();
-}
-if ((mode === "create" || treatAsQuickIssue) && !issueResult) {
-  fail("Issue 작업 결과는 비워둘 수 없습니다.");
 }
 
 let issueEditArgs = null;
