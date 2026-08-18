@@ -11,7 +11,15 @@ export function runAgent({ prompt, cwd }) {
   assertAuth(command, ["login", "status"], "Codex");
   runCli(
     command,
-    ["exec", "--sandbox", "workspace-write", "--ephemeral", "--cd", cwd, "-"],
+    [
+      "exec",
+      "--sandbox",
+      "workspace-write",
+      "--ephemeral",
+      "--cd",
+      cwd,
+      "-",
+    ],
     { cwd, displayName: "Codex", input: prompt },
   );
 }

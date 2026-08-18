@@ -36,7 +36,7 @@ const compactPlace = {
 };
 
 const meta = {
-  title: "shared/ui/PlaceCard",
+  title: "features/recommendation/PlaceCard",
   component: PlaceCard,
   parameters: {
     layout: "centered",

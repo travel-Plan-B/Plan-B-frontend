@@ -12,7 +12,7 @@ const HIGH_IMPACT_FILES = [
   /^(?:middleware|instrumentation)\./u,
 ];
 
-function normalizePath(file) {
+export function normalizeGitPath(file) {
   return file.replaceAll("\\", "/");
 }
 
@@ -26,7 +26,7 @@ export function parseStagedNameStatus(output) {
       const path = status === "R" || status === "C" ? paths.at(-1) : paths[0];
       if (!path)
         throw new TypeError(`staged status를 해석할 수 없습니다: ${line}`);
-      return { status, path: normalizePath(path) };
+      return { status, path: normalizeGitPath(path) };
     });
 }
 
@@ -39,8 +39,8 @@ export function determineRequiredChecks(
   }
   const changes = changedFiles.map((change) =>
     typeof change === "string"
-      ? { status: "M", path: normalizePath(change) }
-      : { status: change.status, path: normalizePath(change.path) },
+      ? { status: "M", path: normalizeGitPath(change) }
+      : { status: change.status, path: normalizeGitPath(change.path) },
   );
   const files = changes.map(({ path }) => path);
   const codeFiles = changes
