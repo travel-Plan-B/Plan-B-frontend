@@ -17,10 +17,12 @@ export interface TravelScheduleStepProps {
 }
 
 export function TravelScheduleStep({ onNext }: TravelScheduleStepProps) {
+  const [region, setRegion] = useState("");
   const [dateRange, setDateRange] = useState<DateRange>({
     start: null,
     end: null,
   });
+  const isReadyForNext = region.trim().length > 0 && Boolean(dateRange.end);
 
   return (
     <div className="flex w-full flex-1 flex-col gap-6 my-7">
@@ -38,6 +40,8 @@ export function TravelScheduleStep({ onNext }: TravelScheduleStepProps) {
           <div className="relative flex-1">
             <MapPin className="pointer-events-none absolute top-1/2 left-4 z-10 size-4 -translate-y-1/2 text-neutral-600" />
             <Input
+              value={region}
+              onChange={(event) => setRegion(event.target.value)}
               placeholder="여행 지역을 입력해주세요"
               clearable
               className="pl-10 py-1.5 text-sm placeholder:text-sm"
@@ -62,7 +66,7 @@ export function TravelScheduleStep({ onNext }: TravelScheduleStepProps) {
         <ScheduleInputPanel />
       </div>
 
-      <BottomActionBar onNext={onNext} nextDisabled={!dateRange.end} />
+      <BottomActionBar onNext={onNext} nextDisabled={!isReadyForNext} />
     </div>
   );
 }
