@@ -22,62 +22,10 @@ const STEPS: StepperStep[] = [
   { label: "최종설정" },
 ];
 
-function PanelCard({ defaultTab }: { defaultTab: "search" | "storage" }) {
-  const [tab, setTab] = useState<"search" | "storage">(defaultTab);
+export function TravelScheduleStep() {
+  const [tab, setTab] = useState<"search" | "storage">("search");
   const isSearch = tab === "search";
 
-  return (
-    <div className="flex flex-col gap-4 rounded-2xl border border-neutral-200 bg-white p-6">
-      <Tabs
-        value={tab}
-        onChange={(value) => setTab(value as typeof tab)}
-        variant="underline"
-      >
-        <TabsList>
-          <TabsTrigger value="search">장소 찾기</TabsTrigger>
-          <TabsTrigger value="storage">장소 보관함</TabsTrigger>
-        </TabsList>
-      </Tabs>
-
-      <div className="flex flex-col gap-1">
-        <p className="text-lg font-semibold text-neutral-900">
-          {isSearch
-            ? "여행에 추가할 장소를 찾아보세요"
-            : "저장한 장소를 일정에 추가해보세요"}
-        </p>
-        <p className="text-sm text-neutral-700">
-          {isSearch
-            ? "장소명이나 태그로 검색해 원하는 장소를 보관함에 담을 수 있어요."
-            : "장소를 오른쪽 일정으로 드래그해 원하는 날짜에 추가할 수 있어요."}
-        </p>
-      </div>
-
-      <div className="relative">
-        <Search className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-neutral-600" />
-        <Input placeholder="태그나, 장소명을 검색해주세요" className="pl-10" />
-      </div>
-
-      <EmptyState
-        {...(isSearch ? EMPTY_STATE_IMAGES.search : EMPTY_STATE_IMAGES.storage)}
-        title={isSearch ? "원하는 장소를 검색해보세요" : "보관함이 비어 있어요"}
-        description={
-          isSearch
-            ? "장소명, 지역, 태그로 검색하면 이용 가능한 장소를 찾아드려요."
-            : "이곳에 드는 장소를 검색해서 + 버튼을 눌러 보관함에 담아 보세요."
-        }
-        className="py-6"
-      />
-
-      <p className="flex items-center gap-1.5 text-xs text-neutral-500">
-        <FolderOpen className="size-4" aria-hidden="true" />
-        보관함은 최대 <span className="text-primary-600">50개까지</span> 저장
-        가능합니다.
-      </p>
-    </div>
-  );
-}
-
-export function TravelScheduleStep() {
   return (
     <PageContainer as="section" className="flex flex-col gap-8 py-8">
       <div className="flex items-start justify-between gap-6">
@@ -114,11 +62,65 @@ export function TravelScheduleStep() {
         </label>
       </div>
 
-      <div className="grid grid-cols-3 gap-6">
-        <PanelCard defaultTab="storage" />
-        <PanelCard defaultTab="search" />
+      <div className="grid grid-cols-5 gap-6">
+        <div className="col-span-2 flex flex-col gap-4 rounded-2xl border border-neutral-200 bg-white p-6">
+          <Tabs
+            value={tab}
+            onChange={(value) => setTab(value as typeof tab)}
+            variant="underline"
+          >
+            <TabsList>
+              <TabsTrigger value="search">장소 찾기</TabsTrigger>
+              <TabsTrigger value="storage">장소 보관함</TabsTrigger>
+            </TabsList>
+          </Tabs>
 
-        <div className="flex flex-col gap-1 rounded-2xl border border-neutral-200 bg-white p-6">
+          <div className="flex flex-col gap-1">
+            <p className="text-lg font-semibold text-neutral-900">
+              {isSearch
+                ? "여행에 추가할 장소를 찾아보세요"
+                : "저장한 장소를 일정에 추가해보세요"}
+            </p>
+            <p className="text-sm text-neutral-700">
+              {isSearch
+                ? "장소명이나 태그로 검색해 원하는 장소를 보관함에 담을 수 있어요."
+                : "장소를 오른쪽 일정으로 드래그해 원하는 날짜에 추가할 수 있어요."}
+            </p>
+          </div>
+
+          <div className="relative">
+            <Search className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-neutral-600" />
+            <Input
+              placeholder="태그나, 장소명을 검색해주세요"
+              className="pl-10"
+            />
+          </div>
+
+          <EmptyState
+            {...(isSearch
+              ? EMPTY_STATE_IMAGES.search
+              : EMPTY_STATE_IMAGES.storage)}
+            title={
+              isSearch ? "원하는 장소를 검색해보세요" : "보관함이 비어 있어요"
+            }
+            description={
+              isSearch
+                ? "장소명, 지역, 태그로 검색하면 이용 가능한 장소를 찾아드려요."
+                : "이곳에 드는 장소를 검색해서 + 버튼을 눌러 보관함에 담아 보세요."
+            }
+            className="py-6"
+          />
+
+          <p className="flex items-center gap-1.5 text-xs text-neutral-500">
+            <FolderOpen className="size-4" aria-hidden="true" />
+            보관함은 최대 <span className="text-primary-600">
+              50개까지
+            </span>{" "}
+            저장 가능합니다.
+          </p>
+        </div>
+
+        <div className="col-span-3 flex flex-col gap-1 rounded-2xl border border-neutral-200 bg-white p-6">
           <p className="text-lg font-semibold text-neutral-900">
             여행 일정 입력
           </p>
