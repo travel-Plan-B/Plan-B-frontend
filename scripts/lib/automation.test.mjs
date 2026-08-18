@@ -12,7 +12,8 @@ import { buildPrAgentPrompt } from "./pr-agent-prompt.mjs";
 import {
   extractCopilotFinalResponse,
   extractCodexFinalResponse,
-  extractSingleJsonObjectResponse,
+  getAgentJsonContractDiagnostics,
+  normalizeAgentJsonResponse,
 } from "./agents/shared.mjs";
 import { issueReferencesFromPr, parseArgs } from "./git-github.mjs";
 import {
@@ -610,39 +611,37 @@ test("자동화 Issue의 scripts 변경은 deterministic scope guard를 통과�
   );
 });
 
-for (const [name, raw] of [
-  ["정상 JSON", '{"plan":{"issue":63}}'],
-  ["앞에 CLI 로그", 'Starting...\n{"plan":{"issue":63}}'],
-  [
-    "뒤에 CLI 통계",
-    '{"plan":{"issue":63}}\nChanges +0 -0\nAI Credits 0',
-  ],
-  [
-    "앞뒤 CLI 로그",
-    'CLI LOG\n{"plan":{"issue":63}}\nCLI STATS',
-  ],
-  [
-    "JSON 문자열 내부 중괄호",
-    '{"plan":{"issue":63},"prBody":"example: {value}"}',
-  ],
-]) {
-  test(`Agent final response scanner: ${name}`, () => {
-    assert.doesNotThrow(() => JSON.parse(extractSingleJsonObjectResponse(raw)));
-  });
-}
+test("Agent JSON contract는 순수 객체와 앞뒤 whitespace를 허용한다", () => {
+  assert.equal(normalizeAgentJsonResponse('{"one":1}'), '{"one":1}');
+  assert.equal(normalizeAgentJsonResponse(' \r\n {"one":1} \n '), '{"one":1}');
+});
 
-test("Agent final response scanner는 JSON이 없으면 실패한다", () => {
-  assert.throws(
-    () => extractSingleJsonObjectResponse("CLI LOG ONLY"),
-    /JSON 객체를 찾을 수 없습니다/u,
+test("Agent JSON contract는 정확히 하나의 json fence만 복구한다", () => {
+  assert.equal(
+    normalizeAgentJsonResponse('```json\n{"one":1}\n```'),
+    '{"one":1}',
   );
 });
 
-test("Agent final response scanner는 JSON 객체가 두 개면 실패한다", () => {
-  assert.throws(
-    () => extractSingleJsonObjectResponse('{"one":1}\n{"two":2}'),
-    /여러 개/u,
-  );
+for (const [name, raw] of [
+  ["JSON 앞 설명문", '분석 결과입니다.\n{"one":1}'],
+  ["JSON 뒤 설명문", '{"one":1}\n완료했습니다.'],
+  ["JSON 객체 두 개", '{"one":1}\n{"two":2}'],
+  ["fence 밖 텍스트", '설명\n```json\n{"one":1}\n```'],
+  ["malformed JSON", '{"one":'],
+]) {
+  test(`Agent JSON contract는 ${name}을 거부한다`, () => {
+    assert.throws(() => normalizeAgentJsonResponse(raw), /Agent/u);
+  });
+}
+
+test("Agent JSON contract diagnostic은 응답 구조만 노출한다", () => {
+  assert.deepEqual(getAgentJsonContractDiagnostics('{"one":1}\n{"two":2}'), {
+    startsWithBrace: true,
+    endsWithBrace: true,
+    hasMarkdownFence: false,
+    topLevelObjects: 2,
+  });
 });
 
 test("Copilot JSONL adapter는 마지막 assistant.message만 반환한다", () => {
@@ -665,6 +664,24 @@ test("Copilot JSONL adapter는 마지막 assistant.message만 반환한다", () 
   assert.equal(result.extractedResponseLength, result.output.length);
   assert.match(result.diagnostics, /assistant\.message/u);
 });
+
+for (const [name, content, succeeds] of [
+  ["순수 JSON", '{"one":1}', true],
+  ["json fence", '```json\n{"one":1}\n```', true],
+  ["앞 설명문", '분석 결과\n{"one":1}', false],
+  ["뒤 설명문", '{"one":1}\n완료', false],
+  ["객체 두 개", '{"one":1}\n{"two":2}', false],
+  ["malformed JSON", '{"one":', false],
+]) {
+  test(`Copilot JSONL final message contract: ${name}`, () => {
+    const raw = [
+      JSON.stringify({ type: "assistant.message", data: { content } }),
+      JSON.stringify({ type: "result", exitCode: 0 }),
+    ].join("\n");
+    if (succeeds) assert.doesNotThrow(() => extractCopilotFinalResponse(raw));
+    else assert.throws(() => extractCopilotFinalResponse(raw), /Agent/u);
+  });
+}
 
 test("PR body 계약은 리뷰 정보와 사용자 실행 보고를 분리한다", () => {
   const prompt = buildPrAgentPrompt({

@@ -38,8 +38,10 @@ export function buildPrAgentPrompt({ issue, mode, existingPr, context }) {
 11. 사용자에게 보여줄 실행 완료 보고와 GitHub 리뷰용 prBody를 섞지 않습니다. prBody에는 작업 결과를 재현·검토하는 데 필요한 정보만 작성합니다.
 
 출력 계약:
-- stdout에는 아래 스키마의 JSON 객체 하나만 출력합니다.
-- Markdown code fence, 선행/후행 설명, 로그를 출력하지 않습니다.
+- 반드시 아래 스키마를 만족하는 JSON 객체 하나만 출력합니다.
+- 응답의 첫 문자는 반드시 \`{\`, 마지막 문자는 반드시 \`}\`여야 합니다.
+- Markdown code fence와 json 코드블록을 사용하지 않습니다.
+- JSON 앞뒤 설명문, 주석, 로그 및 JSON 외 텍스트를 절대 출력하지 않습니다.
 - JSON 문자열 내부 줄바꿈은 올바르게 escape합니다.
 - plan의 mode, type, subject, slug, scope, validation은 개행이 없는 단일 행 문자열이어야 합니다.
 

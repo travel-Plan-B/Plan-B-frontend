@@ -441,11 +441,20 @@ if (analysisCheckpoint || hasGitCheckpoint) {
       agentExecution?.extractedResponseLength ??
       error.extractedResponseLength ??
       0;
+    const contract = error.contractDiagnostics;
+    const contractDetail = contract
+      ? `\n- startsWithBrace: ${contract.startsWithBrace}` +
+        `\n- endsWithBrace: ${contract.endsWithBrace}` +
+        `\n- markdownFence: ${contract.hasMarkdownFence}` +
+        `\n- topLevelObjects: ${contract.topLevelObjects}`
+      : "";
     fail(
       `Agent 응답 JSON 파싱에 실패했습니다.\n` +
         `- agent: ${agent}\n` +
         `- raw stdout length: ${rawOutputLength}\n` +
         `- extracted response length: ${extractedResponseLength}\n` +
+        contractDetail +
+        (contractDetail ? "\n" : "") +
         `- filesystem/Git 변경 없음\n` +
         `원인: ${error.message}`,
     );

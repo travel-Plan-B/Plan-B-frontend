@@ -6,11 +6,15 @@ import { fail } from "../git-github.mjs";
 export const AGENT_OUTPUT_MAX_BUFFER = 16 * 1024 * 1024;
 
 export class AgentOutputError extends TypeError {
-  constructor(message, { rawOutputLength = 0, extractedResponseLength = 0 } = {}) {
+  constructor(
+    message,
+    { rawOutputLength = 0, extractedResponseLength = 0, contractDiagnostics } = {},
+  ) {
     super(message);
     this.name = "AgentOutputError";
     this.rawOutputLength = rawOutputLength;
     this.extractedResponseLength = extractedResponseLength;
+    this.contractDiagnostics = contractDiagnostics;
   }
 }
 
@@ -122,7 +126,7 @@ export function runCli(
   return captureOutput ? result.stdout || "" : undefined;
 }
 
-export function extractSingleJsonObjectResponse(rawOutput) {
+function countTopLevelJsonObjects(rawOutput) {
   const candidates = [];
 
   for (let start = 0; start < rawOutput.length; start += 1) {
@@ -159,18 +163,58 @@ export function extractSingleJsonObjectResponse(rawOutput) {
     }
   }
 
-  if (candidates.length === 0) {
-    throw new AgentOutputError("Agent 출력에서 JSON 객체를 찾을 수 없습니다.", {
-      rawOutputLength: rawOutput.length,
+  return candidates.length;
+}
+
+export function getAgentJsonContractDiagnostics(response) {
+  const trimmed = response.trim();
+  return {
+    startsWithBrace: trimmed.startsWith("{"),
+    endsWithBrace: trimmed.endsWith("}"),
+    hasMarkdownFence: trimmed.includes("```"),
+    topLevelObjects: countTopLevelJsonObjects(trimmed),
+  };
+}
+
+export function normalizeAgentJsonResponse(
+  response,
+  { rawOutputLength = response.length, extractedResponseLength = response.length } = {},
+) {
+  const trimmed = response.trim();
+  const diagnostics = getAgentJsonContractDiagnostics(response);
+  const fenced = trimmed.match(/^```json\r?\n([\s\S]*)\r?\n```$/u);
+  const candidate = fenced ? fenced[1].trim() : trimmed;
+
+  if (diagnostics.hasMarkdownFence && !fenced) {
+    throw new AgentOutputError("Agent JSON contract 위반: JSON fence 밖의 텍스트가 있습니다.", {
+      rawOutputLength,
+      extractedResponseLength,
+      contractDiagnostics: diagnostics,
     });
   }
-  if (candidates.length > 1) {
-    throw new AgentOutputError(
-      "Agent 출력에 JSON 객체가 여러 개 있어 응답이 모호합니다.",
-      { rawOutputLength: rawOutput.length },
-    );
+
+  let parsed;
+  try {
+    parsed = JSON.parse(candidate);
+  } catch {
+    throw new AgentOutputError("Agent 출력이 단일 JSON 객체가 아닙니다.", {
+      rawOutputLength,
+      extractedResponseLength,
+      contractDiagnostics: diagnostics,
+    });
   }
-  return candidates[0];
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new AgentOutputError("Agent 결과는 JSON 객체여야 합니다.", {
+      rawOutputLength,
+      extractedResponseLength,
+      contractDiagnostics: diagnostics,
+    });
+  }
+  return candidate;
+}
+
+export function extractSingleJsonObjectResponse(rawOutput) {
+  return normalizeAgentJsonResponse(rawOutput);
 }
 
 export function extractCopilotFinalResponse(rawOutput) {
@@ -201,8 +245,12 @@ export function extractCopilotFinalResponse(rawOutput) {
     );
   }
   const finalResponse = messages.at(-1).data.content.trim();
+  const output = normalizeAgentJsonResponse(finalResponse, {
+    rawOutputLength: rawOutput.length,
+    extractedResponseLength: finalResponse.length,
+  });
   return {
-    output: finalResponse,
+    output,
     diagnostics: `Copilot JSONL events: ${events.map((event) => event?.type || "unknown").join(", ")}`,
     rawOutputLength: rawOutput.length,
     extractedResponseLength: finalResponse.length,
@@ -210,7 +258,7 @@ export function extractCopilotFinalResponse(rawOutput) {
 }
 
 export function createAgentResult(rawOutput) {
-  const output = extractSingleJsonObjectResponse(rawOutput);
+  const output = normalizeAgentJsonResponse(rawOutput);
   return {
     output,
     diagnostics: "",
@@ -241,7 +289,11 @@ export function extractCodexFinalResponse(rawOutput) {
       rawOutputLength: rawOutput.length,
     });
   }
-  const output = messages.at(-1).item.text.trim();
+  const finalResponse = messages.at(-1).item.text.trim();
+  const output = normalizeAgentJsonResponse(finalResponse, {
+    rawOutputLength: rawOutput.length,
+    extractedResponseLength: finalResponse.length,
+  });
   return {
     output,
     diagnostics: `Codex JSONL events: ${events.map((event) => event?.type || "unknown").join(", ")}`,
