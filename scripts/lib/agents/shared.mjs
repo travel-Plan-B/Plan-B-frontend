@@ -2,6 +2,9 @@ import { spawnSync } from "node:child_process";
 
 import { fail } from "../git-github.mjs";
 
+// Agent JSONL과 최종 응답이 커질 수 있어 Node 기본 1 MiB보다 여유 있게 둔다.
+export const AGENT_OUTPUT_MAX_BUFFER = 16 * 1024 * 1024;
+
 export class AgentOutputError extends TypeError {
   constructor(message, { rawOutputLength = 0, extractedResponseLength = 0 } = {}) {
     super(message);
@@ -98,6 +101,7 @@ export function runCli(
     encoding: "utf8",
     shell: false,
     input,
+    maxBuffer: captureOutput ? AGENT_OUTPUT_MAX_BUFFER : undefined,
     stdio: captureOutput
       ? [input ? "pipe" : "inherit", "pipe", "inherit"]
       : input
@@ -106,6 +110,9 @@ export function runCli(
   });
   if (result.error?.code === "ENOENT") {
     fail(`${displayName} CLI를 찾을 수 없습니다.`);
+  }
+  if (result.error) {
+    fail(`${displayName} 실행에 실패했습니다.\n${result.error.message}`);
   }
   if (result.status !== 0) {
     fail(
@@ -207,6 +214,37 @@ export function createAgentResult(rawOutput) {
   return {
     output,
     diagnostics: "",
+    rawOutputLength: rawOutput.length,
+    extractedResponseLength: output.length,
+  };
+}
+
+export function extractCodexFinalResponse(rawOutput) {
+  const events = rawOutput.split(/\r?\n/u).filter(Boolean).map((line) => {
+    try {
+      return JSON.parse(line);
+    } catch {
+      throw new AgentOutputError("Codex JSONL 출력에 올바르지 않은 event가 있습니다.", {
+        rawOutputLength: rawOutput.length,
+      });
+    }
+  });
+  const messages = events.filter(
+    (event) =>
+      event?.type === "item.completed" &&
+      event.item?.type === "agent_message" &&
+      typeof event.item.text === "string" &&
+      event.item.text.trim(),
+  );
+  if (messages.length === 0) {
+    throw new AgentOutputError("Codex JSONL 출력에 final agent_message가 없습니다.", {
+      rawOutputLength: rawOutput.length,
+    });
+  }
+  const output = messages.at(-1).item.text.trim();
+  return {
+    output,
+    diagnostics: `Codex JSONL events: ${events.map((event) => event?.type || "unknown").join(", ")}`,
     rawOutputLength: rawOutput.length,
     extractedResponseLength: output.length,
   };

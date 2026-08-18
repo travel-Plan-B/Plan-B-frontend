@@ -1,6 +1,8 @@
 import {
   existsSync,
+  lstatSync,
   readFileSync,
+  readlinkSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -18,6 +20,7 @@ import {
   getIssueInfo,
   issueReferencesFromPr,
   outputOf,
+  rawOutputOf,
   parseArgs,
   parseBranch,
   prompt,
@@ -40,6 +43,7 @@ import {
   fingerprintText,
   findUnrelatedToolingChanges,
   getAnalysisCheckpointIntegrityError,
+  getAgentMutationError,
   getScopeBlockReason,
   normalizeSubjectIssueSuffix,
   parseAgentResult,
@@ -251,7 +255,7 @@ function readJsonFile(file, label) {
 }
 
 function changesFingerprint() {
-  const trackedDiff = outputOf("git", [
+  const trackedDiff = rawOutputOf("git", [
     "diff",
     "HEAD",
     "--binary",
@@ -265,10 +269,17 @@ function changesFingerprint() {
   ])
     .split("\0")
     .filter(Boolean);
-  const untrackedFiles = untrackedPaths.map((path) => ({
-    path: normalizeGitPath(path),
-    content: readFileSync(resolve(cwd, path)),
-  }));
+  const untrackedFiles = untrackedPaths.map((path) => {
+    const absolutePath = resolve(cwd, path);
+    const stat = lstatSync(absolutePath);
+    return {
+      path: normalizeGitPath(path),
+      type: stat.isSymbolicLink() ? "symlink" : "file",
+      mode: stat.mode,
+      linkTarget: stat.isSymbolicLink() ? readlinkSync(absolutePath) : "",
+      content: stat.isSymbolicLink() ? Buffer.alloc(0) : readFileSync(absolutePath),
+    };
+  });
   return fingerprintWorkingTree({ trackedDiff, untrackedFiles });
 }
 
@@ -427,8 +438,14 @@ if (analysisCheckpoint || hasGitCheckpoint) {
   const agentStartedAt = performance.now();
   let agentExecution;
   let agentResult;
+  const fingerprintBeforeAgent = changesFingerprint();
   try {
     agentExecution = runAgent({ prompt: agentPrompt, cwd });
+    const mutationError = getAgentMutationError(
+      fingerprintBeforeAgent,
+      changesFingerprint(),
+    );
+    if (mutationError) fail(mutationError);
     console.log(
       `ℹ Agent 실행: ${((performance.now() - agentStartedAt) / 1000).toFixed(1)}s`,
     );
@@ -499,7 +516,7 @@ if (analysisCheckpoint || hasGitCheckpoint) {
     mode,
     sourceBranch: branch,
     targetBranch,
-    changesFingerprint: changesFingerprint(),
+    changesFingerprint: fingerprintBeforeAgent,
     planFingerprint: fingerprintText(planData.content),
   };
   writeFileSync(

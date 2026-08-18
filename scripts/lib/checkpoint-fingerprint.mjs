@@ -11,6 +11,12 @@ export function fingerprintWorkingTree({ trackedDiff, untrackedFiles }) {
     hash.update("\0untracked\0");
     hash.update(file.path);
     hash.update("\0");
+    hash.update(file.type || "file");
+    hash.update("\0");
+    hash.update(String(file.mode ?? ""));
+    hash.update("\0");
+    hash.update(file.linkTarget || "");
+    hash.update("\0");
     hash.update(file.content);
   }
 

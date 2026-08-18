@@ -18,7 +18,8 @@ const ALLOWED_TOOLS = [
   "shell(gh pr diff:*)",
 ];
 
-const DENIED_TOOLS = [
+export const DENIED_TOOLS = [
+  "write",
   "shell(git add:*)",
   "shell(git branch:*)",
   "shell(git commit:*)",

@@ -1,7 +1,7 @@
 import {
   assertAuth,
   assertCommand,
-  createAgentResult,
+  extractCodexFinalResponse,
   resolveCliCommand,
   runCli,
 } from "./shared.mjs";
@@ -17,11 +17,12 @@ export function runAgent({ prompt, cwd }) {
       "--sandbox",
       "read-only",
       "--ephemeral",
+      "--json",
       "--cd",
       cwd,
       "-",
     ],
     { cwd, displayName: "Codex", input: prompt, captureOutput: true },
   );
-  return createAgentResult(rawOutput);
+  return extractCodexFinalResponse(rawOutput);
 }

@@ -20,7 +20,11 @@ const ALLOWED_TOOLS = [
   "Bash(gh pr diff:*)",
 ].join(",");
 
-const DENIED_TOOLS = [
+export const DENIED_TOOLS = [
+  "Write",
+  "Edit",
+  "MultiEdit",
+  "NotebookEdit",
   "Bash(git add:*)",
   "Bash(git branch:*)",
   "Bash(git commit:*)",

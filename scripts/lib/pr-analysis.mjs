@@ -16,14 +16,20 @@ export function fingerprintText(value) {
   return createHash("sha256").update(value).digest("hex");
 }
 
+export function getAgentMutationError(before, after) {
+  return before === after
+    ? null
+    : "Agent 실행 중 작업 트리가 변경되었습니다. artifact 저장과 staging 전에 중단합니다.";
+}
+
 const RESULT_TEXT_FIELDS = ["issueResult", "prBody", "issueBody"];
 const PROTECTED_TOOLING_PATHS = [
   /^scripts\//u,
   /^\.github\//u,
   /^(?:package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|\.npmrc)$/u,
 ];
-const TOOLING_ISSUE_PATTERN =
-  /(?:자동화|개발\s*환경|툴링|도구|automation|tooling|workflow|\bci\b)/iu;
+const TOOLING_ISSUE_MARKER = "<!-- planb:tooling -->";
+const TOOLING_TITLE_PATTERN = /(?:자동화|툴링|automation|tooling)/iu;
 
 export function parseAgentResult(output) {
   let result;
@@ -49,6 +55,10 @@ export function parseAgentResult(output) {
   if (missing.length > 0) {
     throw new TypeError(`Agent plan 필드가 없거나 비어 있습니다: ${missing.join(", ")}`);
   }
+  const multiline = requiredStrings.filter((field) => /[\r\n]/u.test(plan[field]));
+  if (multiline.length > 0) {
+    throw new TypeError(`Agent plan 문자열은 한 줄이어야 합니다: ${multiline.join(", ")}`);
+  }
   if (!Number.isInteger(plan.issue) || plan.issue <= 0) {
     throw new TypeError("Agent plan issue는 양의 정수여야 합니다.");
   }
@@ -68,6 +78,14 @@ export function parseAgentResult(output) {
     if (result[field] !== null && typeof result[field] !== "string") {
       throw new TypeError(`Agent 결과 ${field}는 문자열 또는 null이어야 합니다.`);
     }
+  }
+  if (
+    plan.mode === "create" &&
+    ![result.issueResult, result.prBody].every(
+      (value) => typeof value === "string" && value.trim(),
+    )
+  ) {
+    throw new TypeError("create mode에는 비어 있지 않은 issueResult와 prBody가 필요합니다.");
   }
 
   return {
@@ -106,8 +124,10 @@ export function writeAgentArtifacts(
 }
 
 export function findUnrelatedToolingChanges(changedFiles, issue) {
-  const issueText = `${issue?.title || ""}\n${issue?.body || ""}`;
-  if (TOOLING_ISSUE_PATTERN.test(issueText)) return [];
+  const isToolingIssue =
+    TOOLING_TITLE_PATTERN.test(issue?.title || "") ||
+    (issue?.body || "").includes(TOOLING_ISSUE_MARKER);
+  if (isToolingIssue) return [];
   return [...new Set(changedFiles.map((file) => file.replaceAll("\\", "/")))]
     .filter((file) => PROTECTED_TOOLING_PATHS.some((pattern) => pattern.test(file)))
     .sort();

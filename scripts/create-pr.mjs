@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, lstatSync, readFileSync, readlinkSync, rmSync, writeFileSync } from "node:fs";
 import { relative, resolve } from "node:path";
 import { fingerprintWorkingTree } from "./lib/checkpoint-fingerprint.mjs";
 import {
@@ -19,6 +19,7 @@ import {
   issueInfo,
   issueReferencesFromPr,
   outputOf,
+  rawOutputOf,
   parseArgs,
   parseBranch,
   prompt,
@@ -110,12 +111,12 @@ function fingerprint(value) {
 
 function stagedFingerprint() {
   return fingerprint(
-    outputOf("git", ["diff", "--cached", "--binary", "--no-ext-diff"]),
+    rawOutputOf("git", ["diff", "--cached", "--binary", "--no-ext-diff"]),
   );
 }
 
 function workingTreeFingerprint() {
-  const trackedDiff = outputOf("git", ["diff", "--binary", "--no-ext-diff"]);
+  const trackedDiff = rawOutputOf("git", ["diff", "--binary", "--no-ext-diff"]);
   const untrackedPaths = outputOf("git", [
     "ls-files",
     "--others",
@@ -124,10 +125,17 @@ function workingTreeFingerprint() {
   ])
     .split("\0")
     .filter(Boolean);
-  const untrackedFiles = untrackedPaths.map((path) => ({
-    path: path.replaceAll("\\", "/"),
-    content: readFileSync(resolve(path)),
-  }));
+  const untrackedFiles = untrackedPaths.map((path) => {
+    const absolutePath = resolve(path);
+    const stat = lstatSync(absolutePath);
+    return {
+      path: path.replaceAll("\\", "/"),
+      type: stat.isSymbolicLink() ? "symlink" : "file",
+      mode: stat.mode,
+      linkTarget: stat.isSymbolicLink() ? readlinkSync(absolutePath) : "",
+      content: stat.isSymbolicLink() ? Buffer.alloc(0) : readFileSync(absolutePath),
+    };
+  });
 
   return fingerprintWorkingTree({ trackedDiff, untrackedFiles });
 }

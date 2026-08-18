@@ -41,6 +41,7 @@ export function buildPrAgentPrompt({ issue, mode, existingPr, context }) {
 - stdout에는 아래 스키마의 JSON 객체 하나만 출력합니다.
 - Markdown code fence, 선행/후행 설명, 로그를 출력하지 않습니다.
 - JSON 문자열 내부 줄바꿈은 올바르게 escape합니다.
+- plan의 mode, type, subject, slug, scope, validation은 개행이 없는 단일 행 문자열이어야 합니다.
 
 {
   "plan": {

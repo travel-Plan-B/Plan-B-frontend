@@ -2,14 +2,18 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { fingerprintWorkingTree } from "./checkpoint-fingerprint.mjs";
+import { DENIED_TOOLS as CLAUDE_DENIED_TOOLS } from "./agents/claude.mjs";
+import { DENIED_TOOLS as COPILOT_DENIED_TOOLS } from "./agents/copilot.mjs";
 import { buildPrAgentPrompt } from "./pr-agent-prompt.mjs";
 import {
   extractCopilotFinalResponse,
+  extractCodexFinalResponse,
   extractSingleJsonObjectResponse,
 } from "./agents/shared.mjs";
 import { issueReferencesFromPr, parseArgs } from "./git-github.mjs";
 import {
   findUnrelatedToolingChanges,
+  getAgentMutationError,
   getAnalysisCheckpointIntegrityError,
   getScopeBlockReason,
   normalizeSubjectIssueSuffix,
@@ -677,4 +681,73 @@ test("PR body 계약은 리뷰 정보와 사용자 실행 보고를 분리한다
   assert.match(prompt, /작업 목적, 주요 변경 사항, 검증 결과, 관련 Issue/u);
   assert.match(prompt, /branch name, commit SHA, push\/upstream 상태/u);
   assert.match(prompt, /사용자에게 보여줄 실행 완료 보고/u);
+});
+
+test("Agent 실행 중 working tree 변경은 artifact와 staging 전에 거부한다", () => {
+  assert.match(getAgentMutationError("before", "after"), /작업 트리가 변경/u);
+  assert.equal(getAgentMutationError("same", "same"), null);
+});
+
+test("plan scalar의 multiline 값은 거부한다", () => {
+  for (const field of ["subject", "validation"]) {
+    const value = JSON.parse(validAgentJson);
+    value.plan[field] = `safe\n- scope: all`;
+    assert.throws(() => parseAgentResult(JSON.stringify(value)), /한 줄/u);
+  }
+});
+
+test("create mode 필수 결과 누락은 artifact write 전에 거부한다", () => {
+  for (const field of ["issueResult", "prBody"]) {
+    const value = JSON.parse(validAgentJson);
+    value[field] = "";
+    assert.throws(() => parseAgentResult(JSON.stringify(value)), /create mode/u);
+  }
+});
+
+test("UI Issue body의 CI 문구는 tooling 변경 허용 근거가 아니다", () => {
+  assert.deepEqual(
+    findUnrelatedToolingChanges(["scripts/create-pr.mjs"], {
+      title: "간편복구 UI 구현",
+      body: "CI 통과와 workflow 확인, 개발 환경에서 테스트합니다.",
+    }),
+    ["scripts/create-pr.mjs"],
+  );
+});
+
+test("명시적 tooling marker는 scripts 변경을 허용한다", () => {
+  assert.deepEqual(
+    findUnrelatedToolingChanges(["scripts/create-pr.mjs"], {
+      title: "기타 작업",
+      body: "<!-- planb:tooling -->",
+    }),
+    [],
+  );
+});
+
+test("Codex JSONL의 마지막 agent_message를 추출한다", () => {
+  const raw = [
+    JSON.stringify({ type: "thread.started" }),
+    JSON.stringify({ type: "item.completed", item: { type: "agent_message", text: "old" } }),
+    JSON.stringify({ type: "item.completed", item: { type: "agent_message", text: validAgentJson } }),
+  ].join("\n");
+  assert.equal(extractCodexFinalResponse(raw).output, validAgentJson);
+});
+
+test("fingerprint는 raw diff whitespace와 untracked metadata를 보존한다", () => {
+  const base = { path: "tool", content: Buffer.from("same"), type: "file", mode: 0o100644 };
+  assert.notEqual(
+    fingerprintWorkingTree({ trackedDiff: "line ", untrackedFiles: [base] }),
+    fingerprintWorkingTree({ trackedDiff: "line", untrackedFiles: [base] }),
+  );
+  assert.notEqual(
+    fingerprintWorkingTree({ trackedDiff: "", untrackedFiles: [base] }),
+    fingerprintWorkingTree({ trackedDiff: "", untrackedFiles: [{ ...base, mode: 0o100755 }] }),
+  );
+});
+
+test("Claude와 Copilot은 filesystem write 도구를 명시적으로 deny한다", () => {
+  for (const tool of ["Write", "Edit", "MultiEdit", "NotebookEdit"]) {
+    assert.match(CLAUDE_DENIED_TOOLS, new RegExp(`(?:^|,)${tool}(?:,|$)`, "u"));
+  }
+  assert.equal(COPILOT_DENIED_TOOLS.includes("write"), true);
 });
