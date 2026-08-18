@@ -8,11 +8,14 @@ export interface StepperStep {
   label: string;
 }
 
+export type StepperSize = "md" | "sm";
+
 export interface StepperProps {
   steps: StepperStep[];
   // 1부터 시작하는 현재 단계 번호. 이 번호보다 작은 단계는 완료, 같으면 현재,
   // 크면 예정으로 자동 계산된다.
   currentStep: number;
+  size?: StepperSize;
   className?: string;
 }
 
@@ -27,7 +30,27 @@ function getStepStatus(stepNumber: number, currentStep: number): StepStatus {
   return "upcoming";
 }
 
-export function Stepper({ steps, currentStep, className }: StepperProps) {
+const circleSizeStyles: Record<StepperSize, string> = {
+  md: "size-8 text-sm",
+  sm: "size-6 text-xs",
+};
+
+const checkSizeStyles: Record<StepperSize, string> = {
+  md: "size-4",
+  sm: "size-3",
+};
+
+const connectorSizeStyles: Record<StepperSize, string> = {
+  md: "mx-2 w-8",
+  sm: "mx-1.5 w-6",
+};
+
+export function Stepper({
+  steps,
+  currentStep,
+  size = "md",
+  className,
+}: StepperProps) {
   return (
     <div className={cn("flex items-center", className)}>
       {steps.map((step, index) => {
@@ -44,10 +67,11 @@ export function Stepper({ steps, currentStep, className }: StepperProps) {
         return (
           <div key={step.label} className="flex items-center">
             <div className="flex items-center gap-2">
-              {/* 원형 단계 표시: 32px 고정 크기(size-8), 완전한 원(rounded-full). */}
+              {/* 원형 단계 표시: 완전한 원(rounded-full), 크기는 size prop을 따름. */}
               <span
                 className={cn(
-                  "flex size-8 shrink-0 items-center justify-center rounded-full text-sm font-bold",
+                  "flex shrink-0 items-center justify-center rounded-full font-bold",
+                  circleSizeStyles[size],
                   isActive
                     ? "bg-primary-500 text-white"
                     : "border border-neutral-400 bg-white text-neutral-700",
@@ -55,7 +79,7 @@ export function Stepper({ steps, currentStep, className }: StepperProps) {
               >
                 {/* 완료된 단계만 체크 아이콘, 나머지(현재/예정)는 단계 번호를 보여준다. */}
                 {status === "completed" ? (
-                  <Check className="size-4" />
+                  <Check className={checkSizeStyles[size]} />
                 ) : (
                   stepNumber
                 )}
@@ -71,7 +95,11 @@ export function Stepper({ steps, currentStep, className }: StepperProps) {
               </span>
             </div>
             {/* 단계 사이 연결선. 마지막 단계에는 렌더링하지 않는다. */}
-            {!isLast && <div className="mx-2 h-px w-8 bg-neutral-400" />}
+            {!isLast && (
+              <div
+                className={cn("h-px bg-neutral-400", connectorSizeStyles[size])}
+              />
+            )}
           </div>
         );
       })}
