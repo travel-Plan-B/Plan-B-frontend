@@ -1,19 +1,26 @@
 import type { StaticImageData } from "next/image";
-import type { CSSProperties, HTMLAttributes } from "react";
+import type { CSSProperties, HTMLAttributes, ReactNode } from "react";
 
 import { cn } from "@/shared/lib/cn";
 
 export type IconBadgeVariant = "mint" | "purple" | "pink" | "orange" | "gray";
 export type IconBadgeSize = "sm" | "md" | "lg";
 
-export interface IconBadgeProps extends Omit<
-  HTMLAttributes<HTMLSpanElement>,
-  "children"
-> {
-  icon: StaticImageData | string;
-  variant?: IconBadgeVariant;
-  size?: IconBadgeSize;
-}
+type IconBadgeContentProps =
+  | {
+      icon: StaticImageData | string;
+      children?: never;
+    }
+  | {
+      icon?: never;
+      children: ReactNode;
+    };
+
+export type IconBadgeProps = Omit<HTMLAttributes<HTMLSpanElement>, "children"> &
+  IconBadgeContentProps & {
+    variant?: IconBadgeVariant;
+    size?: IconBadgeSize;
+  };
 
 const variantStyles: Record<IconBadgeVariant, string> = {
   mint: "bg-primary-100 text-primary-700",
@@ -31,17 +38,19 @@ const sizeStyles: Record<IconBadgeSize, string> = {
 
 export function IconBadge({
   icon,
+  children,
   variant = "gray",
   size = "md",
   className,
   "aria-label": ariaLabel,
   ...props
 }: IconBadgeProps) {
-  const iconUrl = typeof icon === "string" ? icon : icon.src;
-  const iconStyle = {
-    maskImage: `url("${iconUrl}")`,
-    WebkitMaskImage: `url("${iconUrl}")`,
-  } satisfies CSSProperties;
+  const iconStyle = icon
+    ? ({
+        maskImage: `url("${typeof icon === "string" ? icon : icon.src}")`,
+        WebkitMaskImage: `url("${typeof icon === "string" ? icon : icon.src}")`,
+      } satisfies CSSProperties)
+    : undefined;
 
   return (
     <span
@@ -56,11 +65,13 @@ export function IconBadge({
       )}
       {...props}
     >
-      <span
-        aria-hidden="true"
-        className="block bg-current mask-center mask-no-repeat mask-contain"
-        style={iconStyle}
-      />
+      {children ?? (
+        <span
+          aria-hidden="true"
+          className="block bg-current mask-center mask-no-repeat mask-contain"
+          style={iconStyle}
+        />
+      )}
     </span>
   );
 }

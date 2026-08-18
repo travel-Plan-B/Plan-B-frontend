@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { CalendarX } from "lucide-react";
 
 import calendarIcon from "@/shared/assets/icons/calendar.svg";
 import carIcon from "@/shared/assets/icons/car.svg";
@@ -70,6 +71,13 @@ export const Sizes: Story = {
       <IconBadge icon={clockIcon} size="lg" aria-label="Large" />
     </div>
   ),
+};
+
+export const ReactIcon: Story = {
+  args: {
+    icon: undefined,
+    children: <CalendarX />,
+  },
 };
 
 export const Icons: Story = {
