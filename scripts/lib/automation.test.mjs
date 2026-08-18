@@ -749,6 +749,30 @@ test("fingerprint는 raw diff whitespace와 untracked metadata를 보존한다",
   );
 });
 
+test("fingerprint는 Git path의 slash와 backslash를 서로 다르게 보존한다", () => {
+  const file = {
+    type: "file",
+    mode: 0o100644,
+    linkTarget: "",
+    content: Buffer.from("same"),
+  };
+  const slashPath = snapshotUntrackedFile("a/b", process.cwd(), {
+    lstat: () => ({ mode: file.mode, isFile: () => true, isSymbolicLink: () => false }),
+    readFile: () => file.content,
+  });
+  const backslashPath = snapshotUntrackedFile("a\\b", process.cwd(), {
+    lstat: () => ({ mode: file.mode, isFile: () => true, isSymbolicLink: () => false }),
+    readFile: () => file.content,
+  });
+
+  assert.equal(slashPath.path, "a/b");
+  assert.equal(backslashPath.path, "a\\b");
+  assert.notEqual(
+    fingerprintWorkingTree({ trackedDiff: "", untrackedFiles: [slashPath] }),
+    fingerprintWorkingTree({ trackedDiff: "", untrackedFiles: [backslashPath] }),
+  );
+});
+
 test("Claude와 Copilot은 filesystem write 도구를 명시적으로 deny한다", () => {
   for (const tool of ["Write", "Edit", "MultiEdit", "NotebookEdit"]) {
     assert.match(CLAUDE_DENIED_TOOLS, new RegExp(`(?:^|,)${tool}(?:,|$)`, "u"));

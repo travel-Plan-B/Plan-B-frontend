@@ -41,7 +41,8 @@ export function snapshotUntrackedFile(
   }
   const symbolicLink = stat.isSymbolicLink();
   return {
-    path: path.replaceAll("\\", "/"),
+    // Fingerprints must preserve the exact path spelling returned by Git.
+    path,
     type: symbolicLink ? "symlink" : "file",
     mode: stat.mode,
     linkTarget: symbolicLink ? readlink(absolutePath) : "",
