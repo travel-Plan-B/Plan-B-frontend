@@ -2,13 +2,16 @@
 
 import { useState } from "react";
 import { CalendarX } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 import clockIcon from "@/shared/assets/icons/clock.svg";
 import rainIcon from "@/shared/assets/icons/rain.svg";
 import { RecoveryPageLayout } from "@/features/recovery/components/RecoveryPageLayout";
 import { RecoveryTypeCard } from "@/features/recovery/components/RecoveryTypeCard";
+import { SIMPLE_RECOVERY_STEPS } from "@/features/recovery/simple/steps";
 import { Button } from "@/shared/components/ui/Button";
 import { IconBadge } from "@/shared/components/ui/IconBadge";
+import { ROUTES } from "@/shared/config/routes";
 
 type RecoveryReason = "weather" | "closed" | "delay";
 
@@ -45,7 +48,8 @@ const RECOVERY_REASONS = [
   example: string;
 }>;
 
-export function SimpleRecoveryReasonPage() {
+export function SimpleRecoverySetupPage() {
+  const router = useRouter();
   const [selectedReason, setSelectedReason] = useState<RecoveryReason | null>(
     null,
   );
@@ -55,6 +59,7 @@ export function SimpleRecoveryReasonPage() {
       title="다음 일정에 어떤 문제가 생겼나요?"
       description="다음 목적지를 변경해야 하는 이유를 가장 잘 설명하는 상황을 선택해 주세요"
       currentStep={1}
+      steps={SIMPLE_RECOVERY_STEPS}
     >
       <div
         role="group"
@@ -97,7 +102,12 @@ export function SimpleRecoveryReasonPage() {
       </div>
 
       <div className="mt-12 flex justify-end">
-        <Button variant="default" size="lg" disabled={!selectedReason}>
+        <Button
+          variant="default"
+          size="lg"
+          disabled={!selectedReason}
+          onClick={() => router.push(ROUTES.RECOVERY_SIMPLE_INFO)}
+        >
           다음으로 넘어가기
         </Button>
       </div>

@@ -11,11 +11,14 @@
 
 ## 현재 route
 
-| URL                | 역할      | route entry                        |
-| ------------------ | --------- | ---------------------------------- |
-| `/`                | 메인      | `src/app/page.tsx`                 |
-| `/recovery/simple` | 간편 복구 | `src/app/recovery/simple/page.tsx` |
-| `/recovery/detail` | 상세 복구 | `src/app/recovery/detail/page.tsx` |
+| URL                          | 역할                     | route entry                                  |
+| ---------------------------- | ------------------------ | -------------------------------------------- |
+| `/`                          | 메인                     | `src/app/page.tsx`                           |
+| `/recovery/simple`           | 간편 복구 시작(redirect) | `src/app/recovery/simple/page.tsx`           |
+| `/recovery/simple/setup`     | 간편 복구 상황 설정      | `src/app/recovery/simple/setup/page.tsx`     |
+| `/recovery/simple/info`      | 간편 복구 정보 입력      | `src/app/recovery/simple/info/page.tsx`      |
+| `/recovery/simple/recommend` | 간편 복구 AI 추천        | `src/app/recovery/simple/recommend/page.tsx` |
+| `/recovery/detail`           | 상세 복구                | `src/app/recovery/detail/page.tsx`           |
 
 목록에 없는 URL은 전역 `src/app/not-found.tsx`에서 처리한다.
 
@@ -62,6 +65,9 @@ export default function Page() {
 export const ROUTES = {
   HOME: "/",
   RECOVERY_SIMPLE: "/recovery/simple",
+  RECOVERY_SIMPLE_SETUP: "/recovery/simple/setup",
+  RECOVERY_SIMPLE_INFO: "/recovery/simple/info",
+  RECOVERY_SIMPLE_RECOMMEND: "/recovery/simple/recommend",
   RECOVERY_DETAIL: "/recovery/detail",
 } as const;
 ```
