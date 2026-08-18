@@ -24,16 +24,21 @@ import {
   CompletionMarkerError,
   finalizeCompletedRun,
 } from "./lib/completion-marker.mjs";
-import { determineRequiredChecks } from "./lib/validation-policy.mjs";
+import {
+  determineRequiredChecks,
+  normalizeGitPath,
+} from "./lib/validation-policy.mjs";
 
 const workflowStartedAt = performance.now();
 
 const AGENTS = ["codex", "claude", "copilot"];
 const args = parseArgs(process.argv.slice(2));
-assertAllowedArgs(args, ["agent", "issue", "help"]);
+assertAllowedArgs(args, ["agent", "issue", "help", "reset-checkpoint"]);
 
 if (args.help) {
-  console.log("pnpm pr [--agent codex|claude|copilot] [--issue 42]");
+  console.log(
+    "pnpm pr [--agent codex|claude|copilot] [--issue 42] [--reset-checkpoint]",
+  );
   process.exit(0);
 }
 
@@ -187,23 +192,44 @@ const absoluteTempDir = resolve(cwd, tempDir);
 const finishedFile = resolve(absoluteTempDir, "finished.json");
 const gitCheckpointFile = resolve(absoluteTempDir, "git-checkpoint.json");
 mkdirSync(absoluteTempDir, { recursive: true });
+if (args["reset-checkpoint"] && existsSync(gitCheckpointFile)) {
+  let checkpoint;
+  try {
+    checkpoint = JSON.parse(readFileSync(gitCheckpointFile, "utf8"));
+  } catch {
+    fail("Git checkpoint가 손상되어 안전하게 초기화할 수 없습니다.");
+  }
+  const head = outputOf("git", ["rev-parse", "HEAD"]);
+  if (checkpoint.phase !== "started" || checkpoint.commit !== head) {
+    fail(
+      "commit 전 started checkpoint이며 HEAD가 일치할 때만 자동화된 초기화가 가능합니다.",
+    );
+  }
+  rmSync(gitCheckpointFile);
+  console.log("✓ commit 전 Git checkpoint를 안전하게 초기화했습니다.");
+} else if (args["reset-checkpoint"]) {
+  console.log("ℹ 초기화할 Git checkpoint가 없습니다.");
+}
 if (existsSync(finishedFile)) rmSync(finishedFile);
 process.env.PLANB_PR_FINISHED_FILE = finishedFile;
 process.env.PLANB_PR_GIT_CHECKPOINT_FILE = gitCheckpointFile;
 
 const stagedFiles = outputOf("git", ["diff", "--cached", "--name-only"])
   .split(/\r?\n/u)
-  .filter(Boolean);
+  .filter(Boolean)
+  .map(normalizeGitPath);
 const unstagedFiles = outputOf("git", ["diff", "--name-only"])
   .split(/\r?\n/u)
-  .filter(Boolean);
+  .filter(Boolean)
+  .map(normalizeGitPath);
 const untrackedFiles = outputOf("git", [
   "ls-files",
   "--others",
   "--exclude-standard",
-])
+  ])
   .split(/\r?\n/u)
-  .filter(Boolean);
+  .filter(Boolean)
+  .map(normalizeGitPath);
 const changedFiles = [
   ...new Set([...stagedFiles, ...unstagedFiles, ...untrackedFiles]),
 ];

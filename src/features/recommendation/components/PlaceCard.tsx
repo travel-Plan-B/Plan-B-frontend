@@ -2,7 +2,7 @@ import type { HTMLAttributes, MouseEventHandler } from "react";
 import { Clock, MapPin, ParkingCircle, Star } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/Button";
-import { PlaceCardImage } from "@/shared/components/ui/PlaceCardImage";
+import { PlaceCardImage } from "./PlaceCardImage";
 import { Tag } from "@/shared/components/ui/Tag";
 import { cn } from "@/shared/lib/cn";
 

@@ -48,12 +48,14 @@ ${modeInstruction}
 2. 제공된 Issue와 작업 범위가 모순될 때만 필요한 최소 조회를 추가한다.
 3. 작업 type, 영문 kebab-case branch slug, 한국어 commit/PR subject를 결정한다.
 4. pr:finish가 정책상 최소 검증을 실행한다. 변경 특성상 필요한 추가 test만 선택해 실행한다.
-5. 작업과 관련된 파일만 경로를 명시해 git add한다. git add . 또는 git add -A를 사용하지 않는다.
-6. create mode에서는 ${tempDir}/issue-result.md와 ${tempDir}/pr-body.md를 작성한다. update mode에서는 갱신이 필요할 때만 해당 파일을 작성한다.
-7. 빠른 Issue(본문에 <!-- planb:quick-issue --> marker가 있음)라면 ${tempDir}/issue-body.md도 작성한다. 정식 Issue라면 기존 요구사항을 보존하며 issue-body.md를 만들지 않는다.
-8. PR 본문은 .github/pull_request_template.md를 따르고 실행한 검증 결과와 Closes #번호를 포함한다.
-9. 모든 판단과 검증, staging, Markdown 작성 후 pnpm pr:finish를 필요한 인자와 파일 경로로 정확히 한 번 실행한다.
-10. ${tempDir}/git-checkpoint.json이 있으면 이전 실행에서 commit 또는 push 이후 단계가 실패한 상태다. 새 변경사항을 stage하지 말고 기존 Markdown과 동일한 인자로 pr:finish를 다시 실행해 안전하게 재개한다.
+5. git status와 diff로 모든 working tree 변경이 이번 Issue 범위인지 확인한다. 이미 필요한 변경이 staged되어 있으면 재-stage하지 않는다.
+6. staged 변경이 없고 모든 working tree 변경이 이번 Issue 범위임이 확인된 경우에만 별도 shell command로 git add -A를 실행한다. unrelated 변경이 섞여 있으면 관련 파일만 git add -- path/to/file 형식으로 stage하며 Git 경로는 Windows에서도 역슬래시가 아닌 /로 정규화한다.
+7. stage 직후 별도 shell command로 git status --short와 git diff --cached --name-status -M을 확인한다. 예상 범위와 다르면 pr:finish를 실행하지 않고 중단한다.
+8. create mode에서는 ${tempDir}/issue-result.md와 ${tempDir}/pr-body.md를 작성한다. update mode에서는 갱신이 필요할 때만 해당 파일을 작성한다.
+9. 빠른 Issue(본문에 <!-- planb:quick-issue --> marker가 있음)라면 ${tempDir}/issue-body.md도 작성한다. 정식 Issue라면 기존 요구사항을 보존하며 issue-body.md를 만들지 않는다.
+10. PR 본문은 .github/pull_request_template.md를 따르고 실행한 검증 결과와 Closes #번호를 포함한다.
+11. stage와 cached diff 확인이 끝난 뒤, 이들과 결합하지 않은 별도 shell command로 pnpm pr:finish를 필요한 인자와 파일 경로로 정확히 한 번 실행한다.
+12. ${tempDir}/git-checkpoint.json이 있으면 기록된 phase와 현재 staged/working tree 상태를 먼저 확인한다. 상태가 유효하면 새 변경사항을 stage하거나 이미 성공한 검증을 반복하지 말고 기존 Markdown과 동일한 인자로 pr:finish를 실행해 재개한다. 상태가 다르면 checkpoint를 삭제하거나 자동 복구하지 말고 중단한다.
 
 필수 제약:
 - 직접 git commit, git push, git switch, git checkout, git rebase, git reset, gh issue edit, gh pr create를 실행하지 않는다.

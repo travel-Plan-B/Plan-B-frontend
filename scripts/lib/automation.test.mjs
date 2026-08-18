@@ -1,12 +1,27 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { issueReferencesFromPr } from "./git-github.mjs";
+import { issueReferencesFromPr, parseArgs } from "./git-github.mjs";
 import { executePrTransaction } from "./pr-transaction.mjs";
 import {
   determineRequiredChecks,
+  normalizeGitPath,
   parseStagedNameStatus,
 } from "./validation-policy.mjs";
+
+test("Windows Git 경로를 POSIX 형식으로 정규화한다", () => {
+  assert.equal(
+    normalizeGitPath("src\\features\\recommendation\\PlaceCard.tsx"),
+    "src/features/recommendation/PlaceCard.tsx",
+  );
+});
+
+test("reset-checkpoint를 값 없는 복구 플래그로 파싱한다", () => {
+  assert.deepEqual(parseArgs(["--reset-checkpoint", "--issue", "59"]), {
+    "reset-checkpoint": true,
+    issue: "59",
+  });
+});
 
 test("Issue 종료 및 내부 참조 키워드를 파싱하고 중복을 제거한다", () => {
   assert.deepEqual(
@@ -62,6 +77,67 @@ for (const mode of ["create", "update"]) {
     ]);
     assert.equal(cleared, true);
     assert.equal(result.pr.prNumber, 49);
+  });
+
+  test(`${mode} started checkpoint 재개는 commit부터 이어서 실행한다`, () => {
+    const calls = [];
+    const result = executePrTransaction({
+      checkpoint: {
+        mode,
+        phase: "started",
+        commit: "base",
+        checksCompleted: true,
+        stagedFingerprint: "staged",
+      },
+      checkpointData: () => ({ mode, commit: "head" }),
+      persistCheckpoint: (checkpoint) => calls.push(`save:${checkpoint.phase}`),
+      clearCheckpoint: () => calls.push("clear"),
+      commit: () => calls.push("commit"),
+      push: () => calls.push("push"),
+      updateIssue: () => calls.push("issue"),
+      updatePr: () => {
+        calls.push("pr");
+        return { prNumber: 59, prUrl: "https://example.test/pull/59" };
+      },
+    });
+
+    assert.deepEqual(calls, [
+      "commit",
+      "save:committed",
+      "push",
+      "save:pushed",
+      "issue",
+      "pr",
+      "save:prCompleted",
+      "clear",
+    ]);
+    assert.equal(result.pr.prNumber, 59);
+  });
+
+  test(`${mode} committed checkpoint 재개는 commit을 반복하지 않는다`, () => {
+    const calls = [];
+    executePrTransaction({
+      checkpoint: { mode, phase: "committed", commit: "head" },
+      checkpointData: () => ({ mode, commit: "head" }),
+      persistCheckpoint: (checkpoint) => calls.push(`save:${checkpoint.phase}`),
+      clearCheckpoint: () => calls.push("clear"),
+      commit: () => calls.push("commit"),
+      push: () => calls.push("push"),
+      updateIssue: () => calls.push("issue"),
+      updatePr: () => {
+        calls.push("pr");
+        return { prNumber: 59, prUrl: "https://example.test/pull/59" };
+      },
+    });
+
+    assert.deepEqual(calls, [
+      "push",
+      "save:pushed",
+      "issue",
+      "pr",
+      "save:prCompleted",
+      "clear",
+    ]);
   });
 }
 

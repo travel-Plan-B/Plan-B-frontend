@@ -134,7 +134,7 @@ export function parseArgs(argv) {
     const token = argv[index];
     if (!token.startsWith("--")) fail(`알 수 없는 인자입니다: ${token}`);
     const key = token.slice(2);
-    if (key === "branch" || key === "help") {
+    if (key === "branch" || key === "help" || key === "reset-checkpoint") {
       values[key] = true;
       continue;
     }

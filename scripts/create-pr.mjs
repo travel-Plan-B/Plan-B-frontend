@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { relative, resolve } from "node:path";
 import {
@@ -94,7 +95,23 @@ function logCheckpointRecovery() {
   console.error(
     `ℹ 실패 복구 checkpoint: ${gitCheckpointFile}\n` +
       "  복구: 같은 pnpm pr:finish 명령을 다시 실행하세요.\n" +
-      "  초기화: 상태를 직접 확인한 뒤 이 checkpoint 파일만 삭제하고 pnpm pr을 다시 실행하세요.",
+      "  초기화: commit 전 started 단계라면 pnpm pr --reset-checkpoint를 실행하세요.",
+  );
+}
+
+function fingerprint(value) {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+function stagedFingerprint() {
+  return fingerprint(
+    outputOf("git", ["diff", "--cached", "--binary", "--no-ext-diff"]),
+  );
+}
+
+function workingTreeFingerprint() {
+  return fingerprint(
+    outputOf("git", ["status", "--porcelain=v1", "--untracked-files=all"]),
   );
 }
 if (gitCheckpoint) logCheckpointRecovery();
@@ -254,6 +271,14 @@ if (gitCheckpoint) {
       fail("push checkpoint의 commit이 원격 브랜치와 일치하지 않습니다.");
     }
   }
+  if (
+    gitCheckpoint.workingTreeFingerprint &&
+    gitCheckpoint.workingTreeFingerprint !== workingTreeFingerprint()
+  ) {
+    fail(
+      "Git checkpoint 이후 working tree 상태가 변경되었습니다. 자동 재개하지 않습니다.",
+    );
+  }
   console.log(`✓ Git ${gitCheckpoint.phase} checkpoint 확인: ${head}`);
 }
 
@@ -293,9 +318,29 @@ if ((!gitCheckpoint || canResumeBeforeCommit) && !stagedStatus) {
   );
 }
 
-if (!gitCheckpoint || canResumeBeforeCommit) {
-  runRequiredChecks(stagedChanges, { mode });
+const currentStagedFingerprint = stagedStatus ? stagedFingerprint() : null;
+if (
+  canResumeBeforeCommit &&
+  gitCheckpoint.stagedFingerprint &&
+  gitCheckpoint.stagedFingerprint !== currentStagedFingerprint
+) {
+  fail(
+    "Git checkpoint의 staged 상태와 현재 staged diff가 다릅니다. 자동 재개하지 않습니다.",
+  );
 }
+const canReuseCompletedChecks = Boolean(
+  canResumeBeforeCommit &&
+    gitCheckpoint.checksCompleted &&
+    gitCheckpoint.stagedFingerprint === currentStagedFingerprint,
+);
+
+if (!gitCheckpoint || (canResumeBeforeCommit && !canReuseCompletedChecks)) {
+  runRequiredChecks(stagedChanges, { mode });
+} else if (canReuseCompletedChecks) {
+  console.log("✓ staged 상태가 checkpoint와 일치해 완료된 검증을 재사용합니다.");
+}
+
+const validatedStagedFingerprint = currentStagedFingerprint;
 
 const subject = (args.subject || (await prompt("commit/PR 작업 요약"))).trim();
 if (!subject || subject.endsWith("."))
@@ -387,6 +432,9 @@ const transaction = executePrTransaction({
     commit: outputOf("git", ["rev-parse", "HEAD"]),
     commitMessage,
     wasQuickIssue: isQuickIssue,
+    checksCompleted: true,
+    stagedFingerprint: validatedStagedFingerprint,
+    workingTreeFingerprint: workingTreeFingerprint(),
   }),
   persistCheckpoint: (checkpoint) => {
     if (gitCheckpointFile) {
