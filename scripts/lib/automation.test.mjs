@@ -24,7 +24,12 @@ import {
   parseArgs,
   QUICK_ISSUE_MARKER,
   QUICK_ISSUE_TITLE,
+  TYPES,
 } from "./git-github.mjs";
+import {
+  applyTypeLabels,
+  labelForType,
+} from "./github-labels.mjs";
 import {
   getAgentMutationError,
   getAnalysisCheckpointIntegrityError,
@@ -335,6 +340,78 @@ test("staged rename은 새 경로만 lint한다", () => {
 
   assert.deepEqual(policy.files, ["src/lib/new.ts"]);
   assert.deepEqual(policy.codeFiles, ["src/lib/new.ts"]);
+});
+
+test("모든 작업 type을 GitHub label로 결정적으로 매핑한다", () => {
+  for (const type of TYPES) {
+    assert.equal(labelForType(type), type);
+  }
+});
+
+test("Issue와 PR에 기존 label을 보존하는 add-label 명령을 적용한다", () => {
+  const calls = [];
+  applyTypeLabels({
+    type: "fix",
+    issueNumber: 76,
+    prNumber: 77,
+    runCommand: (command, args, options) => {
+      calls.push({ command, args, options });
+      if (args[0] === "label") {
+        return { status: 0, stdout: JSON.stringify([{ name: "fix" }]) };
+      }
+      return { status: 0, stdout: "" };
+    },
+    log: () => {},
+    warn: () => {},
+  });
+
+  assert.deepEqual(calls.slice(1).map(({ args }) => args), [
+    ["issue", "edit", "76", "--add-label", "fix"],
+    ["pr", "edit", "77", "--add-label", "fix"],
+  ]);
+  assert.equal(calls.every(({ options }) => options.allowFailure), true);
+});
+
+test("repository에 type label이 없으면 write 없이 warning만 출력한다", () => {
+  const calls = [];
+  const warnings = [];
+  applyTypeLabels({
+    type: "feat",
+    issueNumber: 76,
+    prNumber: 77,
+    runCommand: (_command, args) => {
+      calls.push(args);
+      return { status: 0, stdout: JSON.stringify([{ name: "priority" }]) };
+    },
+    log: () => {},
+    warn: (message) => warnings.push(message),
+  });
+
+  assert.equal(calls.length, 1);
+  assert.match(warnings[0], /feat/u);
+});
+
+test("label API 일부 실패는 다른 대상 적용과 PR 완료를 막지 않는다", () => {
+  const calls = [];
+  const warnings = [];
+  applyTypeLabels({
+    type: "refactor",
+    issueNumber: 80,
+    prNumber: 81,
+    runCommand: (_command, args) => {
+      calls.push(args);
+      if (args[0] === "label") {
+        return { status: 0, stdout: JSON.stringify([{ name: "refactor" }]) };
+      }
+      return { status: args[0] === "issue" ? 1 : 0, stdout: "" };
+    },
+    log: () => {},
+    warn: (message) => warnings.push(message),
+  });
+
+  assert.equal(calls.some((args) => args[0] === "pr"), true);
+  assert.equal(warnings.length, 1);
+  assert.match(warnings[0], /Issue #80/u);
 });
 
 for (const mode of ["create", "update"]) {

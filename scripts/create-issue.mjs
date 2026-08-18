@@ -24,6 +24,7 @@ import {
   run,
   validateSlug,
 } from "./lib/git-github.mjs";
+import { applyTypeLabels } from "./lib/github-labels.mjs";
 
 const args = parseArgs(process.argv.slice(2));
 assertAllowedArgs(args, ["branch", "help", "mode", "type", "title", "slug"]);
@@ -123,6 +124,10 @@ if (!issueMatch) fail(`생성된 Issue 번호를 확인할 수 없습니다: ${i
 const issueNumber = Number(issueMatch[1]);
 console.log(`\n✓ Issue #${issueNumber} 생성`);
 console.log(`✓ ${issueUrl}`);
+
+if (type) {
+  applyTypeLabels({ type, issueNumber, runCommand: run });
+}
 
 if (mode === "quick") {
   try {
