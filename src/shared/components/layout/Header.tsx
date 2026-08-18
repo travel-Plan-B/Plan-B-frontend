@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { HTMLAttributes, ReactNode } from "react";
 
+import { ROUTES } from "@/shared/config/routes";
 import { cn } from "@/shared/lib/cn";
 
 import { PageContainer } from "./PageContainer";
@@ -15,7 +16,7 @@ export function Header({ children, className, ...props }: HeaderProps) {
     <header className={cn("w-full shadow-2xs", className)} {...props}>
       <PageContainer className="flex h-14 items-center justify-between">
         <Link
-          href="/"
+          href={ROUTES.HOME}
           className="rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
         >
           <Image

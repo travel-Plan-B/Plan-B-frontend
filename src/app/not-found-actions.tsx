@@ -4,6 +4,7 @@ import { ArrowLeft, Home } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/shared/components/ui/Button";
+import { ROUTES } from "@/shared/config/routes";
 
 export function NotFoundActions() {
   const router = useRouter();
@@ -14,7 +15,7 @@ export function NotFoundActions() {
         variant="outline"
         className="w-full px-6 lg:w-auto"
         size="sm"
-        onClick={() => router.push("/")}
+        onClick={() => router.push(ROUTES.HOME)}
       >
         <Home className="size-4" />
         메인으로 이동
