@@ -17,6 +17,8 @@ const eslintConfig = defineConfig([
     "storybook-static/**",
     "next-env.d.ts",
     ".tmp/**",
+    // msw init으로 생성된 파일 (msw가 직접 관리, 수정하지 않음)
+    "public/mockServiceWorker.js",
   ]),
   ...storybook.configs["flat/recommended"],
 ]);

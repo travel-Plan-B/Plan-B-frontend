@@ -6,6 +6,7 @@ import { Footer } from "@/shared/components/layout/Footer";
 import { Header } from "@/shared/components/layout/Header";
 import { PageContainer } from "@/shared/components/layout/PageContainer";
 import { ToastProvider } from "@/shared/components/ui/Toast/ToastProvider";
+import { Providers } from "./providers";
 
 const pretendard = localFont({
   src: "../../node_modules/pretendard/dist/web/variable/woff2/PretendardVariable.woff2",
@@ -23,12 +24,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${pretendard.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col font-sans">
-        <Header />
-        <PageContainer as="main" className="flex flex-1 flex-col">
-          {children}
-        </PageContainer>
-        <Footer />
-        <ToastProvider />
+        <Providers>
+          <Header />
+          <PageContainer as="main" className="flex flex-1 flex-col">
+            {children}
+          </PageContainer>
+          <Footer />
+          <ToastProvider />
+        </Providers>
       </body>
     </html>
   );
