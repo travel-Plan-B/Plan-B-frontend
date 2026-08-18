@@ -63,6 +63,15 @@
   --text-tiny--line-height: 14px;
   --text-micro: 8px;
   --text-micro--line-height: 12px;
+
+  /* Fluid Typography — 디테일모드처럼 lg(1024px)~ 구간에서 카드 폭이 유동적인
+     화면에서 텍스트 줄바꿈을 막기 위한 clamp() 기반 크기. 1024px에서 한 단계
+     작은 크기, 1440px 이상에서 원래 Type Scale 크기로 수렴한다. */
+  --text-fluid-xs: clamp(0.625rem, 0.3173rem + 0.48vw, 0.75rem);
+  --text-fluid-sm: clamp(0.75rem, 0.4423rem + 0.48vw, 0.875rem);
+  --text-fluid-base: clamp(0.875rem, 0.5673rem + 0.48vw, 1rem);
+  --text-fluid-lg: clamp(1rem, 0.6923rem + 0.48vw, 1.125rem);
+  --text-fluid-xl: clamp(1.125rem, 0.8173rem + 0.48vw, 1.25rem);
 }
 
 @theme inline {

@@ -7,10 +7,9 @@ import {
 } from "@ncdai/react-wheel-picker";
 import "@ncdai/react-wheel-picker/style.css";
 import { ChevronDown, Clock } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
-import { useAnchoredPosition } from "@/shared/hooks/useAnchoredPosition";
+import { usePopoverPicker } from "@/shared/hooks/usePopoverPicker";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "./Button";
 
@@ -57,57 +56,17 @@ export function TimePicker({
   disabled = false,
   className,
 }: TimePickerProps) {
-  const [open, setOpen] = useState(false);
-  // draft: 패널 안에서 휠을 돌리는 동안의 "임시 선택값". 확인을 눌러야 실제
-  // value로 반영되고, 취소하거나 바깥을 클릭하면 draft만 버려지고 value는
-  // 그대로 유지됨 (네이티브 시간 선택 UI와 동일한 동작).
-  const [draft, setDraft] = useState(value);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
-
-  // 뷰포트 밖으로 나가지 않게 보정된 패널 좌표 (자세한 설명은 훅 참고).
-  const panelPositionStyle = useAnchoredPosition(open, triggerRef, panelRef);
-
-  useEffect(() => {
-    if (!open) return;
-
-    // 트리거/패널 바깥을 클릭하면 패널을 닫는다. 패널은 Portal로
-    // document.body에 렌더링되기 때문에 이 컴포넌트의 DOM 트리 밖에 있어서,
-    // ref 두 개(트리거, 패널)를 각각 확인해야 "바깥 클릭"을 정확히 판단할 수 있음.
-    const handlePointerDown = (event: MouseEvent) => {
-      const target = event.target as Node;
-      if (
-        !triggerRef.current?.contains(target) &&
-        !panelRef.current?.contains(target)
-      ) {
-        setOpen(false);
-      }
-    };
-
-    // 스크롤이 생기면(트리거가 화면에서 움직이면) 위치를 다시 계산하는 대신
-    // 그냥 패널을 닫는다 — 위치를 다시 맞추는 것보다 훨씬 간단하고, 많은
-    // 드롭다운/팝오버가 쓰는 흔한 패턴.
-    const handleScroll = () => setOpen(false);
-
-    document.addEventListener("mousedown", handlePointerDown);
-    window.addEventListener("scroll", handleScroll, true);
-    return () => {
-      document.removeEventListener("mousedown", handlePointerDown);
-      window.removeEventListener("scroll", handleScroll, true);
-    };
-  }, [open]);
-
-  const handleOpen = () => {
-    if (disabled) return;
-    // 패널을 열 때마다 draft를 현재 value로 초기화 (이전에 취소했던 임시값이 남아있지 않도록).
-    setDraft(value);
-    setOpen(true);
-  };
-
-  const handleConfirm = () => {
-    onChange(draft);
-    setOpen(false);
-  };
+  const {
+    open,
+    setOpen,
+    draft,
+    setDraft,
+    triggerRef,
+    panelRef,
+    panelPositionStyle,
+    handleOpen,
+    handleConfirm,
+  } = usePopoverPicker(value, onChange);
 
   return (
     <>

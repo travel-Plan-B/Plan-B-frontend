@@ -68,10 +68,10 @@ export function EmptyState({
       />
 
       <div className="flex flex-col gap-1">
-        <p className="text-base font-semibold text-neutral-900">{title}</p>
+        <p className="text-sm font-semibold text-neutral-900">{title}</p>
 
         {description && (
-          <p className="text-sm text-neutral-700">{description}</p>
+          <p className="text-xs text-neutral-700">{description}</p>
         )}
       </div>
 
