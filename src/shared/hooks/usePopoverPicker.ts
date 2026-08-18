@@ -26,7 +26,13 @@ export function usePopoverPicker<T>(value: T, onChange: (value: T) => void) {
         setOpen(false);
       }
     };
-    const handleScroll = () => setOpen(false);
+    // 패널 내부 스크롤(예: TimePicker의 휠 선택, 달력 스크롤)까지 닫힘으로
+    // 처리하지 않도록, 스크롤이 패널 안에서 일어난 경우는 무시한다.
+    const handleScroll = (event: Event) => {
+      const target = event.target as Node;
+      if (panelRef.current?.contains(target)) return;
+      setOpen(false);
+    };
 
     document.addEventListener("mousedown", handlePointerDown);
     window.addEventListener("scroll", handleScroll, true);
