@@ -1,6 +1,7 @@
 import {
   assertAuth,
   assertCommand,
+  createAgentResult,
   resolveCliCommand,
   runCli,
 } from "./shared.mjs";
@@ -9,25 +10,19 @@ const ALLOWED_TOOLS = [
   "Read",
   "Glob",
   "Grep",
-  "Write",
-  "Edit",
   "Bash(git status:*)",
   "Bash(git diff:*)",
-  "Bash(git branch:*)",
+  "Bash(git ls-files:*)",
   "Bash(git log:*)",
-  "Bash(git add:*)",
   "Bash(gh issue list:*)",
   "Bash(gh issue view:*)",
   "Bash(gh pr view:*)",
   "Bash(gh pr diff:*)",
-  "Bash(pnpm lint:*)",
-  "Bash(pnpm typecheck:*)",
-  "Bash(pnpm build:*)",
-  "Bash(pnpm test:*)",
-  "Bash(pnpm pr:finish:*)",
 ].join(",");
 
 const DENIED_TOOLS = [
+  "Bash(git add:*)",
+  "Bash(git branch:*)",
   "Bash(git commit:*)",
   "Bash(git push:*)",
   "Bash(git rebase:*)",
@@ -36,13 +31,15 @@ const DENIED_TOOLS = [
   "Bash(git switch:*)",
   "Bash(gh pr create:*)",
   "Bash(gh pr edit:*)",
+  "Bash(gh issue edit:*)",
+  "Bash(pnpm pr:*)",
 ].join(",");
 
 export function runAgent({ prompt, cwd }) {
   const command = resolveCliCommand("claude");
   assertCommand(command, "Claude Code");
   assertAuth(command, ["auth", "status"], "Claude Code");
-  runCli(
+  const rawOutput = runCli(
     command,
     [
       "-p",
@@ -53,6 +50,7 @@ export function runAgent({ prompt, cwd }) {
       "--disallowedTools",
       DENIED_TOOLS,
     ],
-    { cwd, displayName: "Claude Code", input: prompt },
+    { cwd, displayName: "Claude Code", input: prompt, captureOutput: true },
   );
+  return createAgentResult(rawOutput);
 }

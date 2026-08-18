@@ -31,6 +31,7 @@ import {
   executePrTransaction,
   getStartedCheckpointIntegrityError,
 } from "./lib/pr-transaction.mjs";
+import { normalizeSubjectIssueSuffix } from "./lib/pr-analysis.mjs";
 import {
   parseStagedNameStatus,
   runRequiredChecks,
@@ -98,7 +99,7 @@ function logCheckpointRecovery() {
   if (!gitCheckpointFile) return;
   console.error(
     `ℹ 실패 복구 checkpoint: ${gitCheckpointFile}\n` +
-      "  복구: 같은 pnpm pr:finish 명령을 다시 실행하세요.\n" +
+      "  복구: pnpm pr을 다시 실행하면 저장된 Agent 분석 결과로 재개합니다.\n" +
       "  초기화: commit 전 started 단계라면 pnpm pr --reset-checkpoint를 실행하세요.",
   );
 }
@@ -114,11 +115,7 @@ function stagedFingerprint() {
 }
 
 function workingTreeFingerprint() {
-  const trackedDiff = outputOf("git", [
-    "diff",
-    "--binary",
-    "--no-ext-diff",
-  ]);
+  const trackedDiff = outputOf("git", ["diff", "--binary", "--no-ext-diff"]);
   const untrackedPaths = outputOf("git", [
     "ls-files",
     "--others",
@@ -343,26 +340,36 @@ if (gitCheckpoint && !canResumeBeforeCommit && stagedStatus) {
 }
 if ((!gitCheckpoint || canResumeBeforeCommit) && !stagedStatus) {
   fail(
-    "staged 변경사항이 없습니다. AI 에이전트가 작업 범위를 검토해 관련 파일만 git add한 뒤 다시 실행해 주세요.",
+    "staged 변경사항이 없습니다. pnpm pr을 다시 실행해 orchestrator staging 단계부터 재개해 주세요.",
   );
 }
 
 const currentStagedFingerprint = stagedStatus ? stagedFingerprint() : null;
 const canReuseCompletedChecks = Boolean(
   canResumeBeforeCommit &&
-    gitCheckpoint.checksCompleted &&
-    gitCheckpoint.stagedFingerprint === currentStagedFingerprint,
+  gitCheckpoint.checksCompleted &&
+  gitCheckpoint.stagedFingerprint === currentStagedFingerprint,
 );
 
 if (!gitCheckpoint || (canResumeBeforeCommit && !canReuseCompletedChecks)) {
   runRequiredChecks(stagedChanges, { mode });
 } else if (canReuseCompletedChecks) {
-  console.log("✓ staged 상태가 checkpoint와 일치해 완료된 검증을 재사용합니다.");
+  console.log(
+    "✓ staged 상태가 checkpoint와 일치해 완료된 검증을 재사용합니다.",
+  );
 }
 
 const validatedStagedFingerprint = currentStagedFingerprint;
 
-const subject = (args.subject || (await prompt("commit/PR 작업 요약"))).trim();
+let subject;
+try {
+  subject = normalizeSubjectIssueSuffix(
+    args.subject || (await prompt("commit/PR 작업 요약")),
+    issueNumber,
+  );
+} catch (error) {
+  fail(error.message);
+}
 if (!subject || subject.endsWith("."))
   fail("작업 요약은 비워둘 수 없고 마침표로 끝날 수 없습니다.");
 const commitMessage = `${type}: ${subject} (#${issueNumber})`;
