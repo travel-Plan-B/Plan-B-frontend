@@ -22,7 +22,7 @@ const tones: ScheduleCardTone[] = [
 ];
 
 const meta = {
-  title: "features/trip/ScheduleCard",
+  title: "features/recommendation/ScheduleCard",
   component: ScheduleCard,
   parameters: {
     layout: "centered",

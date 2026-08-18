@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { fingerprintWorkingTree } from "./checkpoint-fingerprint.mjs";
 import { issueReferencesFromPr, parseArgs } from "./git-github.mjs";
 import {
   executePrTransaction,
@@ -68,6 +69,86 @@ test("fingerprint가 일치하는 started checkpoint는 정상 재개할 수 있
       stagedFingerprint: "staged",
       workingTreeFingerprint: "working-tree",
     }),
+    null,
+  );
+});
+
+test("tracked 파일이 M 상태를 유지해도 unstaged 내용 변경을 감지한다", () => {
+  const before = fingerprintWorkingTree({
+    trackedDiff: Buffer.from("binary-diff-before\0", "utf8"),
+    untrackedFiles: [],
+  });
+  const after = fingerprintWorkingTree({
+    trackedDiff: Buffer.from("binary-diff-after\0", "utf8"),
+    untrackedFiles: [],
+  });
+
+  assert.notEqual(before, after);
+  assert.match(
+    getStartedCheckpointIntegrityError(
+      {
+        phase: "started",
+        stagedFingerprint: "staged",
+        workingTreeFingerprint: before,
+      },
+      { stagedFingerprint: "staged", workingTreeFingerprint: after },
+    ),
+    /working tree/u,
+  );
+});
+
+test("동일한 untracked 경로의 내용 변경을 감지한다", () => {
+  const before = fingerprintWorkingTree({
+    trackedDiff: "",
+    untrackedFiles: [
+      { path: "tmp/data.bin", content: Buffer.from([0, 1, 2]) },
+    ],
+  });
+  const after = fingerprintWorkingTree({
+    trackedDiff: "",
+    untrackedFiles: [
+      { path: "tmp/data.bin", content: Buffer.from([0, 1, 3]) },
+    ],
+  });
+
+  assert.notEqual(before, after);
+  assert.match(
+    getStartedCheckpointIntegrityError(
+      {
+        phase: "started",
+        stagedFingerprint: "staged",
+        workingTreeFingerprint: before,
+      },
+      { stagedFingerprint: "staged", workingTreeFingerprint: after },
+    ),
+    /working tree/u,
+  );
+});
+
+test("동일한 working tree 내용은 파일 열거 순서와 무관하게 정상 재개한다", () => {
+  const files = [
+    { path: "z.bin", content: Buffer.from([255, 0]) },
+    { path: "a.txt", content: Buffer.from("same", "utf8") },
+  ];
+  const before = fingerprintWorkingTree({
+    trackedDiff: "same tracked diff",
+    untrackedFiles: files,
+  });
+  const after = fingerprintWorkingTree({
+    trackedDiff: "same tracked diff",
+    untrackedFiles: [...files].reverse(),
+  });
+
+  assert.equal(before, after);
+  assert.equal(
+    getStartedCheckpointIntegrityError(
+      {
+        phase: "started",
+        stagedFingerprint: "staged",
+        workingTreeFingerprint: before,
+      },
+      { stagedFingerprint: "staged", workingTreeFingerprint: after },
+    ),
     null,
   );
 });

@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { relative, resolve } from "node:path";
+import { fingerprintWorkingTree } from "./lib/checkpoint-fingerprint.mjs";
 import {
   assertBranchContainsLatestDev,
   assertDevIsCurrent,
@@ -113,9 +114,25 @@ function stagedFingerprint() {
 }
 
 function workingTreeFingerprint() {
-  return fingerprint(
-    outputOf("git", ["status", "--porcelain=v1", "--untracked-files=all"]),
-  );
+  const trackedDiff = outputOf("git", [
+    "diff",
+    "--binary",
+    "--no-ext-diff",
+  ]);
+  const untrackedPaths = outputOf("git", [
+    "ls-files",
+    "--others",
+    "--exclude-standard",
+    "-z",
+  ])
+    .split("\0")
+    .filter(Boolean);
+  const untrackedFiles = untrackedPaths.map((path) => ({
+    path: path.replaceAll("\\", "/"),
+    content: readFileSync(resolve(path)),
+  }));
+
+  return fingerprintWorkingTree({ trackedDiff, untrackedFiles });
 }
 if (gitCheckpoint) logCheckpointRecovery();
 
