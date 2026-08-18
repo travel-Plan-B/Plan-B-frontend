@@ -20,6 +20,14 @@ const BRANCH_PATTERN = new RegExp(
 export const QUICK_ISSUE_MARKER = "<!-- planb:quick-issue -->";
 export const QUICK_ISSUE_TITLE = "[WIP] 작업 예정";
 
+export function isQuickIssuePlaceholder(issue) {
+  return (
+    issue?.title?.trim() === QUICK_ISSUE_TITLE &&
+    typeof issue?.body === "string" &&
+    issue.body.includes(QUICK_ISSUE_MARKER)
+  );
+}
+
 export function fail(message) {
   console.error(`\n✗ ${message}`);
   process.exit(1);

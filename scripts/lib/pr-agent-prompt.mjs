@@ -33,6 +33,7 @@ Agent 역할:
 - 반드시 아래 최소 스키마를 만족하는 JSON 객체 하나만 출력합니다.
 - 응답의 첫 문자는 반드시 \`{\`, 마지막 문자는 반드시 \`}\`여야 합니다.
 - Markdown code fence와 json 코드블록을 사용하지 않습니다.
+- prBody에는 Markdown을 사용할 수 있지만 triple backtick fenced code block은 포함하지 않습니다. 코드나 명령은 inline code 또는 들여쓴 예시로 작성합니다.
 - JSON 앞뒤 설명문, 주석, 로그 및 JSON 외 텍스트를 절대 출력하지 않습니다.
 - JSON 문자열 내부 줄바꿈은 올바르게 escape합니다.
 - type, subject, slug는 개행이 없는 단일 행 문자열이고 prBody는 비어 있지 않아야 합니다.
@@ -54,6 +55,7 @@ export function buildAgentResultRepairPrompt({ output, validationError }) {
 
 응답은 첫 문자가 {이고 마지막 문자가 }인 단일 JSON 객체여야 합니다.
 Markdown code fence, 설명문, 주석, JSON 외 텍스트를 출력하지 마세요.
+prBody에는 triple backtick fenced code block을 넣지 말고 inline code 또는 들여쓴 예시를 사용하세요.
 
 이전 응답:
 ${JSON.stringify(output)}`;

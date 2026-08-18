@@ -168,12 +168,19 @@ function countTopLevelJsonObjects(rawOutput) {
 
 export function getAgentJsonContractDiagnostics(response) {
   const trimmed = response.trim();
+  const fencedBlocks = findTopLevelJsonFences(trimmed);
   return {
     startsWithBrace: trimmed.startsWith("{"),
     endsWithBrace: trimmed.endsWith("}"),
-    hasMarkdownFence: trimmed.includes("```"),
+    hasMarkdownFence: fencedBlocks.length > 0,
     topLevelObjects: countTopLevelJsonObjects(trimmed),
   };
+}
+
+function findTopLevelJsonFences(response) {
+  return [
+    ...response.matchAll(/^```json[ \t]*\r?\n([\s\S]*?)^```[ \t]*$/gmu),
+  ];
 }
 
 export function normalizeAgentJsonResponse(
@@ -182,14 +189,11 @@ export function normalizeAgentJsonResponse(
 ) {
   const trimmed = response.trim();
   const diagnostics = getAgentJsonContractDiagnostics(response);
-  const fencedBlocks = [
-    ...trimmed.matchAll(/```json[ \t]*\r?\n([\s\S]*?)\r?\n```/gu),
-  ];
-  const exactFence = trimmed.match(/^```json[ \t]*\r?\n([\s\S]*)\r?\n```$/u);
+  const fencedBlocks = findTopLevelJsonFences(trimmed);
   const candidate =
     fencedBlocks.length === 1 ? fencedBlocks[0][1].trim() : trimmed;
 
-  if (diagnostics.hasMarkdownFence && fencedBlocks.length !== 1) {
+  if (fencedBlocks.length > 1) {
     throw new AgentOutputError("Agent JSON contract 위반: json fence가 정확히 하나여야 합니다.", {
       rawOutputLength,
       extractedResponseLength,
@@ -205,7 +209,7 @@ export function normalizeAgentJsonResponse(
     });
   }
 
-  if (!diagnostics.hasMarkdownFence && !exactFence && diagnostics.topLevelObjects !== 1) {
+  if (fencedBlocks.length === 0 && diagnostics.topLevelObjects !== 1) {
     throw new AgentOutputError("Agent 출력이 단일 JSON 객체가 아닙니다.", {
       rawOutputLength,
       extractedResponseLength,

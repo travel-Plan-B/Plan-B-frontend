@@ -146,6 +146,21 @@ export function getTargetBranch({ sourceBranch, issue, type, slug }) {
   return sourceBranch === "dev" ? `${type}/${issue}-${slug}` : sourceBranch;
 }
 
+export function buildQuickIssueUpdate({
+  isQuickIssue,
+  type,
+  subject,
+  prBody,
+  prNumber,
+}) {
+  if (!isQuickIssue) return null;
+  const typeLabel = type[0].toUpperCase() + type.slice(1);
+  return {
+    title: `[${typeLabel}] ${subject}`,
+    body: `${prBody.trim()}\n\n## 관련 PR\n\n#${prNumber}`,
+  };
+}
+
 export function getAnalysisCheckpointIntegrityError(
   checkpoint,
   { issue, mode, branch, changesFingerprint, planFingerprint },

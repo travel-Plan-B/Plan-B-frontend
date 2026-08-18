@@ -18,12 +18,19 @@ import {
   getAgentJsonContractDiagnostics,
   normalizeAgentJsonResponse,
 } from "./agents/shared.mjs";
-import { issueReferencesFromPr, parseArgs } from "./git-github.mjs";
+import {
+  isQuickIssuePlaceholder,
+  issueReferencesFromPr,
+  parseArgs,
+  QUICK_ISSUE_MARKER,
+  QUICK_ISSUE_TITLE,
+} from "./git-github.mjs";
 import {
   getAgentMutationError,
   getAnalysisCheckpointIntegrityError,
   getBranchSwitchIntegrityError,
   getTargetBranch,
+  buildQuickIssueUpdate,
   normalizeSubjectIssueSuffix,
   parseAgentResult,
   parsePrPlan,
@@ -343,7 +350,7 @@ for (const mode of ["create", "update"]) {
       },
       commit: () => {},
       push: () => {},
-      updateIssue: () => {},
+      afterPrSuccess: () => {},
       updatePr: () => ({ prNumber: 49 }),
     });
 
@@ -373,7 +380,7 @@ for (const mode of ["create", "update"]) {
       clearCheckpoint: () => calls.push("clear"),
       commit: () => calls.push("commit"),
       push: () => calls.push("push"),
-      updateIssue: () => calls.push("issue"),
+      afterPrSuccess: () => calls.push("issue"),
       updatePr: () => {
         calls.push("pr");
         return { prNumber: 59, prUrl: "https://example.test/pull/59" };
@@ -385,9 +392,9 @@ for (const mode of ["create", "update"]) {
       "save:committed",
       "push",
       "save:pushed",
-      "issue",
       "pr",
       "save:prCompleted",
+      "issue",
       "clear",
     ]);
     assert.equal(result.pr.prNumber, 59);
@@ -402,7 +409,7 @@ for (const mode of ["create", "update"]) {
       clearCheckpoint: () => calls.push("clear"),
       commit: () => calls.push("commit"),
       push: () => calls.push("push"),
-      updateIssue: () => calls.push("issue"),
+      afterPrSuccess: () => calls.push("issue"),
       updatePr: () => {
         calls.push("pr");
         return { prNumber: 59, prUrl: "https://example.test/pull/59" };
@@ -412,9 +419,9 @@ for (const mode of ["create", "update"]) {
     assert.deepEqual(calls, [
       "push",
       "save:pushed",
-      "issue",
       "pr",
       "save:prCompleted",
+      "issue",
       "clear",
     ]);
   });
@@ -424,6 +431,7 @@ test("transaction 실패 시 checkpoint를 유지한다", () => {
   const persisted = [];
   let cleared = false;
   let failurePhase;
+  let afterPrSuccessCalls = 0;
 
   assert.throws(() =>
     executePrTransaction({
@@ -438,7 +446,9 @@ test("transaction 실패 시 checkpoint를 유지한다", () => {
       },
       commit: () => {},
       push: () => {},
-      updateIssue: () => {},
+      afterPrSuccess: () => {
+        afterPrSuccessCalls += 1;
+      },
       updatePr: () => {
         throw new Error("PR 실패");
       },
@@ -448,6 +458,7 @@ test("transaction 실패 시 checkpoint를 유지한다", () => {
   assert.deepEqual(persisted, ["started", "committed", "pushed"]);
   assert.equal(cleared, false);
   assert.equal(failurePhase, "pushed");
+  assert.equal(afterPrSuccessCalls, 0);
 });
 
 test("commit 실패 전에도 started checkpoint를 유지한다", () => {
@@ -466,7 +477,9 @@ test("commit 실패 전에도 started checkpoint를 유지한다", () => {
         throw new Error("commit 실패");
       },
       push: () => {},
-      updateIssue: () => {},
+      afterPrSuccess: () => {
+        throw new Error("commit 실패 뒤에는 호출되면 안 됩니다.");
+      },
       updatePr: () => ({}),
     }),
   );
@@ -478,7 +491,7 @@ test("commit 실패 전에도 started checkpoint를 유지한다", () => {
 test("prCompleted 재실행은 기존 PR을 재사용하고 checkpoint만 삭제한다", () => {
   let savedCheckpoint;
   let updatePrCalls = 0;
-  let updateIssueCalls = 0;
+  let afterPrSuccessCalls = 0;
 
   assert.throws(() =>
     executePrTransaction({
@@ -497,8 +510,8 @@ test("prCompleted 재실행은 기존 PR을 재사용하고 checkpoint만 삭제
       },
       commit: () => {},
       push: () => {},
-      updateIssue: () => {
-        updateIssueCalls += 1;
+      afterPrSuccess: () => {
+        afterPrSuccessCalls += 1;
       },
       updatePr: () => {
         updatePrCalls += 1;
@@ -529,8 +542,8 @@ test("prCompleted 재실행은 기존 PR을 재사용하고 checkpoint만 삭제
     push: () => {
       throw new Error("재실행에서 push하면 안 됩니다.");
     },
-    updateIssue: () => {
-      updateIssueCalls += 1;
+    afterPrSuccess: () => {
+      afterPrSuccessCalls += 1;
     },
     updatePr: () => {
       updatePrCalls += 1;
@@ -538,13 +551,95 @@ test("prCompleted 재실행은 기존 PR을 재사용하고 checkpoint만 삭제
     },
   });
 
-  assert.equal(updateIssueCalls, 1);
+  assert.equal(afterPrSuccessCalls, 2);
   assert.equal(updatePrCalls, 1);
   assert.equal(cleared, true);
   assert.deepEqual(recovered.pr, {
     prNumber: 49,
     prUrl: "https://example.test/pull/49",
   });
+});
+
+test("Quick Issue placeholder는 정확한 제목과 marker가 모두 있을 때만 식별한다", () => {
+  assert.equal(
+    isQuickIssuePlaceholder({
+      title: QUICK_ISSUE_TITLE,
+      body: `${QUICK_ISSUE_MARKER}\n\n작업 내용을 입력해 주세요.`,
+    }),
+    true,
+  );
+  assert.equal(
+    isQuickIssuePlaceholder({
+      title: "[Fix] 이미 정리된 Issue",
+      body: QUICK_ISSUE_MARKER,
+    }),
+    false,
+  );
+  assert.equal(
+    isQuickIssuePlaceholder({
+      title: QUICK_ISSUE_TITLE,
+      body: "일반 Issue 본문",
+    }),
+    false,
+  );
+});
+
+test("Quick Issue update는 최종 PR metadata로 결정적으로 생성한다", () => {
+  assert.deepEqual(
+    buildQuickIssueUpdate({
+      isQuickIssue: true,
+      type: "fix",
+      subject: "PR 에이전트 실행 흐름 정리",
+      prBody: "## 작업 내용\n\n- 실행 흐름을 정리했습니다.\n\nCloses #76",
+      prNumber: 77,
+    }),
+    {
+      title: "[Fix] PR 에이전트 실행 흐름 정리",
+      body:
+        "## 작업 내용\n\n- 실행 흐름을 정리했습니다.\n\nCloses #76\n\n## 관련 PR\n\n#77",
+    },
+  );
+  assert.equal(
+    buildQuickIssueUpdate({
+      isQuickIssue: false,
+      type: "fix",
+      subject: "일반 Issue",
+      prBody: "PR body",
+      prNumber: 77,
+    }),
+    null,
+  );
+});
+
+test("PR 성공 뒤 Issue update 실패는 PR transaction을 rollback하지 않는다", () => {
+  const warnings = [];
+  let cleared = false;
+  const result = executePrTransaction({
+    checkpoint: null,
+    checkpointData: () => ({ mode: "create", commit: "abc" }),
+    persistCheckpoint: () => {},
+    clearCheckpoint: () => {
+      cleared = true;
+    },
+    commit: () => {},
+    push: () => {},
+    updatePr: () => ({
+      prNumber: 77,
+      prUrl: "https://example.test/pull/77",
+    }),
+    afterPrSuccess: () => {
+      throw new Error("Issue update failed");
+    },
+    onAfterPrFailure: ({ pr, error }) => {
+      warnings.push({ prNumber: pr.prNumber, message: error.message });
+    },
+  });
+
+  assert.equal(result.pr.prNumber, 77);
+  assert.equal(cleared, true);
+  assert.deepEqual(warnings, [
+    { prNumber: 77, message: "Issue update failed" },
+  ]);
 });
 
 const validAgentJson = JSON.stringify({
@@ -655,6 +750,44 @@ test("Agent JSON contract는 설명문과 정확히 하나의 fenced JSON을 허
   );
 });
 
+test("prBody 내부 backtick은 top-level JSON fence로 오인하지 않는다", () => {
+  const response = JSON.stringify({
+    type: "fix",
+    subject: "parser 경계 수정",
+    slug: "parser-boundary",
+    prBody: "`inline code`와 backtick ` 문자를 포함합니다.",
+  });
+
+  assert.equal(normalizeAgentJsonResponse(response), response);
+  assert.equal(getAgentJsonContractDiagnostics(response).hasMarkdownFence, false);
+});
+
+test("prBody 내부 triple backtick 문자열도 JSON envelope 판정에 영향을 주지 않는다", () => {
+  const response = JSON.stringify({
+    type: "fix",
+    subject: "parser 경계 수정",
+    slug: "parser-boundary",
+    prBody: "예시:\n```ts\nconst value = 1;\n```",
+  });
+
+  assert.equal(normalizeAgentJsonResponse(response), response);
+  assert.equal(getAgentJsonContractDiagnostics(response).hasMarkdownFence, false);
+});
+
+test("fenced JSON의 prBody 내부 backtick은 바깥 fence만 인식한다", () => {
+  const candidate = JSON.stringify({
+    type: "fix",
+    subject: "parser 경계 수정",
+    slug: "parser-boundary",
+    prBody: "`inline code`를 포함한 Markdown",
+  });
+
+  assert.equal(
+    normalizeAgentJsonResponse(`설명문\n\n\`\`\`json\n${candidate}\n\`\`\`\n\n완료`),
+    candidate,
+  );
+});
+
 test("fenced JSON 밖에 다른 JSON 객체가 있으면 거부한다", () => {
   assert.throws(
     () =>
@@ -746,6 +879,7 @@ test("PR body 계약은 리뷰 정보와 사용자 실행 보고를 분리한다
   assert.match(prompt, /working tree의 모든 변경사항은 이번 PR에 포함하도록 확정/u);
   assert.match(prompt, /Issue 제목과 본문을 분석하거나 diff와 비교하지 마세요/u);
   assert.match(prompt, /"type"/u);
+  assert.match(prompt, /prBody.*triple backtick fenced code block/u);
   assert.doesNotMatch(prompt, /unrelatedFiles/u);
 });
 

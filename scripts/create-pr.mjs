@@ -18,12 +18,12 @@ import {
   hasWorkingTreeChanges,
   issueInfo,
   issueReferencesFromPr,
+  isQuickIssuePlaceholder,
   outputOf,
   rawOutputOf,
   parseArgs,
   parseBranch,
   prompt,
-  QUICK_ISSUE_MARKER,
   remoteBranchExists,
   run,
   validateSlug,
@@ -33,6 +33,7 @@ import {
   getStartedCheckpointIntegrityError,
 } from "./lib/pr-transaction.mjs";
 import {
+  buildQuickIssueUpdate,
   getBranchSwitchIntegrityError,
   normalizeSubjectIssueSuffix,
 } from "./lib/pr-analysis.mjs";
@@ -205,7 +206,7 @@ if (!Number.isInteger(issueNumber) || issueNumber <= 0)
   fail("올바른 Issue 번호를 입력해 주세요.");
 
 const issue = issueInfo(issueNumber);
-const isQuickIssue = issue.body.includes(QUICK_ISSUE_MARKER);
+const isQuickIssue = isQuickIssuePlaceholder(issue);
 console.log(`✓ Issue #${issue.number} 확인: ${issue.title}`);
 if (isQuickIssue) console.log("✓ 빠른 생성 Issue로 확인");
 if (issueWasInferred && !(await confirm("이 Issue가 맞습니까?"))) {
@@ -398,46 +399,6 @@ if (prBody) {
   }
 }
 
-let issueResult;
-if (args["issue-result-file"]) {
-  issueResult = readFileSync(args["issue-result-file"], "utf8").trim();
-} else if (args["issue-result"]) {
-  issueResult = args["issue-result"].trim();
-}
-
-let issueEditArgs = null;
-let issueUpdateMessage;
-if (issueResult) {
-  const marker = "## 작업 결과";
-  let issueBody;
-  if (treatAsQuickIssue) {
-    issueBody = args["issue-body-file"]
-      ? readFileSync(args["issue-body-file"], "utf8").trim()
-      : `## 작업 내용\n\n- ${subject}\n\n## 완료 조건\n\n- [x] ${subject}\n\n## 작업 결과\n\n${issueResult}`;
-    if (!issueBody) fail("Issue 본문 파일이 비어 있습니다.");
-    if (!issueBody.includes(marker)) {
-      issueBody = `${issueBody}\n\n${marker}\n\n${issueResult}`;
-    }
-  } else {
-    issueBody = issue.body.includes(marker)
-      ? issue.body.replace(
-          new RegExp(`${marker}[\\s\\S]*$`, "u"),
-          `${marker}\n\n${issueResult}`,
-        )
-      : `${issue.body.trim()}\n\n${marker}\n\n${issueResult}`;
-  }
-  issueEditArgs = ["issue", "edit", String(issueNumber)];
-  if (treatAsQuickIssue) {
-    const typeLabel = type[0].toUpperCase() + type.slice(1);
-    issueEditArgs.push("--title", `[${typeLabel}] ${subject}`);
-  }
-  issueEditArgs.push("--body", issueBody);
-  issueUpdateMessage = treatAsQuickIssue
-    ? `✓ Issue #${issueNumber} 제목과 본문 정식화`
-    : `✓ Issue #${issueNumber} 작업 결과 갱신`;
-} else {
-  issueUpdateMessage = `ℹ Issue #${issueNumber} 본문은 변경하지 않습니다.`;
-}
 if (gitCheckpoint?.phase === "pushed") {
   console.log(
     "✓ 기존 commit/push 완료 상태에서 원격 메타데이터 작업을 재개합니다.",
@@ -484,10 +445,6 @@ const transaction = executePrTransaction({
     }
     console.log("✓ push 완료");
   },
-  updateIssue: () => {
-    if (issueEditArgs) run("gh", issueEditArgs, { inherit: true });
-    console.log(issueUpdateMessage);
-  },
   updatePr: () => {
     if (mode === "update") {
       const prUrl = openPr.url;
@@ -520,6 +477,40 @@ const transaction = executePrTransaction({
     const prNumber = prMatch ? Number(prMatch[1]) : undefined;
     console.log(`\n✓ PR${prNumber ? ` #${prNumber}` : ""} 생성 완료`);
     return { prUrl, prNumber };
+  },
+  afterPrSuccess: ({ prNumber }) => {
+    const update = buildQuickIssueUpdate({
+      isQuickIssue,
+      type,
+      subject,
+      prBody: prBody || openPr?.body || "",
+      prNumber,
+    });
+    if (!update) {
+      console.log(`ℹ Issue #${issueNumber}는 Quick Issue placeholder가 아니어서 변경하지 않습니다.`);
+      return;
+    }
+    run(
+      "gh",
+      [
+        "issue",
+        "edit",
+        String(issueNumber),
+        "--title",
+        update.title,
+        "--body",
+        update.body,
+      ],
+      { inherit: true },
+    );
+    console.log(`✓ Quick Issue #${issueNumber} 제목과 본문 정리 완료`);
+  },
+  onAfterPrFailure: ({ pr, error }) => {
+    console.warn(
+      `⚠ Issue #${issueNumber} 제목/본문 업데이트 실패\n` +
+        `  PR${pr.prNumber ? ` #${pr.prNumber}` : ""}은 정상 생성된 상태입니다.\n` +
+        `  ${error.message}`,
+    );
   },
 });
 const { prUrl, prNumber } = transaction.pr;
