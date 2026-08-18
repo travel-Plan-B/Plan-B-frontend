@@ -8,7 +8,12 @@ const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "/api/v1";
 export const handlers = [
   http.get(`${BASE_URL}/places/search`, ({ request }) => {
     const query = new URL(request.url).searchParams.get("query") ?? "";
-    const places = MOCK_PLACES.filter((place) => place.name.includes(query));
+    const places = MOCK_PLACES.filter(
+      (place) =>
+        place.name.includes(query) ||
+        place.address.includes(query) ||
+        place.category_tag.includes(query),
+    );
     return HttpResponse.json({ places });
   }),
 ];
