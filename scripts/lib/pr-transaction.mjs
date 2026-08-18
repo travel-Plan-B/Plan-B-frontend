@@ -23,14 +23,20 @@ export function executePrTransaction({
   onFailure,
   commit,
   push,
-  updateIssue,
   updatePr,
+  afterPrSuccess,
+  onAfterPrFailure,
 }) {
   let state = checkpoint;
 
   try {
     if (state?.phase === "prCompleted") {
       const pr = { prNumber: state.prNumber, prUrl: state.prUrl };
+      try {
+        afterPrSuccess?.(pr);
+      } catch (error) {
+        onAfterPrFailure?.({ pr, error });
+      }
       clearCheckpoint?.();
       return { checkpoint: state, pr };
     }
@@ -52,7 +58,6 @@ export function executePrTransaction({
       persistCheckpoint(state);
     }
 
-    updateIssue();
     const pr = updatePr();
     state = {
       ...state,
@@ -61,6 +66,11 @@ export function executePrTransaction({
       prUrl: pr.prUrl,
     };
     persistCheckpoint(state);
+    try {
+      afterPrSuccess?.(pr);
+    } catch (error) {
+      onAfterPrFailure?.({ pr, error });
+    }
     clearCheckpoint?.();
     return { checkpoint: state, pr };
   } catch (error) {

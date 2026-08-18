@@ -8,22 +8,38 @@ import {
 } from "./checkpoint-fingerprint.mjs";
 import { DENIED_TOOLS as CLAUDE_DENIED_TOOLS } from "./agents/claude.mjs";
 import { DENIED_TOOLS as COPILOT_DENIED_TOOLS } from "./agents/copilot.mjs";
-import { buildPrAgentPrompt } from "./pr-agent-prompt.mjs";
+import {
+  buildAgentResultRepairPrompt,
+  buildPrAgentPrompt,
+} from "./pr-agent-prompt.mjs";
 import {
   extractCopilotFinalResponse,
   extractCodexFinalResponse,
   getAgentJsonContractDiagnostics,
   normalizeAgentJsonResponse,
 } from "./agents/shared.mjs";
-import { issueReferencesFromPr, parseArgs } from "./git-github.mjs";
 import {
-  findUnrelatedToolingChanges,
+  isQuickIssuePlaceholder,
+  issueReferencesFromPr,
+  parseArgs,
+  QUICK_ISSUE_MARKER,
+  QUICK_ISSUE_TITLE,
+  TYPES,
+} from "./git-github.mjs";
+import {
+  applyTypeLabels,
+  labelForType,
+} from "./github-labels.mjs";
+import {
   getAgentMutationError,
   getAnalysisCheckpointIntegrityError,
-  getScopeBlockReason,
+  getBranchSwitchIntegrityError,
+  getTargetBranch,
+  buildQuickIssueUpdate,
   normalizeSubjectIssueSuffix,
   parseAgentResult,
   parsePrPlan,
+  resolvePrMetadata,
   writeAgentArtifacts,
 } from "./pr-analysis.mjs";
 import {
@@ -60,8 +76,6 @@ test("Agent PR plan Markdown 계약을 파싱한다", () => {
 - type: feat
 - subject: 간단 복구 흐름 UI 추가
 - slug: simple-recovery-flow
-- scope: all
-- validation: pr:finish 필수 검증에 위임
 `),
     {
       issue: 63,
@@ -69,25 +83,7 @@ test("Agent PR plan Markdown 계약을 파싱한다", () => {
       type: "feat",
       subject: "간단 복구 흐름 UI 추가",
       slug: "simple-recovery-flow",
-      scope: "all",
-      validation: "pr:finish 필수 검증에 위임",
     },
-  );
-});
-
-test("unrelated 변경을 나타내는 PR plan은 staging 전에 거부한다", () => {
-  assert.throws(
-    () =>
-      parsePrPlan(`
-- issue: 63
-- mode: create
-- type: feat
-- subject: 작업 요약
-- slug: work-summary
-- scope: partial
-- validation: pending
-`),
-    /scope가 all이 아닙니다/u,
   );
 });
 
@@ -99,6 +95,66 @@ test("subject의 동일 Issue suffix는 최종 조합 전에 모두 제거한다
   assert.throws(
     () => normalizeSubjectIssueSuffix("간단 복구 흐름 UI 추가 (#62)", 63),
     /Issue #62/u,
+  );
+});
+
+test("dev에서는 Agent metadata와 Issue 번호로 작업 branch를 결정한다", () => {
+  const metadata = resolvePrMetadata(
+    {
+      type: "feat",
+      subject: "간편 복구 기본 정보 추가",
+      slug: "simple-recovery-info",
+      prBody: "body",
+    },
+    null,
+  );
+
+  assert.equal(
+    getTargetBranch({ sourceBranch: "dev", issue: 63, ...metadata }),
+    "feat/63-simple-recovery-info",
+  );
+});
+
+test("기존 작업 branch에서는 branch의 type과 slug를 source of truth로 사용한다", () => {
+  const metadata = resolvePrMetadata(
+    {
+      type: "feat",
+      subject: "PR Agent 단순화",
+      slug: "different-agent-slug",
+      prBody: "body",
+    },
+    { type: "fix", issue: 76, slug: "pr-agent-unrelated-files" },
+  );
+
+  assert.equal(metadata.type, "fix");
+  assert.equal(metadata.slug, "pr-agent-unrelated-files");
+  assert.equal(
+    getTargetBranch({
+      sourceBranch: "fix/76-pr-agent-unrelated-files",
+      issue: 76,
+      ...metadata,
+    }),
+    "fix/76-pr-agent-unrelated-files",
+  );
+});
+
+test("update mode의 기존 branch는 새 target branch를 만들지 않는다", () => {
+  assert.equal(
+    getTargetBranch({
+      sourceBranch: "fix/76-pr-agent-unrelated-files",
+      issue: 76,
+      type: "fix",
+      slug: "pr-agent-unrelated-files",
+    }),
+    "fix/76-pr-agent-unrelated-files",
+  );
+});
+
+test("작업 branch 생성 전후 working tree fingerprint 보존을 검증한다", () => {
+  assert.equal(getBranchSwitchIntegrityError("same", "same"), null);
+  assert.match(
+    getBranchSwitchIntegrityError("before", "after"),
+    /working tree가 달라졌습니다/u,
   );
 });
 
@@ -286,6 +342,78 @@ test("staged rename은 새 경로만 lint한다", () => {
   assert.deepEqual(policy.codeFiles, ["src/lib/new.ts"]);
 });
 
+test("모든 작업 type을 GitHub label로 결정적으로 매핑한다", () => {
+  for (const type of TYPES) {
+    assert.equal(labelForType(type), type);
+  }
+});
+
+test("Issue와 PR에 기존 label을 보존하는 add-label 명령을 적용한다", () => {
+  const calls = [];
+  applyTypeLabels({
+    type: "fix",
+    issueNumber: 76,
+    prNumber: 77,
+    runCommand: (command, args, options) => {
+      calls.push({ command, args, options });
+      if (args[0] === "label") {
+        return { status: 0, stdout: JSON.stringify([{ name: "fix" }]) };
+      }
+      return { status: 0, stdout: "" };
+    },
+    log: () => {},
+    warn: () => {},
+  });
+
+  assert.deepEqual(calls.slice(1).map(({ args }) => args), [
+    ["issue", "edit", "76", "--add-label", "fix"],
+    ["pr", "edit", "77", "--add-label", "fix"],
+  ]);
+  assert.equal(calls.every(({ options }) => options.allowFailure), true);
+});
+
+test("repository에 type label이 없으면 write 없이 warning만 출력한다", () => {
+  const calls = [];
+  const warnings = [];
+  applyTypeLabels({
+    type: "feat",
+    issueNumber: 76,
+    prNumber: 77,
+    runCommand: (_command, args) => {
+      calls.push(args);
+      return { status: 0, stdout: JSON.stringify([{ name: "priority" }]) };
+    },
+    log: () => {},
+    warn: (message) => warnings.push(message),
+  });
+
+  assert.equal(calls.length, 1);
+  assert.match(warnings[0], /feat/u);
+});
+
+test("label API 일부 실패는 다른 대상 적용과 PR 완료를 막지 않는다", () => {
+  const calls = [];
+  const warnings = [];
+  applyTypeLabels({
+    type: "refactor",
+    issueNumber: 80,
+    prNumber: 81,
+    runCommand: (_command, args) => {
+      calls.push(args);
+      if (args[0] === "label") {
+        return { status: 0, stdout: JSON.stringify([{ name: "refactor" }]) };
+      }
+      return { status: args[0] === "issue" ? 1 : 0, stdout: "" };
+    },
+    log: () => {},
+    warn: (message) => warnings.push(message),
+  });
+
+  assert.equal(calls.some((args) => args[0] === "pr"), true);
+  assert.equal(warnings.length, 1);
+  assert.match(warnings[0], /Issue #80/u);
+});
+
 for (const mode of ["create", "update"]) {
   test(`${mode} transaction 성공 시 checkpoint를 삭제한다`, () => {
     const persisted = [];
@@ -299,7 +427,7 @@ for (const mode of ["create", "update"]) {
       },
       commit: () => {},
       push: () => {},
-      updateIssue: () => {},
+      afterPrSuccess: () => {},
       updatePr: () => ({ prNumber: 49 }),
     });
 
@@ -329,7 +457,7 @@ for (const mode of ["create", "update"]) {
       clearCheckpoint: () => calls.push("clear"),
       commit: () => calls.push("commit"),
       push: () => calls.push("push"),
-      updateIssue: () => calls.push("issue"),
+      afterPrSuccess: () => calls.push("issue"),
       updatePr: () => {
         calls.push("pr");
         return { prNumber: 59, prUrl: "https://example.test/pull/59" };
@@ -341,9 +469,9 @@ for (const mode of ["create", "update"]) {
       "save:committed",
       "push",
       "save:pushed",
-      "issue",
       "pr",
       "save:prCompleted",
+      "issue",
       "clear",
     ]);
     assert.equal(result.pr.prNumber, 59);
@@ -358,7 +486,7 @@ for (const mode of ["create", "update"]) {
       clearCheckpoint: () => calls.push("clear"),
       commit: () => calls.push("commit"),
       push: () => calls.push("push"),
-      updateIssue: () => calls.push("issue"),
+      afterPrSuccess: () => calls.push("issue"),
       updatePr: () => {
         calls.push("pr");
         return { prNumber: 59, prUrl: "https://example.test/pull/59" };
@@ -368,9 +496,9 @@ for (const mode of ["create", "update"]) {
     assert.deepEqual(calls, [
       "push",
       "save:pushed",
-      "issue",
       "pr",
       "save:prCompleted",
+      "issue",
       "clear",
     ]);
   });
@@ -380,6 +508,7 @@ test("transaction 실패 시 checkpoint를 유지한다", () => {
   const persisted = [];
   let cleared = false;
   let failurePhase;
+  let afterPrSuccessCalls = 0;
 
   assert.throws(() =>
     executePrTransaction({
@@ -394,7 +523,9 @@ test("transaction 실패 시 checkpoint를 유지한다", () => {
       },
       commit: () => {},
       push: () => {},
-      updateIssue: () => {},
+      afterPrSuccess: () => {
+        afterPrSuccessCalls += 1;
+      },
       updatePr: () => {
         throw new Error("PR 실패");
       },
@@ -404,6 +535,7 @@ test("transaction 실패 시 checkpoint를 유지한다", () => {
   assert.deepEqual(persisted, ["started", "committed", "pushed"]);
   assert.equal(cleared, false);
   assert.equal(failurePhase, "pushed");
+  assert.equal(afterPrSuccessCalls, 0);
 });
 
 test("commit 실패 전에도 started checkpoint를 유지한다", () => {
@@ -422,7 +554,9 @@ test("commit 실패 전에도 started checkpoint를 유지한다", () => {
         throw new Error("commit 실패");
       },
       push: () => {},
-      updateIssue: () => {},
+      afterPrSuccess: () => {
+        throw new Error("commit 실패 뒤에는 호출되면 안 됩니다.");
+      },
       updatePr: () => ({}),
     }),
   );
@@ -434,7 +568,7 @@ test("commit 실패 전에도 started checkpoint를 유지한다", () => {
 test("prCompleted 재실행은 기존 PR을 재사용하고 checkpoint만 삭제한다", () => {
   let savedCheckpoint;
   let updatePrCalls = 0;
-  let updateIssueCalls = 0;
+  let afterPrSuccessCalls = 0;
 
   assert.throws(() =>
     executePrTransaction({
@@ -453,8 +587,8 @@ test("prCompleted 재실행은 기존 PR을 재사용하고 checkpoint만 삭제
       },
       commit: () => {},
       push: () => {},
-      updateIssue: () => {
-        updateIssueCalls += 1;
+      afterPrSuccess: () => {
+        afterPrSuccessCalls += 1;
       },
       updatePr: () => {
         updatePrCalls += 1;
@@ -485,8 +619,8 @@ test("prCompleted 재실행은 기존 PR을 재사용하고 checkpoint만 삭제
     push: () => {
       throw new Error("재실행에서 push하면 안 됩니다.");
     },
-    updateIssue: () => {
-      updateIssueCalls += 1;
+    afterPrSuccess: () => {
+      afterPrSuccessCalls += 1;
     },
     updatePr: () => {
       updatePrCalls += 1;
@@ -494,7 +628,7 @@ test("prCompleted 재실행은 기존 PR을 재사용하고 checkpoint만 삭제
     },
   });
 
-  assert.equal(updateIssueCalls, 1);
+  assert.equal(afterPrSuccessCalls, 2);
   assert.equal(updatePrCalls, 1);
   assert.equal(cleared, true);
   assert.deepEqual(recovered.pr, {
@@ -503,20 +637,111 @@ test("prCompleted 재실행은 기존 PR을 재사용하고 checkpoint만 삭제
   });
 });
 
+test("Quick Issue placeholder는 정확한 제목과 marker가 모두 있을 때만 식별한다", () => {
+  assert.equal(
+    isQuickIssuePlaceholder({
+      title: QUICK_ISSUE_TITLE,
+      body: `${QUICK_ISSUE_MARKER}\n\n작업 내용을 입력해 주세요.`,
+    }),
+    true,
+  );
+  assert.equal(
+    isQuickIssuePlaceholder({
+      title: "[Fix] 이미 정리된 Issue",
+      body: QUICK_ISSUE_MARKER,
+    }),
+    false,
+  );
+  assert.equal(
+    isQuickIssuePlaceholder({
+      title: QUICK_ISSUE_TITLE,
+      body: "일반 Issue 본문",
+    }),
+    false,
+  );
+});
+
+test("Quick Issue update는 최종 PR metadata로 결정적으로 생성한다", () => {
+  assert.deepEqual(
+    buildQuickIssueUpdate({
+      isQuickIssue: true,
+      type: "fix",
+      subject: "PR 에이전트 실행 흐름 정리",
+      prBody: "## 작업 내용\n\n- 실행 흐름을 정리했습니다.\n\nCloses #76",
+      prNumber: 77,
+    }),
+    {
+      title: "[Fix] PR 에이전트 실행 흐름 정리",
+      body:
+        "## 작업 내용\n\n- 실행 흐름을 정리했습니다.\n\nCloses #76\n\n## 관련 PR\n\n#77",
+    },
+  );
+  assert.equal(
+    buildQuickIssueUpdate({
+      isQuickIssue: false,
+      type: "fix",
+      subject: "일반 Issue",
+      prBody: "PR body",
+      prNumber: 77,
+    }),
+    null,
+  );
+});
+
+test("PR 성공 뒤 Issue update 실패는 PR transaction을 rollback하지 않는다", () => {
+  const warnings = [];
+  let cleared = false;
+  const result = executePrTransaction({
+    checkpoint: null,
+    checkpointData: () => ({ mode: "create", commit: "abc" }),
+    persistCheckpoint: () => {},
+    clearCheckpoint: () => {
+      cleared = true;
+    },
+    commit: () => {},
+    push: () => {},
+    updatePr: () => ({
+      prNumber: 77,
+      prUrl: "https://example.test/pull/77",
+    }),
+    afterPrSuccess: () => {
+      throw new Error("Issue update failed");
+    },
+    onAfterPrFailure: ({ pr, error }) => {
+      warnings.push({ prNumber: pr.prNumber, message: error.message });
+    },
+  });
+
+  assert.equal(result.pr.prNumber, 77);
+  assert.equal(cleared, true);
+  assert.deepEqual(warnings, [
+    { prNumber: 77, message: "Issue update failed" },
+  ]);
+});
+
 const validAgentJson = JSON.stringify({
-  plan: {
-    issue: 63,
-    mode: "create",
-    type: "feat",
-    subject: "간편 복구 화면 추가",
-    slug: "simple-recovery-page",
-    scope: "all",
-    validation: "pr:finish 검증에 위임",
-    unrelatedFiles: [],
-  },
-  issueResult: "## 작업 결과",
+  type: "feat",
+  subject: "간편 복구 화면 추가",
+  slug: "simple-recovery-page",
   prBody: "## 변경 내용\n\nCloses #63",
-  issueBody: null,
+});
+
+test("최소 Agent metadata schema를 검증한다", () => {
+  assert.deepEqual(parseAgentResult(validAgentJson), JSON.parse(validAgentJson));
+  for (const field of ["type", "subject", "slug", "prBody"]) {
+    const value = JSON.parse(validAgentJson);
+    delete value[field];
+    assert.throws(() => parseAgentResult(JSON.stringify(value)), /필드가 없거나/u);
+  }
+});
+
+test("schema 교정 prompt는 최소 metadata 네 필드만 요구한다", () => {
+  const prompt = buildAgentResultRepairPrompt({
+    output: '{"type":"fix"}',
+    validationError: "필드가 없습니다.",
+  });
+  assert.match(prompt, /schema만 수정/u);
+  assert.match(prompt, /type, subject, slug, prBody 네 필드/u);
 });
 
 test("Agent는 JSON만 반환하고 Node가 기존 Markdown 파일을 생성한다", () => {
@@ -525,7 +750,7 @@ test("Agent는 JSON만 반환하고 Node가 기존 Markdown 파일을 생성한�
   const removed = [];
   const result = parseAgentResult(validAgentJson);
 
-  writeAgentArtifacts(result, ".tmp/planb-pr", {
+  writeAgentArtifacts(result, ".tmp/planb-pr", { issue: 63, mode: "create" }, {
     mkdir: (path, options) => created.push({ path, options }),
     writeFile: (path, content) =>
       written.set(path.replaceAll("\\", "/"), content),
@@ -535,13 +760,13 @@ test("Agent는 JSON만 반환하고 Node가 기존 Markdown 파일을 생성한�
   const contentFor = (name) =>
     [...written].find(([path]) => path.endsWith(`/planb-pr/${name}`))?.[1];
   assert.equal(created.length, 1);
-  assert.match(contentFor("pr-plan.md"), /- scope: all/u);
-  assert.equal(contentFor("issue-result.md"), "## 작업 결과\n");
+  assert.match(contentFor("pr-plan.md"), /- issue: 63/u);
+  assert.equal(removed.some((path) => path.endsWith("issue-result.md")), true);
   assert.equal(
     contentFor("pr-body.md"),
     "## 변경 내용\n\nCloses #63\n",
   );
-  assert.equal(removed[0].endsWith("/planb-pr/issue-body.md"), true);
+  assert.equal(removed.some((path) => path.endsWith("issue-body.md")), true);
 });
 
 test("Agent JSON 파싱 실패 시 파일, checkpoint, staging을 시작하지 않는다", () => {
@@ -551,7 +776,7 @@ test("Agent JSON 파싱 실패 시 파일, checkpoint, staging을 시작하지 �
 
   assert.throws(() => {
     const result = parseAgentResult("분석 완료\n```json\n{}\n```");
-    writeAgentArtifacts(result, ".tmp/planb-pr", {
+    writeAgentArtifacts(result, ".tmp/planb-pr", { issue: 63, mode: "create" }, {
       mkdir: () => {
         wrote = true;
       },
@@ -570,7 +795,7 @@ test("Node tmp 쓰기 실패 시 checkpoint와 staging을 시작하지 않는다
   const result = parseAgentResult(validAgentJson);
 
   assert.throws(() => {
-    writeAgentArtifacts(result, ".tmp/planb-pr", {
+    writeAgentArtifacts(result, ".tmp/planb-pr", { issue: 63, mode: "create" }, {
       mkdir: () => {},
       writeFile: () => {
         throw new Error("EACCES");
@@ -581,34 +806,6 @@ test("Node tmp 쓰기 실패 시 checkpoint와 staging을 시작하지 않는다
   }, /EACCES/u);
   assert.equal(checkpointed, false);
   assert.equal(staged, false);
-});
-
-test("UI Issue에 섞인 automation 변경은 scope all이어도 staging 전에 거부한다", () => {
-  const result = parseAgentResult(validAgentJson);
-  const unrelated = findUnrelatedToolingChanges(
-    [
-      "src/features/recovery/simple/SimpleRecoveryReasonPage.tsx",
-      "scripts/create-pr.mjs",
-      "scripts/lib/agents/codex.mjs",
-    ],
-    { title: "간편복구 UI 구현", body: "1단계 화면을 추가합니다." },
-  );
-
-  assert.deepEqual(unrelated, [
-    "scripts/create-pr.mjs",
-    "scripts/lib/agents/codex.mjs",
-  ]);
-  assert.match(getScopeBlockReason(result, unrelated), /PR 범위를 분리/u);
-});
-
-test("자동화 Issue의 scripts 변경은 deterministic scope guard를 통과한다", () => {
-  assert.deepEqual(
-    findUnrelatedToolingChanges(["scripts/run-pr-agent.mjs"], {
-      title: "PR 자동화 안정화",
-      body: "Agent와 orchestrator 책임을 분리합니다.",
-    }),
-    [],
-  );
 });
 
 test("Agent JSON contract는 순수 객체와 앞뒤 whitespace를 허용한다", () => {
@@ -623,11 +820,66 @@ test("Agent JSON contract는 정확히 하나의 json fence만 복구한다", ()
   );
 });
 
+test("Agent JSON contract는 설명문과 정확히 하나의 fenced JSON을 허용한다", () => {
+  assert.equal(
+    normalizeAgentJsonResponse('분석 결과입니다.\n```json\n{"one":1}\n```\n완료'),
+    '{"one":1}',
+  );
+});
+
+test("prBody 내부 backtick은 top-level JSON fence로 오인하지 않는다", () => {
+  const response = JSON.stringify({
+    type: "fix",
+    subject: "parser 경계 수정",
+    slug: "parser-boundary",
+    prBody: "`inline code`와 backtick ` 문자를 포함합니다.",
+  });
+
+  assert.equal(normalizeAgentJsonResponse(response), response);
+  assert.equal(getAgentJsonContractDiagnostics(response).hasMarkdownFence, false);
+});
+
+test("prBody 내부 triple backtick 문자열도 JSON envelope 판정에 영향을 주지 않는다", () => {
+  const response = JSON.stringify({
+    type: "fix",
+    subject: "parser 경계 수정",
+    slug: "parser-boundary",
+    prBody: "예시:\n```ts\nconst value = 1;\n```",
+  });
+
+  assert.equal(normalizeAgentJsonResponse(response), response);
+  assert.equal(getAgentJsonContractDiagnostics(response).hasMarkdownFence, false);
+});
+
+test("fenced JSON의 prBody 내부 backtick은 바깥 fence만 인식한다", () => {
+  const candidate = JSON.stringify({
+    type: "fix",
+    subject: "parser 경계 수정",
+    slug: "parser-boundary",
+    prBody: "`inline code`를 포함한 Markdown",
+  });
+
+  assert.equal(
+    normalizeAgentJsonResponse(`설명문\n\n\`\`\`json\n${candidate}\n\`\`\`\n\n완료`),
+    candidate,
+  );
+});
+
+test("fenced JSON 밖에 다른 JSON 객체가 있으면 거부한다", () => {
+  assert.throws(
+    () =>
+      normalizeAgentJsonResponse(
+        '```json\n{"one":1}\n```\n추가 결과: {"two":2}',
+      ),
+    /JSON 후보가 여러 개/u,
+  );
+});
+
 for (const [name, raw] of [
   ["JSON 앞 설명문", '분석 결과입니다.\n{"one":1}'],
   ["JSON 뒤 설명문", '{"one":1}\n완료했습니다.'],
   ["JSON 객체 두 개", '{"one":1}\n{"two":2}'],
-  ["fence 밖 텍스트", '설명\n```json\n{"one":1}\n```'],
+  ["JSON fence 두 개", '```json\n{"one":1}\n```\n```json\n{"two":2}\n```'],
   ["malformed JSON", '{"one":'],
 ]) {
   test(`Agent JSON contract는 ${name}을 거부한다`, () => {
@@ -671,6 +923,8 @@ for (const [name, content, succeeds] of [
   ["앞 설명문", '분석 결과\n{"one":1}', false],
   ["뒤 설명문", '{"one":1}\n완료', false],
   ["객체 두 개", '{"one":1}\n{"two":2}', false],
+  ["설명과 fenced JSON", '설명\n```json\n{"one":1}\n```', true],
+  ["fenced JSON 두 개", '```json\n{"one":1}\n```\n```json\n{"two":2}\n```', false],
   ["malformed JSON", '{"one":', false],
 ]) {
   test(`Copilot JSONL final message contract: ${name}`, () => {
@@ -699,9 +953,11 @@ test("PR body 계약은 리뷰 정보와 사용자 실행 보고를 분리한다
     },
   });
 
-  assert.match(prompt, /작업 목적, 주요 변경 사항, 검증 결과, 관련 Issue/u);
-  assert.match(prompt, /branch name, commit SHA, push\/upstream 상태/u);
-  assert.match(prompt, /사용자에게 보여줄 실행 완료 보고/u);
+  assert.match(prompt, /working tree의 모든 변경사항은 이번 PR에 포함하도록 확정/u);
+  assert.match(prompt, /Issue 제목과 본문을 분석하거나 diff와 비교하지 마세요/u);
+  assert.match(prompt, /"type"/u);
+  assert.match(prompt, /prBody.*triple backtick fenced code block/u);
+  assert.doesNotMatch(prompt, /unrelatedFiles/u);
 });
 
 test("Agent 실행 중 working tree 변경은 artifact와 staging 전에 거부한다", () => {
@@ -709,40 +965,12 @@ test("Agent 실행 중 working tree 변경은 artifact와 staging 전에 거부�
   assert.equal(getAgentMutationError("same", "same"), null);
 });
 
-test("plan scalar의 multiline 값은 거부한다", () => {
-  for (const field of ["subject", "validation"]) {
+test("metadata scalar의 multiline 값은 거부한다", () => {
+  for (const field of ["type", "subject", "slug"]) {
     const value = JSON.parse(validAgentJson);
-    value.plan[field] = `safe\n- scope: all`;
+    value[field] = "safe\nvalue";
     assert.throws(() => parseAgentResult(JSON.stringify(value)), /한 줄/u);
   }
-});
-
-test("create mode 필수 결과 누락은 artifact write 전에 거부한다", () => {
-  for (const field of ["issueResult", "prBody"]) {
-    const value = JSON.parse(validAgentJson);
-    value[field] = "";
-    assert.throws(() => parseAgentResult(JSON.stringify(value)), /create mode/u);
-  }
-});
-
-test("UI Issue body의 CI 문구는 tooling 변경 허용 근거가 아니다", () => {
-  assert.deepEqual(
-    findUnrelatedToolingChanges(["scripts/create-pr.mjs"], {
-      title: "간편복구 UI 구현",
-      body: "CI 통과와 workflow 확인, 개발 환경에서 테스트합니다.",
-    }),
-    ["scripts/create-pr.mjs"],
-  );
-});
-
-test("명시적 tooling marker는 scripts 변경을 허용한다", () => {
-  assert.deepEqual(
-    findUnrelatedToolingChanges(["scripts/create-pr.mjs"], {
-      title: "기타 작업",
-      body: "<!-- planb:tooling -->",
-    }),
-    [],
-  );
 });
 
 test("Codex JSONL의 마지막 agent_message를 추출한다", () => {

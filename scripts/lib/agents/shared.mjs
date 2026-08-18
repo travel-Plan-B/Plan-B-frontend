@@ -168,12 +168,19 @@ function countTopLevelJsonObjects(rawOutput) {
 
 export function getAgentJsonContractDiagnostics(response) {
   const trimmed = response.trim();
+  const fencedBlocks = findTopLevelJsonFences(trimmed);
   return {
     startsWithBrace: trimmed.startsWith("{"),
     endsWithBrace: trimmed.endsWith("}"),
-    hasMarkdownFence: trimmed.includes("```"),
+    hasMarkdownFence: fencedBlocks.length > 0,
     topLevelObjects: countTopLevelJsonObjects(trimmed),
   };
+}
+
+function findTopLevelJsonFences(response) {
+  return [
+    ...response.matchAll(/^```json[ \t]*\r?\n([\s\S]*?)^```[ \t]*$/gmu),
+  ];
 }
 
 export function normalizeAgentJsonResponse(
@@ -182,11 +189,28 @@ export function normalizeAgentJsonResponse(
 ) {
   const trimmed = response.trim();
   const diagnostics = getAgentJsonContractDiagnostics(response);
-  const fenced = trimmed.match(/^```json\r?\n([\s\S]*)\r?\n```$/u);
-  const candidate = fenced ? fenced[1].trim() : trimmed;
+  const fencedBlocks = findTopLevelJsonFences(trimmed);
+  const candidate =
+    fencedBlocks.length === 1 ? fencedBlocks[0][1].trim() : trimmed;
 
-  if (diagnostics.hasMarkdownFence && !fenced) {
-    throw new AgentOutputError("Agent JSON contract 위반: JSON fence 밖의 텍스트가 있습니다.", {
+  if (fencedBlocks.length > 1) {
+    throw new AgentOutputError("Agent JSON contract 위반: json fence가 정확히 하나여야 합니다.", {
+      rawOutputLength,
+      extractedResponseLength,
+      contractDiagnostics: diagnostics,
+    });
+  }
+
+  if (fencedBlocks.length === 1 && diagnostics.topLevelObjects !== 1) {
+    throw new AgentOutputError("Agent 출력에 JSON 후보가 여러 개 있습니다.", {
+      rawOutputLength,
+      extractedResponseLength,
+      contractDiagnostics: diagnostics,
+    });
+  }
+
+  if (fencedBlocks.length === 0 && diagnostics.topLevelObjects !== 1) {
+    throw new AgentOutputError("Agent 출력이 단일 JSON 객체가 아닙니다.", {
       rawOutputLength,
       extractedResponseLength,
       contractDiagnostics: diagnostics,

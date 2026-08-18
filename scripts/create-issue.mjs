@@ -19,10 +19,12 @@ import {
   parseArgs,
   prompt,
   QUICK_ISSUE_MARKER,
+  QUICK_ISSUE_TITLE,
   remoteBranchExists,
   run,
   validateSlug,
 } from "./lib/git-github.mjs";
+import { applyTypeLabels } from "./lib/github-labels.mjs";
 
 const args = parseArgs(process.argv.slice(2));
 assertAllowedArgs(args, ["branch", "help", "mode", "type", "title", "slug"]);
@@ -103,7 +105,7 @@ if (args.branch) {
 
 const typeLabel = type ? type[0].toUpperCase() + type.slice(1) : null;
 const issueTitle =
-  mode === "quick" ? "[WIP] 작업 예정" : `[${typeLabel}] ${title}`;
+  mode === "quick" ? QUICK_ISSUE_TITLE : `[${typeLabel}] ${title}`;
 const issueBody =
   mode === "quick"
     ? `${QUICK_ISSUE_MARKER}\n\n작업 완료 후 실제 작업 내용을 기준으로 업데이트합니다.`
@@ -122,6 +124,10 @@ if (!issueMatch) fail(`생성된 Issue 번호를 확인할 수 없습니다: ${i
 const issueNumber = Number(issueMatch[1]);
 console.log(`\n✓ Issue #${issueNumber} 생성`);
 console.log(`✓ ${issueUrl}`);
+
+if (type) {
+  applyTypeLabels({ type, issueNumber, runCommand: run });
+}
 
 if (mode === "quick") {
   try {
