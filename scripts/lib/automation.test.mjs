@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { fingerprintWorkingTree } from "./checkpoint-fingerprint.mjs";
+import {
+  fingerprintWorkingTree,
+  getStagingSnapshotError,
+  snapshotUntrackedFile,
+} from "./checkpoint-fingerprint.mjs";
 import { DENIED_TOOLS as CLAUDE_DENIED_TOOLS } from "./agents/claude.mjs";
 import { DENIED_TOOLS as COPILOT_DENIED_TOOLS } from "./agents/copilot.mjs";
 import { buildPrAgentPrompt } from "./pr-agent-prompt.mjs";
@@ -750,4 +754,79 @@ test("Claude와 Copilot은 filesystem write 도구를 명시적으로 deny한다
     assert.match(CLAUDE_DENIED_TOOLS, new RegExp(`(?:^|,)${tool}(?:,|$)`, "u"));
   }
   assert.equal(COPILOT_DENIED_TOOLS.includes("write"), true);
+});
+
+test("content length framing은 delimiter collision을 방지한다", () => {
+  const first = fingerprintWorkingTree({
+    trackedDiff: "",
+    untrackedFiles: [
+      {
+        path: "a",
+        type: "file",
+        mode: 1,
+        linkTarget: "",
+        content: Buffer.concat([
+          Buffer.from("x"),
+          Buffer.from([0]),
+          Buffer.from("path"),
+          Buffer.from([0]),
+          Buffer.from("1"),
+          Buffer.from([0]),
+          Buffer.from("b"),
+        ]),
+      },
+    ],
+  });
+  const second = fingerprintWorkingTree({
+    trackedDiff: "",
+    untrackedFiles: [
+      { path: "a", type: "file", mode: 1, linkTarget: "", content: Buffer.from("x") },
+      { path: "b", type: "file", mode: 1, linkTarget: "", content: Buffer.alloc(0) },
+    ],
+  });
+  assert.notEqual(first, second);
+});
+
+test("unsupported untracked file type은 content read 전에 거부한다", () => {
+  let read = false;
+  assert.throws(
+    () =>
+      snapshotUntrackedFile("pipe", process.cwd(), {
+        lstat: () => ({ isFile: () => false, isSymbolicLink: () => false }),
+        readFile: () => {
+          read = true;
+          return Buffer.alloc(0);
+        },
+      }),
+    /지원하지 않는 untracked 파일 형식/u,
+  );
+  assert.equal(read, false);
+});
+
+test("Agent 종료 후 staging 전 변경은 staging을 차단한다", () => {
+  assert.match(
+    getStagingSnapshotError({
+      baseline: "before",
+      current: "after",
+      headDiff: "pending",
+      stagedDiff: "pending",
+      unstaged: "",
+      untracked: "",
+    }),
+    /staging하지 않습니다/u,
+  );
+});
+
+test("staging 결과가 분석 snapshot과 다르면 commit 전에 차단한다", () => {
+  assert.match(
+    getStagingSnapshotError({
+      baseline: "same",
+      current: "same",
+      headDiff: "expected",
+      stagedDiff: "different",
+      unstaged: "",
+      untracked: "",
+    }),
+    /commit하지 않습니다/u,
+  );
 });

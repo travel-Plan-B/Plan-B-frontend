@@ -1,8 +1,6 @@
 import {
   existsSync,
-  lstatSync,
   readFileSync,
-  readlinkSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -29,7 +27,10 @@ import {
   TYPES,
   validateSlug,
 } from "./lib/git-github.mjs";
-import { fingerprintWorkingTree } from "./lib/checkpoint-fingerprint.mjs";
+import {
+  fingerprintRepositoryWorkingTree,
+  getStagingSnapshotError,
+} from "./lib/checkpoint-fingerprint.mjs";
 import { buildPrAgentPrompt } from "./lib/pr-agent-prompt.mjs";
 import {
   CompletionMarkerError,
@@ -255,32 +256,11 @@ function readJsonFile(file, label) {
 }
 
 function changesFingerprint() {
-  const trackedDiff = rawOutputOf("git", [
-    "diff",
-    "HEAD",
-    "--binary",
-    "--no-ext-diff",
-  ]);
-  const untrackedPaths = outputOf("git", [
-    "ls-files",
-    "--others",
-    "--exclude-standard",
-    "-z",
-  ])
-    .split("\0")
-    .filter(Boolean);
-  const untrackedFiles = untrackedPaths.map((path) => {
-    const absolutePath = resolve(cwd, path);
-    const stat = lstatSync(absolutePath);
-    return {
-      path: normalizeGitPath(path),
-      type: stat.isSymbolicLink() ? "symlink" : "file",
-      mode: stat.mode,
-      linkTarget: stat.isSymbolicLink() ? readlinkSync(absolutePath) : "",
-      content: stat.isSymbolicLink() ? Buffer.alloc(0) : readFileSync(absolutePath),
-    };
+  return fingerprintRepositoryWorkingTree({
+    cwd,
+    rawGitOutput: (gitArgs) => rawOutputOf("git", gitArgs),
+    gitOutput: (gitArgs) => rawOutputOf("git", gitArgs),
   });
-  return fingerprintWorkingTree({ trackedDiff, untrackedFiles });
 }
 
 if (args["reset-checkpoint"] && existsSync(gitCheckpointFile)) {
@@ -541,6 +521,7 @@ if (unrelatedToolingFiles.length > 0) {
 }
 
 if (!hasGitCheckpoint) {
+  const analysisBaselineFingerprint = analysisCheckpoint.changesFingerprint;
   const unstaged = outputOf("git", ["diff", "--name-only"]);
   const untracked = outputOf("git", [
     "ls-files",
@@ -550,6 +531,15 @@ if (!hasGitCheckpoint) {
   let staged = outputOf("git", ["diff", "--cached", "--name-only"]);
 
   if (unstaged || untracked) {
+    const preStageError = getStagingSnapshotError({
+      baseline: analysisBaselineFingerprint,
+      current: changesFingerprint(),
+      headDiff: "pending",
+      stagedDiff: "pending",
+      unstaged: "",
+      untracked: "",
+    });
+    if (preStageError) fail(preStageError);
     const stageResult = run("git", ["add", "-A"], { allowFailure: true });
     if (stageResult.status !== 0) {
       const detail = stageResult.stderr?.trim() || stageResult.stdout?.trim();
@@ -568,12 +558,15 @@ if (!hasGitCheckpoint) {
   }
 
   if (!staged) fail("staging 후 commit할 변경사항이 없습니다.");
-  if (
-    outputOf("git", ["diff", "--name-only"]) ||
-    outputOf("git", ["ls-files", "--others", "--exclude-standard"])
-  ) {
-    fail("staging 후에도 unstaged 또는 untracked 변경사항이 남아 있습니다.");
-  }
+  const stagedSnapshotError = getStagingSnapshotError({
+    baseline: analysisBaselineFingerprint,
+    current: analysisBaselineFingerprint,
+    headDiff: rawOutputOf("git", ["diff", "HEAD", "--binary", "--no-ext-diff"]),
+    stagedDiff: rawOutputOf("git", ["diff", "--cached", "--binary", "--no-ext-diff"]),
+    unstaged: outputOf("git", ["diff", "--name-only"]),
+    untracked: outputOf("git", ["ls-files", "--others", "--exclude-standard"]),
+  });
+  if (stagedSnapshotError) fail(stagedSnapshotError);
 
   run("git", ["status", "--short"], { inherit: true });
   run("git", ["diff", "--cached", "--name-status", "-M"], {

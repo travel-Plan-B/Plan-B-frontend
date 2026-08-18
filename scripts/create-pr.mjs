@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
-import { existsSync, lstatSync, readFileSync, readlinkSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { relative, resolve } from "node:path";
-import { fingerprintWorkingTree } from "./lib/checkpoint-fingerprint.mjs";
+import { fingerprintRepositoryWorkingTree } from "./lib/checkpoint-fingerprint.mjs";
 import {
   assertBranchContainsLatestDev,
   assertDevIsCurrent,
@@ -116,28 +116,11 @@ function stagedFingerprint() {
 }
 
 function workingTreeFingerprint() {
-  const trackedDiff = rawOutputOf("git", ["diff", "--binary", "--no-ext-diff"]);
-  const untrackedPaths = outputOf("git", [
-    "ls-files",
-    "--others",
-    "--exclude-standard",
-    "-z",
-  ])
-    .split("\0")
-    .filter(Boolean);
-  const untrackedFiles = untrackedPaths.map((path) => {
-    const absolutePath = resolve(path);
-    const stat = lstatSync(absolutePath);
-    return {
-      path: path.replaceAll("\\", "/"),
-      type: stat.isSymbolicLink() ? "symlink" : "file",
-      mode: stat.mode,
-      linkTarget: stat.isSymbolicLink() ? readlinkSync(absolutePath) : "",
-      content: stat.isSymbolicLink() ? Buffer.alloc(0) : readFileSync(absolutePath),
-    };
+  return fingerprintRepositoryWorkingTree({
+    cwd: process.cwd(),
+    rawGitOutput: (gitArgs) => rawOutputOf("git", gitArgs),
+    gitOutput: (gitArgs) => rawOutputOf("git", gitArgs),
   });
-
-  return fingerprintWorkingTree({ trackedDiff, untrackedFiles });
 }
 if (gitCheckpoint) logCheckpointRecovery();
 
