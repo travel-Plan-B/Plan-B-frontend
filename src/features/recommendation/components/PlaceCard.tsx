@@ -2,7 +2,7 @@ import type { HTMLAttributes, MouseEventHandler } from "react";
 import { Clock, MapPin, ParkingCircle, Star } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/Button";
-import { PlaceCardImage } from "./PlaceCardImage";
+import { ImageWithFallback } from "@/shared/components/ui/ImageWithFallback";
 import { Tag } from "@/shared/components/ui/Tag";
 import { cn } from "@/shared/lib/cn";
 
@@ -138,7 +138,7 @@ export function PlaceCard({
           compact ? "aspect-video" : "aspect-4/3",
         )}
       >
-        <PlaceCardImage
+        <ImageWithFallback
           imageUrl={imageUrl}
           imageAlt={imageAlt ?? title}
           sizes={compact ? "320px" : "400px"}
