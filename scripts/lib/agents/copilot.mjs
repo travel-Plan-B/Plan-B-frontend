@@ -1,32 +1,27 @@
 import {
   assertAuth,
   assertCommand,
+  extractCopilotFinalResponse,
   resolveCliCommand,
   runCli,
 } from "./shared.mjs";
 
 const ALLOWED_TOOLS = [
   "read",
-  "write(issue-result.md)",
-  "write(issue-body.md)",
-  "write(pr-body.md)",
   "shell(git status:*)",
   "shell(git diff:*)",
-  "shell(git branch:*)",
+  "shell(git ls-files:*)",
   "shell(git log:*)",
-  "shell(git add:*)",
   "shell(gh issue list:*)",
   "shell(gh issue view:*)",
   "shell(gh pr view:*)",
   "shell(gh pr diff:*)",
-  "shell(pnpm lint:*)",
-  "shell(pnpm typecheck:*)",
-  "shell(pnpm build:*)",
-  "shell(pnpm test:*)",
-  "shell(pnpm pr:finish:*)",
 ];
 
-const DENIED_TOOLS = [
+export const DENIED_TOOLS = [
+  "write",
+  "shell(git add:*)",
+  "shell(git branch:*)",
   "shell(git commit:*)",
   "shell(git push:*)",
   "shell(git rebase:*)",
@@ -35,6 +30,8 @@ const DENIED_TOOLS = [
   "shell(git switch:*)",
   "shell(gh pr create:*)",
   "shell(gh pr edit:*)",
+  "shell(gh issue edit:*)",
+  "shell(pnpm pr:*)",
 ];
 
 export function runAgent({ prompt, cwd }) {
@@ -45,9 +42,26 @@ export function runAgent({ prompt, cwd }) {
     ...ALLOWED_TOOLS.map((tool) => `--allow-tool=${tool}`),
     ...DENIED_TOOLS.map((tool) => `--deny-tool=${tool}`),
   ];
-  runCli(command, ["--no-ask-user", ...permissionArgs], {
+  const rawOutput = runCli(
+    command,
+    [
+      "--no-ask-user",
+      "--silent",
+      "--stream",
+      "off",
+      "--output-format",
+      "json",
+      "--no-color",
+      "--log-level",
+      "none",
+      ...permissionArgs,
+    ],
+    {
     cwd,
     displayName: "GitHub Copilot",
     input: prompt,
-  });
+    captureOutput: true,
+    },
+  );
+  return extractCopilotFinalResponse(rawOutput);
 }

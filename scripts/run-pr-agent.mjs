@@ -1,4 +1,9 @@
-import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
+import {
+  existsSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { resolve } from "node:path";
 
 import { clearActiveIssue, readActiveIssue } from "./lib/active-issue.mjs";
@@ -13,12 +18,19 @@ import {
   getIssueInfo,
   issueReferencesFromPr,
   outputOf,
+  rawOutputOf,
   parseArgs,
   parseBranch,
   prompt,
   QUICK_ISSUE_MARKER,
   run,
+  TYPES,
+  validateSlug,
 } from "./lib/git-github.mjs";
+import {
+  fingerprintRepositoryWorkingTree,
+  getStagingSnapshotError,
+} from "./lib/checkpoint-fingerprint.mjs";
 import { buildPrAgentPrompt } from "./lib/pr-agent-prompt.mjs";
 import {
   CompletionMarkerError,
@@ -28,8 +40,20 @@ import {
   determineRequiredChecks,
   normalizeGitPath,
 } from "./lib/validation-policy.mjs";
+import {
+  fingerprintText,
+  findUnrelatedToolingChanges,
+  getAnalysisCheckpointIntegrityError,
+  getAgentMutationError,
+  getScopeBlockReason,
+  normalizeSubjectIssueSuffix,
+  parseAgentResult,
+  parsePrPlan,
+  writeAgentArtifacts,
+} from "./lib/pr-analysis.mjs";
 
 const workflowStartedAt = performance.now();
+const cwd = process.cwd();
 
 const AGENTS = ["codex", "claude", "copilot"];
 const args = parseArgs(process.argv.slice(2));
@@ -88,6 +112,7 @@ function validateOpenIssue(issueNumber) {
 }
 
 let confirmedIssue = args.issue ? Number(args.issue) : undefined;
+let confirmedIssueInfo;
 const branch = currentBranch();
 const branchIssue = parseBranch(branch)?.issue;
 let mode = "create";
@@ -106,7 +131,28 @@ if (branch !== "dev") {
         `기존 PR #${existingPr.number}의 head ${existingPr.headRefName}가 현재 브랜치 ${branch}와 다릅니다.`,
       );
     }
-    mode = "update";
+    let recoveringCompletedCreate = false;
+    const checkpointHintFile = resolve(
+      cwd,
+      ".tmp",
+      "planb-pr",
+      "git-checkpoint.json",
+    );
+    if (existsSync(checkpointHintFile)) {
+      try {
+        const checkpointHint = JSON.parse(
+          readFileSync(checkpointHintFile, "utf8"),
+        );
+        recoveringCompletedCreate =
+          checkpointHint.phase === "prCompleted" &&
+          checkpointHint.mode === "create" &&
+          checkpointHint.branch === branch &&
+          checkpointHint.prNumber === existingPr.number;
+      } catch {
+        // 정식 checkpoint 검증 단계에서 손상 오류를 보고한다.
+      }
+    }
+    mode = recoveringCompletedCreate ? "create" : "update";
     console.log(`✓ 기존 PR #${existingPr.number} 확인: ${existingPr.url}`);
   } else {
     const priorPullRequests = [prState.priorPr].filter(Boolean);
@@ -186,19 +232,39 @@ if (confirmedIssue) {
   }
 }
 
-const cwd = process.cwd();
+confirmedIssueInfo ||= validateOpenIssue(confirmedIssue);
+
 const tempDir = ".tmp/planb-pr";
 const absoluteTempDir = resolve(cwd, tempDir);
 const finishedFile = resolve(absoluteTempDir, "finished.json");
 const gitCheckpointFile = resolve(absoluteTempDir, "git-checkpoint.json");
-mkdirSync(absoluteTempDir, { recursive: true });
-if (args["reset-checkpoint"] && existsSync(gitCheckpointFile)) {
-  let checkpoint;
+const analysisCheckpointFile = resolve(
+  absoluteTempDir,
+  "analysis-checkpoint.json",
+);
+const prPlanFile = resolve(absoluteTempDir, "pr-plan.md");
+const issueResultFile = resolve(absoluteTempDir, "issue-result.md");
+const issueBodyFile = resolve(absoluteTempDir, "issue-body.md");
+const prBodyFile = resolve(absoluteTempDir, "pr-body.md");
+
+function readJsonFile(file, label) {
   try {
-    checkpoint = JSON.parse(readFileSync(gitCheckpointFile, "utf8"));
+    return JSON.parse(readFileSync(file, "utf8"));
   } catch {
-    fail("Git checkpoint가 손상되어 안전하게 초기화할 수 없습니다.");
+    fail(`${label} checkpoint가 손상되었습니다.`);
   }
+}
+
+function changesFingerprint() {
+  return fingerprintRepositoryWorkingTree({
+    cwd,
+    rawGitOutput: (gitArgs) => rawOutputOf("git", gitArgs),
+    gitOutput: (gitArgs) => rawOutputOf("git", gitArgs),
+  });
+}
+
+if (args["reset-checkpoint"] && existsSync(gitCheckpointFile)) {
+  const checkpoint = readJsonFile(gitCheckpointFile, "Git");
   const head = outputOf("git", ["rev-parse", "HEAD"]);
   if (checkpoint.phase !== "started" || checkpoint.commit !== head) {
     fail(
@@ -210,7 +276,17 @@ if (args["reset-checkpoint"] && existsSync(gitCheckpointFile)) {
 } else if (args["reset-checkpoint"]) {
   console.log("ℹ 초기화할 Git checkpoint가 없습니다.");
 }
-if (existsSync(finishedFile)) rmSync(finishedFile);
+if (args["reset-checkpoint"] && existsSync(analysisCheckpointFile)) {
+  const checkpoint = readJsonFile(analysisCheckpointFile, "PR 분석");
+  if (
+    checkpoint.phase !== "agentAnalysisComplete" &&
+    checkpoint.phase !== "staged"
+  ) {
+    fail("안전하게 초기화할 수 없는 PR 분석 checkpoint입니다.");
+  }
+  rmSync(analysisCheckpointFile);
+  console.log("✓ PR 분석 checkpoint를 초기화했습니다.");
+}
 process.env.PLANB_PR_FINISHED_FILE = finishedFile;
 process.env.PLANB_PR_GIT_CHECKPOINT_FILE = gitCheckpointFile;
 
@@ -226,7 +302,7 @@ const untrackedFiles = outputOf("git", [
   "ls-files",
   "--others",
   "--exclude-standard",
-  ])
+])
   .split(/\r?\n/u)
   .filter(Boolean)
   .map(normalizeGitPath);
@@ -243,7 +319,6 @@ const cachedDevRelation =
       ? "cached origin/dev 포함"
       : "cached origin/dev 미포함 또는 ref 없음";
 
-const { runAgent } = await import(`./lib/agents/${agent}.mjs`);
 const agentPrompt = buildPrAgentPrompt({
   issue: confirmedIssue,
   tempDir,
@@ -260,19 +335,280 @@ const agentPrompt = buildPrAgentPrompt({
   },
 });
 
-console.log(`✓ ${agent} agent를 실행합니다.`);
-console.log(
-  `ℹ 사전 확인: ${((performance.now() - workflowStartedAt) / 1000).toFixed(1)}s`,
+function loadAndValidatePlan() {
+  if (!existsSync(prPlanFile)) {
+    fail(`Agent 분석 결과가 없습니다: ${prPlanFile}`);
+  }
+
+  let plan;
+  const content = readFileSync(prPlanFile, "utf8");
+  try {
+    plan = parsePrPlan(content);
+    plan.subject = normalizeSubjectIssueSuffix(plan.subject, confirmedIssue);
+  } catch (error) {
+    fail(`Agent PR plan을 사용할 수 없습니다.\n${error.message}`);
+  }
+
+  if (plan.issue !== confirmedIssue || plan.mode !== mode) {
+    fail(
+      "Agent PR plan의 Issue 또는 mode가 orchestrator 확인 결과와 다릅니다.",
+    );
+  }
+  if (!TYPES.includes(plan.type)) {
+    fail(`Agent PR plan의 type이 올바르지 않습니다: ${plan.type}`);
+  }
+  plan.slug = validateSlug(plan.slug);
+  if (branch !== "dev") {
+    const parsedBranch = parseBranch(branch);
+    if (
+      !parsedBranch ||
+      parsedBranch.type !== plan.type ||
+      parsedBranch.issue !== confirmedIssue ||
+      parsedBranch.slug !== plan.slug
+    ) {
+      fail("Agent PR plan의 type/slug가 현재 작업 브랜치와 다릅니다.");
+    }
+  }
+  if (mode === "create") {
+    if (!existsSync(issueResultFile) || !existsSync(prBodyFile)) {
+      fail(
+        "create mode Agent 결과에는 issue-result.md와 pr-body.md가 모두 필요합니다.",
+      );
+    }
+  }
+
+  return { plan, content };
+}
+
+let analysisCheckpoint = existsSync(analysisCheckpointFile)
+  ? readJsonFile(analysisCheckpointFile, "PR 분석")
+  : null;
+const hasGitCheckpoint = existsSync(gitCheckpointFile);
+let planData;
+
+if (analysisCheckpoint || hasGitCheckpoint) {
+  if (!analysisCheckpoint || !existsSync(prPlanFile)) {
+    fail(
+      "기존 checkpoint를 재개할 Agent 분석 결과가 없습니다. --reset-checkpoint로 초기화하세요.",
+    );
+  }
+  planData = loadAndValidatePlan();
+  if (!hasGitCheckpoint) {
+    const checkpointError = getAnalysisCheckpointIntegrityError(
+      analysisCheckpoint,
+      {
+        issue: confirmedIssue,
+        mode,
+        branch,
+        changesFingerprint: changesFingerprint(),
+        planFingerprint: fingerprintText(planData.content),
+      },
+    );
+    if (checkpointError) fail(checkpointError);
+  }
+  console.log(
+    `✓ ${analysisCheckpoint.phase} checkpoint에서 Agent 분석 결과를 재사용합니다.`,
+  );
+} else {
+  const { runAgent } = await import(`./lib/agents/${agent}.mjs`);
+  console.log(`✓ ${agent} agent를 실행합니다.`);
+  console.log(
+    `ℹ 사전 확인: ${((performance.now() - workflowStartedAt) / 1000).toFixed(1)}s`,
+  );
+  const agentStartedAt = performance.now();
+  let agentExecution;
+  let agentResult;
+  const fingerprintBeforeAgent = changesFingerprint();
+  try {
+    agentExecution = runAgent({ prompt: agentPrompt, cwd });
+    const mutationError = getAgentMutationError(
+      fingerprintBeforeAgent,
+      changesFingerprint(),
+    );
+    if (mutationError) fail(mutationError);
+    console.log(
+      `ℹ Agent 실행: ${((performance.now() - agentStartedAt) / 1000).toFixed(1)}s`,
+    );
+    agentResult = parseAgentResult(agentExecution.output);
+    agentResult.plan.subject = normalizeSubjectIssueSuffix(
+      agentResult.plan.subject,
+      confirmedIssue,
+    );
+  } catch (error) {
+    const rawOutputLength =
+      agentExecution?.rawOutputLength ?? error.rawOutputLength ?? 0;
+    const extractedResponseLength =
+      agentExecution?.extractedResponseLength ??
+      error.extractedResponseLength ??
+      0;
+    fail(
+      `Agent 응답 JSON 파싱에 실패했습니다.\n` +
+        `- agent: ${agent}\n` +
+        `- raw stdout length: ${rawOutputLength}\n` +
+        `- extracted response length: ${extractedResponseLength}\n` +
+        `- filesystem/Git 변경 없음\n` +
+        `원인: ${error.message}`,
+    );
+  }
+  if (agentResult.plan.issue !== confirmedIssue || agentResult.plan.mode !== mode) {
+    fail(
+      "Agent 결과의 Issue 또는 mode가 orchestrator 확인 결과와 다릅니다. filesystem과 Git은 변경하지 않았습니다.",
+    );
+  }
+  if (!TYPES.includes(agentResult.plan.type)) {
+    fail(`Agent 결과의 type이 올바르지 않습니다: ${agentResult.plan.type}`);
+  }
+  agentResult.plan.slug = validateSlug(agentResult.plan.slug);
+
+  const unrelatedToolingFiles = findUnrelatedToolingChanges(
+    changedFiles,
+    confirmedIssueInfo,
+  );
+  const scopeBlockReason = getScopeBlockReason(
+    agentResult,
+    unrelatedToolingFiles,
+  );
+  if (scopeBlockReason) fail(scopeBlockReason);
+  if (
+    mode === "create" &&
+    (!agentResult.issueResult || !agentResult.prBody)
+  ) {
+    fail(
+      "create mode Agent 결과에는 issueResult와 prBody가 필요합니다. filesystem과 Git은 변경하지 않았습니다.",
+    );
+  }
+
+  try {
+    writeAgentArtifacts(agentResult, absoluteTempDir);
+  } catch (error) {
+    fail(
+      `Agent 분석은 완료했지만 Node가 결과 파일을 저장하지 못했습니다. staging은 실행하지 않았고 작업 트리는 유지됩니다.\n${error.message}`,
+    );
+  }
+  planData = loadAndValidatePlan();
+  const targetBranch =
+    branch === "dev"
+      ? `${planData.plan.type}/${confirmedIssue}-${planData.plan.slug}`
+      : branch;
+  analysisCheckpoint = {
+    phase: "agentAnalysisComplete",
+    issue: confirmedIssue,
+    mode,
+    sourceBranch: branch,
+    targetBranch,
+    changesFingerprint: fingerprintBeforeAgent,
+    planFingerprint: fingerprintText(planData.content),
+  };
+  writeFileSync(
+    analysisCheckpointFile,
+    `${JSON.stringify(analysisCheckpoint)}\n`,
+    "utf8",
+  );
+  console.log("✓ Agent 분석 결과와 checkpoint를 저장했습니다.");
+}
+
+const unrelatedToolingFiles = findUnrelatedToolingChanges(
+  changedFiles,
+  confirmedIssueInfo,
 );
-const agentStartedAt = performance.now();
-runAgent({ prompt: agentPrompt, cwd });
-console.log(
-  `ℹ Agent 실행: ${((performance.now() - agentStartedAt) / 1000).toFixed(1)}s`,
-);
+if (unrelatedToolingFiles.length > 0) {
+  fail(
+    getScopeBlockReason(
+      { plan: { ...planData.plan, unrelatedFiles: [] } },
+      unrelatedToolingFiles,
+    ),
+  );
+}
+
+if (!hasGitCheckpoint) {
+  const analysisBaselineFingerprint = analysisCheckpoint.changesFingerprint;
+  const unstaged = outputOf("git", ["diff", "--name-only"]);
+  const untracked = outputOf("git", [
+    "ls-files",
+    "--others",
+    "--exclude-standard",
+  ]);
+  let staged = outputOf("git", ["diff", "--cached", "--name-only"]);
+
+  if (unstaged || untracked) {
+    const preStageError = getStagingSnapshotError({
+      baseline: analysisBaselineFingerprint,
+      current: changesFingerprint(),
+      headDiff: "pending",
+      stagedDiff: "pending",
+      unstaged: "",
+      untracked: "",
+    });
+    if (preStageError) fail(preStageError);
+    const stageResult = run("git", ["add", "-A"], { allowFailure: true });
+    if (stageResult.status !== 0) {
+      const detail = stageResult.stderr?.trim() || stageResult.stdout?.trim();
+      fail(
+        "PR 분석은 완료했지만 변경사항 staging에 실패했습니다.\n" +
+          "현재 작업 트리와 분석 결과는 유지됩니다. pnpm pr을 다시 실행하면 staging부터 재개합니다." +
+          (detail ? `\n${detail}` : ""),
+      );
+    }
+    console.log("✓ orchestrator가 전체 변경사항을 staging했습니다.");
+    staged = outputOf("git", ["diff", "--cached", "--name-only"]);
+  } else if (staged) {
+    console.log(
+      "✓ 필요한 변경사항이 이미 staged되어 있어 staging을 건너뜁니다.",
+    );
+  }
+
+  if (!staged) fail("staging 후 commit할 변경사항이 없습니다.");
+  const stagedSnapshotError = getStagingSnapshotError({
+    baseline: analysisBaselineFingerprint,
+    current: analysisBaselineFingerprint,
+    headDiff: rawOutputOf("git", ["diff", "HEAD", "--binary", "--no-ext-diff"]),
+    stagedDiff: rawOutputOf("git", ["diff", "--cached", "--binary", "--no-ext-diff"]),
+    unstaged: outputOf("git", ["diff", "--name-only"]),
+    untracked: outputOf("git", ["ls-files", "--others", "--exclude-standard"]),
+  });
+  if (stagedSnapshotError) fail(stagedSnapshotError);
+
+  run("git", ["status", "--short"], { inherit: true });
+  run("git", ["diff", "--cached", "--name-status", "-M"], {
+    inherit: true,
+  });
+  analysisCheckpoint = { ...analysisCheckpoint, phase: "staged" };
+  writeFileSync(
+    analysisCheckpointFile,
+    `${JSON.stringify(analysisCheckpoint)}\n`,
+    "utf8",
+  );
+}
+
+if (existsSync(finishedFile)) rmSync(finishedFile);
+const finishArgs = [
+  resolve(cwd, "scripts", "create-pr.mjs"),
+  "--mode",
+  mode,
+  "--issue",
+  String(confirmedIssue),
+  "--type",
+  planData.plan.type,
+  "--subject",
+  planData.plan.subject,
+  "--slug",
+  planData.plan.slug,
+];
+if (existingPr) finishArgs.push("--pr", String(existingPr.number));
+if (existsSync(issueResultFile)) {
+  finishArgs.push("--issue-result-file", issueResultFile);
+}
+if (existsSync(issueBodyFile)) {
+  finishArgs.push("--issue-body-file", issueBodyFile);
+}
+if (existsSync(prBodyFile)) finishArgs.push("--pr-body-file", prBodyFile);
+
+console.log("✓ orchestrator가 pr:finish 단계로 진행합니다.");
+run(process.execPath, finishArgs, { inherit: true });
 
 if (!existsSync(finishedFile)) {
   fail(
-    `Agent가 PR 마무리를 완료하지 않았습니다. 진단 및 재시도를 위해 ${tempDir} 파일을 보존합니다.`,
+    `PR 마무리가 완료되지 않았습니다. 진단 및 재시도를 위해 ${tempDir} 파일을 보존합니다.`,
   );
 }
 

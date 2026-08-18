@@ -49,6 +49,10 @@ export function outputOf(command, args, options = {}) {
   return run(command, args, options).stdout.trim();
 }
 
+export function rawOutputOf(command, args, options = {}) {
+  return run(command, args, options).stdout;
+}
+
 export function assertRepository() {
   if (
     outputOf("git", ["rev-parse", "--is-inside-work-tree"], {
