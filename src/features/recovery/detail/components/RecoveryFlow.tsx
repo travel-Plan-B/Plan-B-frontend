@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { TravelScheduleStep } from "../schedule-input/components/TravelScheduleStep";
+import { TravelScheduleStep } from "./TravelScheduleStep";
 
 // 4단계(기존 일정 입력 → 조건 설정 → 결과편집 → 최종설정)를 URL 없이
 // 이 컴포넌트의 state로만 전환한다. 여행지역/기간, 보관함에 담은 장소 같은
