@@ -45,6 +45,11 @@ const connectorSizeStyles: Record<StepperSize, string> = {
   sm: "mx-1.5 w-6",
 };
 
+const labelSizeStyles: Record<StepperSize, string> = {
+  md: "text-sm",
+  sm: "text-xs",
+};
+
 export function Stepper({
   steps,
   currentStep,
@@ -87,7 +92,8 @@ export function Stepper({
               {/* 단계 이름. 완료/현재는 진한 텍스트, 예정은 흐린 텍스트로 구분. */}
               <span
                 className={cn(
-                  "text-tiny font-bold whitespace-nowrap",
+                  "font-bold whitespace-nowrap",
+                  labelSizeStyles[size],
                   isActive ? "text-neutral-800" : "text-neutral-400",
                 )}
               >
