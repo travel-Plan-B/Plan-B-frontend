@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
@@ -9,10 +8,6 @@ const PLAN_FIELDS = [
   "subject",
   "slug",
 ];
-
-export function fingerprintText(value) {
-  return createHash("sha256").update(value).digest("hex");
-}
 
 export function getAgentMutationError(before, after) {
   return before === after
@@ -81,6 +76,20 @@ export function writeAgentArtifacts(
     const path = resolve(directory, name);
     if (content === null) removeFile(path, { force: true });
     else writeFile(path, content.endsWith("\n") ? content : `${content}\n`, "utf8");
+  }
+}
+
+const AGENT_ARTIFACT_FILES = [
+  "analysis-checkpoint.json",
+  "pr-plan.md",
+  "pr-body.md",
+  "issue-result.md",
+  "issue-body.md",
+];
+
+export function clearAgentArtifacts(directory, { removeFile = rmSync } = {}) {
+  for (const name of AGENT_ARTIFACT_FILES) {
+    removeFile(resolve(directory, name), { force: true });
   }
 }
 
@@ -159,36 +168,4 @@ export function buildQuickIssueUpdate({
     title: `[${typeLabel}] ${subject}`,
     body: `${prBody.trim()}\n\n## 관련 PR\n\n#${prNumber}`,
   };
-}
-
-export function getAnalysisCheckpointIntegrityError(
-  checkpoint,
-  { issue, mode, branch, changesFingerprint, planFingerprint },
-) {
-  if (!checkpoint) return null;
-  if (!new Set(["agentAnalysisComplete", "staged"]).has(checkpoint.phase)) {
-    return "PR 분석 checkpoint phase를 확인할 수 없습니다.";
-  }
-  if (checkpoint.issue !== issue || checkpoint.mode !== mode) {
-    return "PR 분석 checkpoint의 Issue 또는 mode가 현재 실행과 다릅니다.";
-  }
-  if (
-    branch !== checkpoint.sourceBranch &&
-    branch !== checkpoint.targetBranch
-  ) {
-    return "PR 분석 checkpoint의 branch가 현재 branch와 다릅니다.";
-  }
-  if (
-    !checkpoint.changesFingerprint ||
-    checkpoint.changesFingerprint !== changesFingerprint
-  ) {
-    return "Agent 분석 이후 변경사항이 달라졌습니다. 자동 재개하지 않습니다.";
-  }
-  if (
-    !checkpoint.planFingerprint ||
-    checkpoint.planFingerprint !== planFingerprint
-  ) {
-    return "Agent 분석 결과 파일이 checkpoint와 다릅니다. 자동 재개하지 않습니다.";
-  }
-  return null;
 }

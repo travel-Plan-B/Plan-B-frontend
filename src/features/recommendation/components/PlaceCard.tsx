@@ -72,7 +72,7 @@ function InfoRow({ label, value, icon: Icon, compact = false }: InfoRowProps) {
   );
 }
 
-function Rating({ value }: { value: number }) {
+export function PlaceRating({ value }: { value: number }) {
   return (
     <span
       className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-neutral-900"
@@ -166,7 +166,7 @@ export function PlaceCard({
             >
               {title}
             </h3>
-            {rating !== undefined && <Rating value={rating} />}
+            {rating !== undefined && <PlaceRating value={rating} />}
           </div>
           {subtitle && (
             <p className="mt-1 truncate text-sm text-neutral-700">{subtitle}</p>

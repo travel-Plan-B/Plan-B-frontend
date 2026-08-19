@@ -31,8 +31,8 @@ import {
   labelForType,
 } from "./github-labels.mjs";
 import {
+  clearAgentArtifacts,
   getAgentMutationError,
-  getAnalysisCheckpointIntegrityError,
   getBranchSwitchIntegrityError,
   getTargetBranch,
   buildQuickIssueUpdate,
@@ -155,39 +155,6 @@ test("작업 branch 생성 전후 working tree fingerprint 보존을 검증한�
   assert.match(
     getBranchSwitchIntegrityError("before", "after"),
     /working tree가 달라졌습니다/u,
-  );
-});
-
-test("staging 실패 후 동일한 분석 checkpoint는 Agent 재실행 없이 재개할 수 있다", () => {
-  const checkpoint = {
-    phase: "agentAnalysisComplete",
-    issue: 63,
-    mode: "create",
-    sourceBranch: "dev",
-    targetBranch: "feat/63-simple-recovery",
-    changesFingerprint: "changes",
-    planFingerprint: "plan",
-  };
-
-  assert.equal(
-    getAnalysisCheckpointIntegrityError(checkpoint, {
-      issue: 63,
-      mode: "create",
-      branch: "dev",
-      changesFingerprint: "changes",
-      planFingerprint: "plan",
-    }),
-    null,
-  );
-  assert.match(
-    getAnalysisCheckpointIntegrityError(checkpoint, {
-      issue: 63,
-      mode: "create",
-      branch: "dev",
-      changesFingerprint: "changed",
-      planFingerprint: "plan",
-    }),
-    /변경사항이 달라졌습니다/u,
   );
 });
 
@@ -767,6 +734,31 @@ test("Agent는 JSON만 반환하고 Node가 기존 Markdown 파일을 생성한�
     "## 변경 내용\n\nCloses #63\n",
   );
   assert.equal(removed.some((path) => path.endsWith("issue-body.md")), true);
+});
+
+test("새 실행은 이전 Agent 분석 산출물을 정리하고 Git checkpoint는 유지한다", () => {
+  const removed = [];
+
+  clearAgentArtifacts(".tmp/planb-pr", {
+    removeFile: (path, options) =>
+      removed.push({ path: path.replaceAll("\\", "/"), options }),
+  });
+
+  assert.deepEqual(
+    removed.map(({ path }) => path.split("/").at(-1)),
+    [
+      "analysis-checkpoint.json",
+      "pr-plan.md",
+      "pr-body.md",
+      "issue-result.md",
+      "issue-body.md",
+    ],
+  );
+  assert.equal(
+    removed.some(({ path }) => path.endsWith("git-checkpoint.json")),
+    false,
+  );
+  assert.equal(removed.every(({ options }) => options.force === true), true);
 });
 
 test("Agent JSON 파싱 실패 시 파일, checkpoint, staging을 시작하지 않는다", () => {

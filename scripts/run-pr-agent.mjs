@@ -2,7 +2,6 @@ import {
   existsSync,
   readFileSync,
   rmSync,
-  writeFileSync,
 } from "node:fs";
 import { resolve } from "node:path";
 
@@ -44,13 +43,11 @@ import {
   normalizeGitPath,
 } from "./lib/validation-policy.mjs";
 import {
-  fingerprintText,
-  getAnalysisCheckpointIntegrityError,
+  clearAgentArtifacts,
   getAgentMutationError,
   normalizeSubjectIssueSuffix,
   parseAgentResult,
   parsePrPlan,
-  getTargetBranch,
   resolvePrMetadata,
   writeAgentArtifacts,
 } from "./lib/pr-analysis.mjs";
@@ -240,10 +237,6 @@ const tempDir = ".tmp/planb-pr";
 const absoluteTempDir = resolve(cwd, tempDir);
 const finishedFile = resolve(absoluteTempDir, "finished.json");
 const gitCheckpointFile = resolve(absoluteTempDir, "git-checkpoint.json");
-const analysisCheckpointFile = resolve(
-  absoluteTempDir,
-  "analysis-checkpoint.json",
-);
 const prPlanFile = resolve(absoluteTempDir, "pr-plan.md");
 const prBodyFile = resolve(absoluteTempDir, "pr-body.md");
 
@@ -276,19 +269,10 @@ if (args["reset-checkpoint"] && existsSync(gitCheckpointFile)) {
 } else if (args["reset-checkpoint"]) {
   console.log("ℹ 초기화할 Git checkpoint가 없습니다.");
 }
-if (args["reset-checkpoint"] && existsSync(analysisCheckpointFile)) {
-  const checkpoint = readJsonFile(analysisCheckpointFile, "PR 분석");
-  if (
-    checkpoint.phase !== "agentAnalysisComplete" &&
-    checkpoint.phase !== "staged"
-  ) {
-    fail("안전하게 초기화할 수 없는 PR 분석 checkpoint입니다.");
-  }
-  rmSync(analysisCheckpointFile);
-  console.log("✓ PR 분석 checkpoint를 초기화했습니다.");
-}
 process.env.PLANB_PR_FINISHED_FILE = finishedFile;
 process.env.PLANB_PR_GIT_CHECKPOINT_FILE = gitCheckpointFile;
+
+clearAgentArtifacts(absoluteTempDir);
 
 const stagedFiles = outputOf("git", ["diff", "--cached", "--name-only"])
   .split(/\r?\n/u)
@@ -373,36 +357,11 @@ function loadAndValidatePlan() {
   return { plan, content };
 }
 
-let analysisCheckpoint = existsSync(analysisCheckpointFile)
-  ? readJsonFile(analysisCheckpointFile, "PR 분석")
-  : null;
 const hasGitCheckpoint = existsSync(gitCheckpointFile);
 let planData;
+const fingerprintBeforeAgent = changesFingerprint();
 
-if (analysisCheckpoint || hasGitCheckpoint) {
-  if (!analysisCheckpoint || !existsSync(prPlanFile)) {
-    fail(
-      "기존 checkpoint를 재개할 Agent 분석 결과가 없습니다. --reset-checkpoint로 초기화하세요.",
-    );
-  }
-  planData = loadAndValidatePlan();
-  if (!hasGitCheckpoint) {
-    const checkpointError = getAnalysisCheckpointIntegrityError(
-      analysisCheckpoint,
-      {
-        issue: confirmedIssue,
-        mode,
-        branch,
-        changesFingerprint: changesFingerprint(),
-        planFingerprint: fingerprintText(planData.content),
-      },
-    );
-    if (checkpointError) fail(checkpointError);
-  }
-  console.log(
-    `✓ ${analysisCheckpoint.phase} checkpoint에서 Agent 분석 결과를 재사용합니다.`,
-  );
-} else {
+{
   const { runAgent } = await import(`./lib/agents/${agent}.mjs`);
   console.log(`✓ ${agent} agent를 실행합니다.`);
   console.log(
@@ -411,7 +370,6 @@ if (analysisCheckpoint || hasGitCheckpoint) {
   const agentStartedAt = performance.now();
   let agentExecution;
   let agentResult;
-  const fingerprintBeforeAgent = changesFingerprint();
   try {
     agentExecution = runAgent({ prompt: agentPrompt, cwd });
     const mutationError = getAgentMutationError(
@@ -489,31 +447,11 @@ if (analysisCheckpoint || hasGitCheckpoint) {
     );
   }
   planData = loadAndValidatePlan();
-  const targetBranch = getTargetBranch({
-    sourceBranch: branch,
-    issue: confirmedIssue,
-    type: planData.plan.type,
-    slug: planData.plan.slug,
-  });
-  analysisCheckpoint = {
-    phase: "agentAnalysisComplete",
-    issue: confirmedIssue,
-    mode,
-    sourceBranch: branch,
-    targetBranch,
-    changesFingerprint: fingerprintBeforeAgent,
-    planFingerprint: fingerprintText(planData.content),
-  };
-  writeFileSync(
-    analysisCheckpointFile,
-    `${JSON.stringify(analysisCheckpoint)}\n`,
-    "utf8",
-  );
-  console.log("✓ Agent 분석 결과와 checkpoint를 저장했습니다.");
+  console.log("✓ 현재 실행의 Agent 분석 결과를 저장했습니다.");
 }
 
 if (!hasGitCheckpoint) {
-  const analysisBaselineFingerprint = analysisCheckpoint.changesFingerprint;
+  const analysisBaselineFingerprint = fingerprintBeforeAgent;
   const unstaged = outputOf("git", ["diff", "--name-only"]);
   const untracked = outputOf("git", [
     "ls-files",
@@ -564,12 +502,6 @@ if (!hasGitCheckpoint) {
   run("git", ["diff", "--cached", "--name-status", "-M"], {
     inherit: true,
   });
-  analysisCheckpoint = { ...analysisCheckpoint, phase: "staged" };
-  writeFileSync(
-    analysisCheckpointFile,
-    `${JSON.stringify(analysisCheckpoint)}\n`,
-    "utf8",
-  );
 }
 
 if (existsSync(finishedFile)) rmSync(finishedFile);
