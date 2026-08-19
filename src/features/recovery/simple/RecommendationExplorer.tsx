@@ -12,7 +12,6 @@ import { useState, type ReactNode } from "react";
 
 import { PlaceRating } from "@/features/recommendation/components/PlaceCard";
 import { PlaceCardImage } from "@/features/recommendation/components/PlaceCardImage";
-import { Button } from "@/shared/components/ui/Button";
 import { IconBadge } from "@/shared/components/ui/IconBadge";
 import { Tag } from "@/shared/components/ui/Tag";
 
@@ -114,10 +113,6 @@ export function RecommendationExplorer({
                 }
               />
             </dl>
-
-            <Button variant="default" size="md" className="mt-6 w-full">
-              상세보기
-            </Button>
           </div>
         </div>
       </section>

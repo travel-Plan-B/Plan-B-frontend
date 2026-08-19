@@ -2,7 +2,6 @@ import { ArrowRight } from "lucide-react";
 
 import { ScheduleCard } from "@/features/recommendation/components/ScheduleCard";
 import { RecoveryPageLayout } from "@/features/recovery/components/RecoveryPageLayout";
-import { Button } from "@/shared/components/ui/Button";
 import { IconBadge } from "@/shared/components/ui/IconBadge";
 import { Tag, type TagVariant } from "@/shared/components/ui/Tag";
 
@@ -78,12 +77,6 @@ export function SimpleRecoveryRecommendPage() {
         recommendations={recommendations}
         initialRecommendationId={INITIAL_RECOMMENDATION_ID}
       />
-
-      <div className="mt-12 flex justify-center pb-8">
-        <Button variant="default" size="lg">
-          추천 더보기
-        </Button>
-      </div>
     </RecoveryPageLayout>
   );
 }

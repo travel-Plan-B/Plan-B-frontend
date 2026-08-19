@@ -81,7 +81,6 @@ export function RecommendationList({
             distance={place.travelTime}
             hours={place.hours}
             parking={place.parking}
-            onDetail={() => undefined}
             onSelect={() => onSelect(place.id)}
             className="h-full"
           />
