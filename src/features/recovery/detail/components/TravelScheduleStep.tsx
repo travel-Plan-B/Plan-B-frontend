@@ -8,7 +8,6 @@ import { List, MapPin, Map as MapIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 import { RecoveryPageLayout } from "@/features/recovery/components/RecoveryPageLayout";
 import { BottomActionBar } from "@/shared/components/layout/BottomActionBar";
-import type { StepperStep } from "@/shared/components/ui/Stepper";
 import {
   type DateRange,
   DateRangePicker,
@@ -17,6 +16,7 @@ import { Input } from "@/shared/components/ui/Input";
 import { Tabs } from "@/shared/components/ui/Tabs/Tabs";
 import { TabsList } from "@/shared/components/ui/Tabs/TabsList";
 import { TabsTrigger } from "@/shared/components/ui/Tabs/TabsTrigger";
+import { DETAIL_RECOVERY_STEPS } from "../steps";
 import {
   buildScheduleDays,
   MOCK_ITEMS_BY_DAY,
@@ -24,14 +24,6 @@ import {
 } from "../mocks/scheduleMock";
 import { PlaceFinderPanel } from "./place-finder/PlaceFinderPanel";
 import { ScheduleInputPanel } from "./schedule-panel/ScheduleInputPanel";
-
-/** 디테일모드 4단계 라벨. 2~4단계 화면이 생겨서 재사용처가 또 생기면 steps.ts로 분리. */
-const DETAIL_RECOVERY_STEPS = [
-  { label: "기존 일정 입력" },
-  { label: "조건 설정" },
-  { label: "결과편집" },
-  { label: "최종일정" },
-] satisfies StepperStep[];
 
 export interface TravelScheduleStepProps {
   onNext?: () => void;
