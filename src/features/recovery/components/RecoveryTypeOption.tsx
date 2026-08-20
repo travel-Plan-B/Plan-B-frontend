@@ -2,18 +2,35 @@ import type { ButtonHTMLAttributes, ReactNode } from "react";
 
 import { cn } from "@/shared/lib/cn";
 
-export interface RecoveryTypeOptionProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children" | "title"> {
+export type RecoveryTypeOptionSize = "md" | "sm";
+
+export interface RecoveryTypeOptionProps extends Omit<
+  ButtonHTMLAttributes<HTMLButtonElement>,
+  "children" | "title"
+> {
   icon: ReactNode;
   title: string;
   description: string;
   selected?: boolean;
+  size?: RecoveryTypeOptionSize;
 }
+
+const titleSizeStyles: Record<RecoveryTypeOptionSize, string> = {
+  md: "text-base",
+  sm: "text-sm",
+};
+
+const descriptionSizeStyles: Record<RecoveryTypeOptionSize, string> = {
+  md: "text-sm",
+  sm: "text-xs",
+};
 
 export function RecoveryTypeOption({
   icon,
   title,
   description,
   selected = false,
+  size = "md",
   className,
   type = "button",
   ...props
@@ -38,8 +55,22 @@ export function RecoveryTypeOption({
       </span>
 
       <span className="mt-3 min-w-0">
-        <span className="block text-base font-medium text-neutral-900">{title}</span>
-        <span className="mt-1 block text-sm text-neutral-700">{description}</span>
+        <span
+          className={cn(
+            "block font-medium text-neutral-900",
+            titleSizeStyles[size],
+          )}
+        >
+          {title}
+        </span>
+        <span
+          className={cn(
+            "mt-1 block text-neutral-700",
+            descriptionSizeStyles[size],
+          )}
+        >
+          {description}
+        </span>
       </span>
     </button>
   );
