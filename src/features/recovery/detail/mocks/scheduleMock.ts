@@ -29,7 +29,7 @@ export interface ScheduleDay {
   items: ScheduleItem[];
 }
 
-const TRAVEL_INFO_BY_MODE: Record<
+export const TRAVEL_INFO_BY_MODE: Record<
   TransportMode,
   { label: string; estimatedMinutes: number; distanceKm: number }
 > = {
