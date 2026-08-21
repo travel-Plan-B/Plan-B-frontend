@@ -4,10 +4,7 @@
  * DAY별 일정, 추천 장소 모두 목업 값을 쓴다.
  */
 import type { TagVariant } from "@/shared/components/ui/Tag";
-import { CATEGORY_TAG_VARIANT } from "./placeMock";
 import type { ScheduleItem } from "./scheduleMock";
-
-export { CATEGORY_TAG_VARIANT };
 
 export interface ResultConditionChip {
   label: string;

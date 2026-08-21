@@ -9,15 +9,22 @@ interface PlaceCardImageProps {
   imageUrl?: string;
   imageAlt: string;
   sizes: string;
+  /** 작은 썸네일 등 라벨 텍스트가 안 맞는 곳에서 false로 끈다. 기본 true. */
+  showFallbackLabel?: boolean;
 }
 
 type LoadableImageProps = Required<PlaceCardImageProps>;
 
-function LoadableImage({ imageUrl, imageAlt, sizes }: LoadableImageProps) {
+function LoadableImage({
+  imageUrl,
+  imageAlt,
+  sizes,
+  showFallbackLabel,
+}: LoadableImageProps) {
   const [hasError, setHasError] = useState(false);
 
   if (hasError) {
-    return <PlaceImagePlaceholder />;
+    return <PlaceImagePlaceholder showFallbackLabel={showFallbackLabel} />;
   }
 
   return (
@@ -32,10 +39,14 @@ function LoadableImage({ imageUrl, imageAlt, sizes }: LoadableImageProps) {
   );
 }
 
-function PlaceImagePlaceholder() {
+function PlaceImagePlaceholder({
+  showFallbackLabel,
+}: {
+  showFallbackLabel: boolean;
+}) {
   return (
     <ImagePlaceholder className="rounded-none">
-      <span className="text-xs">이미지 없음</span>
+      {showFallbackLabel && <span className="text-xs">이미지 없음</span>}
     </ImagePlaceholder>
   );
 }
@@ -44,9 +55,10 @@ export function PlaceCardImage({
   imageUrl,
   imageAlt,
   sizes,
+  showFallbackLabel = true,
 }: PlaceCardImageProps) {
   if (!imageUrl) {
-    return <PlaceImagePlaceholder />;
+    return <PlaceImagePlaceholder showFallbackLabel={showFallbackLabel} />;
   }
 
   return (
@@ -55,6 +67,7 @@ export function PlaceCardImage({
       imageUrl={imageUrl}
       imageAlt={imageAlt}
       sizes={sizes}
+      showFallbackLabel={showFallbackLabel}
     />
   );
 }

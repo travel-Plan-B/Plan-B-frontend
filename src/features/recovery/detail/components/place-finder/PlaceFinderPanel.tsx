@@ -1,7 +1,7 @@
 "use client";
 
 import { FolderOpen, Search, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/shared/components/ui/Button";
 import {
   EMPTY_STATE_IMAGES,
@@ -9,44 +9,53 @@ import {
 } from "@/shared/components/ui/EmptyState";
 import { Input } from "@/shared/components/ui/Input";
 import { ConfirmModal } from "@/shared/components/ui/Modal/ConfirmModal";
+import { Spinner } from "@/shared/components/ui/Spinner";
 import { Tabs } from "@/shared/components/ui/Tabs/Tabs";
 import { TabsList } from "@/shared/components/ui/Tabs/TabsList";
 import { TabsTrigger } from "@/shared/components/ui/Tabs/TabsTrigger";
+import { toast } from "@/shared/components/ui/Toast/toast";
 import { cn } from "@/shared/lib/cn";
-import { MOCK_SEARCH_RESULTS, PLACE_CATEGORIES } from "../../mocks/placeMock";
+import { usePlaceSearchQuery } from "../../api/placeQueries";
+import { useDebouncedValue } from "../../hooks/useDebouncedValue";
+import { useStoredPlaces } from "../../hooks/useStoredPlaces";
 import { PlaceResultItem } from "./PlaceResultItem";
 import { StoredPlaceItem } from "./StoredPlaceItem";
 
-/**
- * 왼쪽 영역: "장소 찾기" / "장소 보관함" 두 탭 패널.
- *
- * TODO(#71): 검색/보관함 API 연동.
- */
 export function PlaceFinderPanel() {
+  // "장소 찾기" / "장소 보관함" 탭 전환
   const [tab, setTab] = useState<"search" | "storage">("search");
   const isSearch = tab === "search";
 
-  const [storedIds, setStoredIds] = useState<string[]>(["place-1"]);
-  const isStored = (id: string) => storedIds.includes(id);
-  const toggleStored = (id: string) => {
-    setStoredIds((prev) =>
-      prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id],
-    );
-  };
-  const removeStored = (id: string) =>
-    setStoredIds((prev) => prev.filter((v) => v !== id));
+  // 검색어 입력 -> 400ms 디바운스 -> 실제 장소 검색 API 호출
+  const [searchInput, setSearchInput] = useState("");
+  const debouncedQuery = useDebouncedValue(searchInput, 400);
+  const {
+    data: searchResults,
+    isLoading,
+    isFetching,
+    isError,
+  } = usePlaceSearchQuery(debouncedQuery);
 
-  const storedPlaces = MOCK_SEARCH_RESULTS.filter((place) =>
-    storedIds.includes(place.id),
-  );
+  // 검색 실패 시 토스트로 알림
+  useEffect(() => {
+    if (isError)
+      toast.error("장소 검색에 실패했어요. 잠시 후 다시 시도해주세요.");
+  }, [isError]);
 
-  const [categoryFilter, setCategoryFilter] =
-    useState<(typeof PLACE_CATEGORIES)[number]>("전체");
+  // 보관함(담기/빼기/카테고리 필터/비우기) 상태
+  const {
+    storedPlaces,
+    isStored,
+    toggleStored,
+    removeStored,
+    clearStored,
+    categories,
+    categoryFilter,
+    setCategoryFilter,
+    filteredStoredPlaces,
+  } = useStoredPlaces();
+
   const [confirmClearOpen, setConfirmClearOpen] = useState(false);
-  const filteredStoredPlaces =
-    categoryFilter === "전체"
-      ? storedPlaces
-      : storedPlaces.filter((place) => place.categoryTag === categoryFilter);
 
   return (
     <div className="min-w-70 flex flex-2 flex-col gap-3 rounded-2xl border border-neutral-200 bg-white px-4 pt-4 pb-0 shadow-lg">
@@ -90,27 +99,56 @@ export function PlaceFinderPanel() {
           <div className="relative">
             <Search className="pointer-events-none absolute top-1/2 left-4 z-10 size-4 -translate-y-1/2 text-neutral-600" />
             <Input
-              defaultValue="성산"
+              value={searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
               placeholder="태그나,장소명을 검색 해주세요"
               clearable
               className="text-fluid-sm placeholder:text-fluid-sm pl-10 py-1.5"
             />
           </div>
 
-          <p className="text-xs font-semibold text-neutral-700">
-            검색 결과{" "}
-            <span className="font-semibold text-primary-600">100</span>
-          </p>
+          {debouncedQuery.length > 0 && (
+            <p className="text-xs font-semibold text-neutral-700">
+              검색 결과{" "}
+              <span className="font-semibold text-primary-600">
+                {searchResults?.length ?? 0}
+              </span>
+            </p>
+          )}
 
-          <div className="flex-1 divide-y divide-neutral-100 overflow-y-auto">
-            {MOCK_SEARCH_RESULTS.map((place) => (
-              <PlaceResultItem
-                key={place.id}
-                place={place}
-                isStored={isStored(place.id)}
-                onToggle={() => toggleStored(place.id)}
+          <div className="flex flex-1 flex-col overflow-y-auto">
+            {isLoading || isFetching ? (
+              <div className="flex flex-1 items-center justify-center">
+                <Spinner />
+              </div>
+            ) : debouncedQuery.length === 0 ? (
+              <EmptyState
+                {...EMPTY_STATE_IMAGES.search}
+                title="장소를 검색해보세요"
+                description="장소명이나 태그로 검색하면 결과가 여기 표시돼요."
+                imageClassName="w-40"
+                className="flex-1"
               />
-            ))}
+            ) : searchResults?.length === 0 ? (
+              <EmptyState
+                {...EMPTY_STATE_IMAGES.search}
+                title="검색 결과가 없어요"
+                description="다른 장소명이나 태그로 검색해보세요."
+                imageClassName="w-40"
+                className="flex-1"
+              />
+            ) : (
+              <div className="divide-y divide-neutral-100">
+                {searchResults?.map((place) => (
+                  <PlaceResultItem
+                    key={place.id}
+                    place={place}
+                    isStored={isStored(place.id)}
+                    onToggle={() => toggleStored(place)}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         </>
       ) : (
@@ -124,18 +162,9 @@ export function PlaceFinderPanel() {
             </p>
           </div>
 
-          <div className="relative">
-            <Search className="pointer-events-none absolute top-1/2 left-4 z-10 size-4 -translate-y-1/2 text-neutral-600" />
-            <Input
-              placeholder="태그나,장소명을 검색 해주세요"
-              clearable
-              className="text-fluid-sm placeholder:text-fluid-sm pl-10 py-1.5"
-            />
-          </div>
-
           <div className="flex items-center justify-between">
             <div className="flex gap-2">
-              {PLACE_CATEGORIES.map((category) => (
+              {categories.map((category) => (
                 <button
                   key={category}
                   type="button"
@@ -196,7 +225,7 @@ export function PlaceFinderPanel() {
         open={confirmClearOpen}
         onClose={() => setConfirmClearOpen(false)}
         onConfirm={() => {
-          setStoredIds([]);
+          clearStored();
           setConfirmClearOpen(false);
         }}
         title="보관함을 비울까요?"

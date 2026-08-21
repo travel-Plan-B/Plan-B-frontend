@@ -1,7 +1,8 @@
 import { GripVertical, X } from "lucide-react";
 
 import { Tag } from "@/shared/components/ui/Tag";
-import { CATEGORY_TAG_VARIANT, type MockPlace } from "../../mocks/placeMock";
+import type { Place } from "../../api/types";
+import { getCategoryTagVariant } from "../../mocks/placeMock";
 
 /**
  * PlaceFinderPanel의 "장소 보관함" 탭 목록 한 줄.
@@ -9,7 +10,7 @@ import { CATEGORY_TAG_VARIANT, type MockPlace } from "../../mocks/placeMock";
  * TODO(#73): 드래그 핸들 -> 일정 패널 드래그앤드롭 연결.
  */
 export interface StoredPlaceItemProps {
-  place: MockPlace;
+  place: Place;
   onRemove: () => void;
 }
 
@@ -27,7 +28,7 @@ export function StoredPlaceItem({ place, onRemove }: StoredPlaceItemProps) {
             {place.name}
           </span>
           <Tag
-            variant={CATEGORY_TAG_VARIANT[place.categoryTag] ?? "gray"}
+            variant={getCategoryTagVariant(place.categoryTag)}
             size="sm"
             className="shrink-0 border-0"
           >

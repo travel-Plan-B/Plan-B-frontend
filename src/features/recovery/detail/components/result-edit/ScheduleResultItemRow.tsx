@@ -5,7 +5,7 @@ import trainIcon from "@/shared/assets/icons/train.svg";
 import walkIcon from "@/shared/assets/icons/walk.svg";
 import { Tag } from "@/shared/components/ui/Tag";
 import { cn } from "@/shared/lib/cn";
-import { CATEGORY_TAG_VARIANT } from "../../mocks/placeMock";
+import { getCategoryTagVariant } from "../../mocks/placeMock";
 import type { TransportMode } from "../../mocks/scheduleMock";
 import type { ResultScheduleItem } from "../../mocks/resultEditMock";
 
@@ -76,7 +76,7 @@ export function ScheduleResultItemRow({
               {item.placeName}
             </span>
             <Tag
-              variant={CATEGORY_TAG_VARIANT[item.categoryTag] ?? "gray"}
+              variant={getCategoryTagVariant(item.categoryTag)}
               size="sm"
               className="shrink-0 border-0"
             >
