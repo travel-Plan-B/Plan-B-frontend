@@ -1,5 +1,15 @@
 import { SimpleRecoveryRecommendPage } from "@/features/recovery/simple/SimpleRecoveryRecommendPage";
 
-export default function SimpleRecoveryRecommendRoute() {
-  return <SimpleRecoveryRecommendPage />;
+export default async function SimpleRecoveryRecommendRoute({
+  searchParams,
+}: PageProps<"/recovery/simple/recommend">) {
+  const { selectedPlaceId } = await searchParams;
+
+  return (
+    <SimpleRecoveryRecommendPage
+      selectedPlaceId={
+        typeof selectedPlaceId === "string" ? selectedPlaceId : undefined
+      }
+    />
+  );
 }

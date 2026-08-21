@@ -31,37 +31,9 @@ import { Tag } from "@/shared/components/ui/Tag";
 import { ROUTES } from "@/shared/config/routes";
 import { cn } from "@/shared/lib/cn";
 
-const gallery = [
-  {
-    src: "https://images.unsplash.com/photo-1549490349-8643362247b5?auto=format&fit=crop&w=1600&q=88",
-    alt: "빛과 색으로 채워진 몰입형 미디어 아트 전시장",
-  },
-  {
-    src: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=900&q=84",
-    alt: "컬러 미디어 아트 전시",
-  },
-  {
-    src: "https://images.unsplash.com/photo-1547891654-e66ed7ebb968?auto=format&fit=crop&w=900&q=84",
-    alt: "현대 미술 전시 공간",
-  },
-  {
-    src: "https://images.unsplash.com/photo-1577083552431-6e5fd01aa342?auto=format&fit=crop&w=900&q=84",
-    alt: "빛을 활용한 디지털 아트",
-  },
-  {
-    src: "https://images.unsplash.com/photo-1561214115-f2f134cc4912?auto=format&fit=crop&w=900&q=84",
-    alt: "넓은 실내 갤러리",
-  },
-];
+import type { PlaceDetailFixture } from "./placeDetailFixtures";
 
-const recommendationReason = {
-  category: "날씨 · 일정",
-  title: "비 오는 날에도 현재 일정에 맞춰 방문하기 좋아요",
-  description:
-    "실내 중심의 미디어 아트 공간이라 날씨의 영향을 거의 받지 않고, 다음 일정인 경포해변까지 이동한 뒤에도 25분의 여유가 남아 일정을 자연스럽게 이어갈 수 있어요.",
-};
-
-export function PlaceDetailPage() {
+export function PlaceDetailPage({ place }: { place: PlaceDetailFixture }) {
   return (
     <div className="flex flex-1 flex-col pb-10">
       <div className="flex flex-col gap-5 py-6 lg:flex-row lg:items-center lg:justify-between">
@@ -74,18 +46,22 @@ export function PlaceDetailPage() {
         </Link>
       </div>
 
-      <Gallery />
-      <PlaceHeading />
-      <FitAnalysis />
-      <RecommendationReasons />
-      <PlaceOverview />
-      <VisitInformation />
-      <BottomActions />
+      <Gallery place={place} />
+      <PlaceHeading place={place} />
+      <FitAnalysis place={place} />
+      <RecommendationReasons reason={place.recommendationReason} />
+      <PlaceOverview place={place} />
+      <VisitInformation place={place} />
+      <BottomActions placeId={place.id} />
     </div>
   );
 }
 
-function Gallery() {
+function Gallery({ place }: { place: PlaceDetailFixture }) {
+  const gallery = [
+    { src: place.imageUrl, alt: place.imageAlt },
+    ...place.gallery,
+  ];
   return (
     <section
       aria-label="장소 사진"
@@ -120,7 +96,7 @@ function Gallery() {
   );
 }
 
-function PlaceHeading() {
+function PlaceHeading({ place }: { place: PlaceDetailFixture }) {
   const actions = [
     { icon: Phone, label: "전화" },
     { icon: Globe, label: "웹사이트" },
@@ -134,17 +110,18 @@ function PlaceHeading() {
         <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-primary-50 px-3 py-1.5 text-xs font-semibold text-primary-700">
           <Sparkles className="size-3.5" /> AI 추천 장소
         </div>
-        <h1 className="text-h1 font-bold text-neutral-900">
-          아르떼뮤지엄 강릉
-        </h1>
+        <h1 className="text-h1 font-bold text-neutral-900">{place.title}</h1>
         <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-neutral-700">
-          <span>미디어 아트 · 실내 관광지 · 강릉</span>
-          <span className="inline-flex items-center gap-1 font-semibold text-neutral-900">
-            <Star className="size-4 fill-yellow-500 text-yellow-500" /> 4.8
+          <span>
+            {place.category} · 실내 관광지 · {place.location}
           </span>
-          <span>리뷰 1,234개</span>
+          <span className="inline-flex items-center gap-1 font-semibold text-neutral-900">
+            <Star className="size-4 fill-yellow-500 text-yellow-500" />{" "}
+            {place.rating.toFixed(1)}
+          </span>
+          <span>리뷰 {place.reviewCount.toLocaleString()}개</span>
           <span className="inline-flex items-center gap-1.5">
-            <Car className="size-4" /> 차량 약 25분
+            <Car className="size-4" /> {place.travelTime}
           </span>
         </div>
       </div>
@@ -162,15 +139,19 @@ function PlaceHeading() {
   );
 }
 
-function FitAnalysis() {
+function FitAnalysis({ place }: { place: PlaceDetailFixture }) {
   const summaries = [
-    { icon: Navigation, label: "현재 위치에서", value: "12분" },
-    { icon: Clock3, label: "추천 체류 시간", value: "1시간 20분" },
-    { icon: Route, label: "다음 장소까지", value: "18분" },
+    {
+      icon: Navigation,
+      label: "현재 위치에서",
+      value: `${place.distanceMinutes}분`,
+    },
+    { icon: Clock3, label: "추천 체류 시간", value: place.stayTime },
+    { icon: Route, label: "다음 장소까지", value: place.nextTravelTime },
     {
       icon: TimerReset,
       label: "일정 여유 시간",
-      value: "25분",
+      value: place.bufferTime,
       highlight: true,
     },
   ];
@@ -210,22 +191,22 @@ function FitAnalysis() {
         <div className="mt-4 grid items-stretch gap-3 md:grid-cols-[1fr_auto_1.15fr_auto_1fr]">
           <FlowCard
             eyebrow="현재 위치"
-            title="인사동"
+            title="강릉역"
             detail="13:20 출발"
             icon={MapPin}
           />
           <FlowArrow />
           <FlowCard
             eyebrow="추천 장소"
-            title="아르떼뮤지엄 강릉"
-            detail="13:32 도착 · 14:52 출발"
+            title={place.title}
+            detail={`${place.arrivalTime} 도착 · ${place.timeRange} 체류`}
             icon={Sparkles}
             active
           />
           <FlowArrow />
           <FlowCard
             eyebrow="다음 일정"
-            title="경포해변"
+            title={place.nextPlace}
             detail="15:10 도착 예정"
             icon={CalendarClock}
           />
@@ -323,7 +304,11 @@ function FlowArrow() {
   );
 }
 
-function RecommendationReasons() {
+function RecommendationReasons({
+  reason,
+}: {
+  reason: PlaceDetailFixture["recommendationReason"];
+}) {
   return (
     <section className="mt-14" aria-labelledby="reason-title">
       <h2 id="reason-title" className="text-2xl font-bold text-neutral-900">
@@ -340,13 +325,13 @@ function RecommendationReasons() {
             className="gap-2 border-transparent bg-primary-50 text-primary-700"
           >
             <CloudRain className="size-4" aria-hidden="true" />
-            {recommendationReason.category}
+            {reason.category}
           </Tag>
           <h3 className="mt-4 text-lg font-semibold text-neutral-900">
-            {recommendationReason.title}
+            {reason.title}
           </h3>
           <p className="mt-2 text-sm leading-6 text-neutral-700">
-            {recommendationReason.description}
+            {reason.description}
           </p>
         </div>
       </article>
@@ -354,7 +339,7 @@ function RecommendationReasons() {
   );
 }
 
-function PlaceOverview() {
+function PlaceOverview({ place }: { place: PlaceDetailFixture }) {
   return (
     <section
       className="mt-12 grid items-start gap-8 border-t border-neutral-200 pt-12 lg:grid-cols-[1fr_0.85fr]"
@@ -365,22 +350,17 @@ function PlaceOverview() {
           장소 소개
         </h2>
         <p className="mt-5 max-w-2xl text-base leading-7 text-neutral-700">
-          아르떼뮤지엄 강릉은 디지털 기술과 자연을 결합한 몰입형 미디어 아트
-          전시 공간입니다. 파도와 숲, 별빛을 모티프로 한 작품을 오감으로 경험할
-          수 있어요. 실내 관광지이기 때문에 날씨에 영향을 받지 않고 방문할 수
-          있으며 약 1~2시간 정도 관람하기 좋습니다.
+          {place.description}
         </p>
         <div className="mt-6 flex flex-wrap gap-2">
-          {["몰입형 전시", "실내 데이트", "가족 여행", "포토 스팟"].map(
-            (tag) => (
-              <span
-                key={tag}
-                className="rounded-full bg-neutral-100 px-3 py-1.5 text-xs font-medium text-neutral-700"
-              >
-                {tag}
-              </span>
-            ),
-          )}
+          {place.tags.map((tag) => (
+            <span
+              key={tag}
+              className="rounded-full bg-neutral-100 px-3 py-1.5 text-xs font-medium text-neutral-700"
+            >
+              {tag}
+            </span>
+          ))}
         </div>
       </div>
       <div>
@@ -393,7 +373,7 @@ function PlaceOverview() {
               <MapPin className="size-6 fill-current" />
             </div>
             <span className="absolute top-[62%] left-1/2 -translate-x-1/2 rounded-lg bg-white px-3 py-1.5 text-xs font-semibold shadow">
-              아르떼뮤지엄 강릉
+              {place.title}
             </span>
           </div>
           <button className="flex w-full cursor-pointer items-center justify-center gap-2 border-t border-neutral-200 py-2 text-sm font-medium text-neutral-900 transition-colors hover:bg-neutral-50">
@@ -406,7 +386,7 @@ function PlaceOverview() {
   );
 }
 
-function VisitInformation() {
+function VisitInformation({ place }: { place: PlaceDetailFixture }) {
   const rows: Array<{
     icon: ComponentType<{ className?: string }>;
     label: string;
@@ -415,30 +395,25 @@ function VisitInformation() {
     {
       icon: MapPin,
       label: "주소",
-      value: "강원특별자치도 강릉시 난설헌로 131",
+      value: place.address,
     },
     {
       icon: Clock3,
       label: "운영시간",
       value: (
         <>
-          10:00 - 20:00{" "}
+          {place.hours}{" "}
           <span className="ml-2 text-xs font-medium text-primary-700">
             운영 중
           </span>
         </>
       ),
     },
-    { icon: CalendarClock, label: "휴무", value: "연중무휴" },
-    { icon: Umbrella, label: "입장료", value: "성인 17,000원" },
-    { icon: TimerReset, label: "추천 체류 시간", value: "약 1시간 20분" },
+    { icon: CalendarClock, label: "휴무", value: place.closedDay },
+    { icon: Umbrella, label: "입장료", value: place.cost },
+    { icon: TimerReset, label: "추천 체류 시간", value: place.stayTime },
   ];
-  const facilities = [
-    { icon: ParkingCircle, label: "주차 가능" },
-    { icon: Toilet, label: "화장실" },
-    { icon: Umbrella, label: "실내 관광지" },
-    { icon: Accessibility, label: "휠체어 접근 가능" },
-  ];
+  const facilityIcons = [ParkingCircle, Toilet, Umbrella, Accessibility];
   return (
     <section className="mt-10" aria-labelledby="visit-title">
       <h2 id="visit-title" className="text-2xl font-bold text-neutral-900">
@@ -464,15 +439,19 @@ function VisitInformation() {
         <div className="border-t border-neutral-100 bg-neutral-50 p-4">
           <p className="text-xs font-semibold text-neutral-700">편의시설</p>
           <div className="mt-2 flex flex-wrap gap-2">
-            {facilities.map(({ icon: Icon, label }) => (
-              <span
-                key={label}
-                className="inline-flex items-center gap-1.5 rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-xs font-medium text-neutral-700"
-              >
-                <Icon className="size-3.5 text-neutral-600" />
-                {label}
-              </span>
-            ))}
+            {place.facilities.map((label, index) => {
+              const Icon = facilityIcons[index] ?? Check;
+
+              return (
+                <span
+                  key={label}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-xs font-medium text-neutral-700"
+                >
+                  <Icon className="size-3.5 text-neutral-600" />
+                  {label}
+                </span>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -480,7 +459,7 @@ function VisitInformation() {
   );
 }
 
-function BottomActions() {
+function BottomActions({ placeId }: { placeId: string }) {
   return (
     <section
       className="sticky bottom-4 z-20 mt-12 flex flex-col gap-4 rounded-2xl border border-neutral-200 bg-white/95 p-4 shadow-lg backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-6"
@@ -502,7 +481,10 @@ function BottomActions() {
           다른 장소 보기
         </Link>
         <Link
-          href={ROUTES.RECOVERY_SIMPLE_RECOMMEND}
+          href={{
+            pathname: ROUTES.RECOVERY_SIMPLE_RECOMMEND,
+            query: { selectedPlaceId: placeId },
+          }}
           className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl bg-primary-500 px-6 py-3.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 sm:flex-none"
         >
           <Check className="size-4" /> 이 장소로 선택

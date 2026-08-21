@@ -84,7 +84,9 @@ export function RecommendationList({
             distance={place.travelTime}
             hours={place.hours}
             parking={place.parking}
-            onDetail={() => router.push(ROUTES.RECOVERY_SIMPLE_PLACE_DETAIL)}
+            onDetail={() =>
+              router.push(ROUTES.RECOVERY_SIMPLE_PLACE_DETAIL(place.id))
+            }
             onSelect={() => onSelect(place.id)}
             className="h-full"
           />
