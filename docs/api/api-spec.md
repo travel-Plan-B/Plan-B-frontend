@@ -43,7 +43,7 @@
 
 ### REQ-COMMON-001 서버 상태 확인
 
-- **URL**: `GET /api/v1/health`
+- **URL**: `GET /health` (실제 배포 서버 기준. `/api/v1` prefix 없음)
 - **백엔드 완료상태**: 완료
 
 **Response**
@@ -181,34 +181,61 @@
 
 **Response — Success**
 
+실제 배포 서버 응답 기준(2026-08-21 확인). OpenAPI 스펙에는 응답 스키마가 비어 있어(`response_model` 미지정) 문서화되지 않았던 것을 실제 호출로 채워 넣었다. `place_id` 단일 필드는 없고 `source`+`source_id` 조합이 유일 키다(REQ-DETAIL-002 참고). `location` 중첩 객체가 아니라 `lat`/`lng`이 최상위 필드다.
+
 ```json
 {
+  "count": 0,
   "places": [
     {
-      "place_id": "str",
+      "source": "str",
+      "source_id": "str",
       "name": "str",
+      "address": "str",
       "category_tag": "str",
-      "location": { "lat": 0, "lng": 0 },
-      "image_url": "str",
-      "address": "str"
+      "is_indoor": true,
+      "lat": 0,
+      "lng": 0,
+      "image_url": "str | null",
+      "description": "str | null",
+      "rating": 0,
+      "user_rating_count": 0,
+      "operating_hours": "str | null",
+      "parking_available": true,
+      "raw_category_source": "str"
     }
   ]
 }
 ```
 
-예시:
+예시 (`?query=경포해변`):
 
 ```json
 {
+  "count": 8,
   "places": [
     {
-      "name": "경포해변",
-      "category_tag": "해변",
-      "address": "강원 강릉시 저동"
+      "source": "kakao",
+      "source_id": "8199114",
+      "name": "경포해수욕장",
+      "address": "강원특별자치도 강릉시 창해로 514",
+      "category_tag": "관광지",
+      "is_indoor": null,
+      "lat": 37.8034055083125,
+      "lng": 128.910210247605,
+      "image_url": null,
+      "description": null,
+      "rating": null,
+      "user_rating_count": null,
+      "operating_hours": null,
+      "parking_available": null,
+      "raw_category_source": "AT4"
     }
   ]
 }
 ```
+
+- `rating`, `user_rating_count`, `image_url` 등은 데이터가 없으면 `null`로 내려온다. 프론트에서 null 처리 필요.
 
 **Response — Error**
 

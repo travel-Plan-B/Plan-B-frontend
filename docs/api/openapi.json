@@ -1,0 +1,549 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Plan-B API",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/v1/places/search": {
+      "get": {
+        "tags": ["places"],
+        "summary": "Search Places",
+        "description": "\ub514\ud14c\uc77c\ud0ed - \ub2f4\uc544\ub458 \uc7a5\uc18c \uac80\uc0c9. \uac80\uc0c9 \uacb0\uacfc\ub97c Place \ud14c\uc774\ube14\uc5d0\ub3c4 \uc800\uc7a5\ud574\uc11c\n\ub098\uc911\uc5d0 '\uc774 \uc7a5\uc18c\uc640 \ube44\uc2b7\ud55c \uacf3' \uac80\uc0c9 \uc2dc \uae30\uc900\uc73c\ub85c \uc4f8 \uc218 \uc788\uac8c \ud568.",
+        "operationId": "search_places_api_v1_places_search_get",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "\uc7a5\uc18c\uba85 \ub610\ub294 \uc8fc\uc18c",
+              "title": "Query"
+            },
+            "description": "\uc7a5\uc18c\uba85 \ub610\ub294 \uc8fc\uc18c"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/detail/recommendations": {
+      "post": {
+        "tags": ["detail"],
+        "summary": "Recommend Detail",
+        "operationId": "recommend_detail_api_v1_detail_recommendations_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DetailRecommendRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/simple/recommendations": {
+      "post": {
+        "tags": ["simple"],
+        "summary": "Recommend Simple",
+        "operationId": "recommend_simple_api_v1_simple_recommendations_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SimpleRecommendRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/schedule/validate": {
+      "post": {
+        "tags": ["schedule"],
+        "summary": "Validate Schedule",
+        "operationId": "validate_schedule_api_v1_schedule_validate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/weather": {
+      "get": {
+        "tags": ["weather"],
+        "summary": "Get Weather",
+        "operationId": "get_weather_api_v1_weather_get",
+        "parameters": [
+          {
+            "name": "lat",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "description": "\uc704\ub3c4",
+              "title": "Lat"
+            },
+            "description": "\uc704\ub3c4"
+          },
+          {
+            "name": "lng",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "description": "\uacbd\ub3c4",
+              "title": "Lng"
+            },
+            "description": "\uacbd\ub3c4"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/chat": {
+      "post": {
+        "tags": ["chat"],
+        "summary": "Chat",
+        "operationId": "chat_api_v1_chat_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Health Check",
+        "operationId": "health_check_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ChatRequest": {
+        "properties": {
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": ["message"],
+        "title": "ChatRequest"
+      },
+      "DetailRecommendRequest": {
+        "properties": {
+          "item_id": {
+            "type": "string",
+            "title": "Item Id"
+          },
+          "place_id": {
+            "type": "string",
+            "title": "Place Id"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "prev_item_location": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Location"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "next_item_location": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Location"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "next_item_start_time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Item Start Time"
+          },
+          "current_time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Time"
+          },
+          "priority": {
+            "type": "string",
+            "title": "Priority",
+            "default": "MINIMIZE_TRAVEL"
+          },
+          "transport": {
+            "type": "string",
+            "title": "Transport",
+            "default": "CAR"
+          },
+          "problem_reason": {
+            "type": "string",
+            "title": "Problem Reason"
+          },
+          "situational_answer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Situational Answer"
+          }
+        },
+        "type": "object",
+        "required": ["item_id", "place_id", "source", "problem_reason"],
+        "title": "DetailRecommendRequest"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "Location": {
+        "properties": {
+          "lat": {
+            "type": "number",
+            "title": "Lat"
+          },
+          "lng": {
+            "type": "number",
+            "title": "Lng"
+          }
+        },
+        "type": "object",
+        "required": ["lat", "lng"],
+        "title": "Location"
+      },
+      "NextFixedItem": {
+        "properties": {
+          "start_time": {
+            "type": "string",
+            "title": "Start Time"
+          },
+          "location": {
+            "$ref": "#/components/schemas/Location"
+          }
+        },
+        "type": "object",
+        "required": ["start_time", "location"],
+        "title": "NextFixedItem"
+      },
+      "SimpleRecommendRequest": {
+        "properties": {
+          "current_location": {
+            "$ref": "#/components/schemas/Location"
+          },
+          "next_place": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Location"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "deadline_time": {
+            "type": "string",
+            "title": "Deadline Time"
+          },
+          "current_time": {
+            "type": "string",
+            "title": "Current Time"
+          },
+          "transport": {
+            "type": "string",
+            "title": "Transport",
+            "default": "CAR"
+          },
+          "problem_reason": {
+            "type": "string",
+            "title": "Problem Reason"
+          },
+          "situational_answer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Situational Answer"
+          },
+          "sort": {
+            "type": "string",
+            "title": "Sort",
+            "default": "RECOMMENDED"
+          }
+        },
+        "type": "object",
+        "required": [
+          "current_location",
+          "deadline_time",
+          "current_time",
+          "problem_reason"
+        ],
+        "title": "SimpleRecommendRequest"
+      },
+      "ValidateRequest": {
+        "properties": {
+          "item_id": {
+            "type": "string",
+            "title": "Item Id"
+          },
+          "new_start_time": {
+            "type": "string",
+            "title": "New Start Time"
+          },
+          "new_duration_minutes": {
+            "type": "integer",
+            "title": "New Duration Minutes"
+          },
+          "location": {
+            "$ref": "#/components/schemas/Location"
+          },
+          "next_fixed_item": {
+            "$ref": "#/components/schemas/NextFixedItem"
+          },
+          "transport": {
+            "type": "string",
+            "title": "Transport",
+            "default": "CAR"
+          }
+        },
+        "type": "object",
+        "required": [
+          "item_id",
+          "new_start_time",
+          "new_duration_minutes",
+          "location",
+          "next_fixed_item"
+        ],
+        "title": "ValidateRequest"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": ["loc", "msg", "type"],
+        "title": "ValidationError"
+      }
+    }
+  }
+}
