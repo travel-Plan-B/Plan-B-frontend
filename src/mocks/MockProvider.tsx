@@ -13,9 +13,15 @@ export function MockProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!isMockingEnabled) return;
-    import("./browser").then(({ startMockWorker }) =>
-      startMockWorker().then(() => setIsReady(true)),
-    );
+    import("./browser")
+      .then(({ startMockWorker }) => startMockWorker())
+      .catch((error: unknown) => {
+        console.error(
+          "MSW worker 시작 실패, 목업 없이 계속 진행합니다.",
+          error,
+        );
+      })
+      .finally(() => setIsReady(true));
   }, []);
 
   if (!isReady) return null;
