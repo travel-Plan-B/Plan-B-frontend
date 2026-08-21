@@ -1,5 +1,7 @@
 import ky, { HTTPError } from "ky";
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+
 export class ApiError extends Error {
   status: number;
 
@@ -25,14 +27,12 @@ function extractErrorMessage(data: unknown, fallback: string): string {
   return fallback;
 }
 
-// next.config.ts의 rewrites가 /api/v1/*, /health를 백엔드로 프록시한다.
-// 백엔드가 CORS 헤더를 내려주지 않아 브라우저에서 절대 URL로 직접 호출하면 막힌다 (같은 origin으로만 요청).
 export async function fetchClient<T>(
   path: string,
   { params, body, ...options }: FetchClientOptions = {},
 ): Promise<T> {
   try {
-    const response = await ky(path, {
+    const response = await ky(new URL(path, API_BASE_URL), {
       ...options,
       searchParams: params,
       json: body,
