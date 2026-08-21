@@ -8,12 +8,14 @@ import {
   Star,
   TimerReset,
 } from "lucide-react";
+import Link from "next/link";
 import { useState, type ReactNode } from "react";
 
 import { PlaceRating } from "@/features/recommendation/components/PlaceCard";
 import { PlaceCardImage } from "@/features/recommendation/components/PlaceCardImage";
 import { IconBadge } from "@/shared/components/ui/IconBadge";
 import { Tag } from "@/shared/components/ui/Tag";
+import { ROUTES } from "@/shared/config/routes";
 
 import { RecommendationList } from "./RecommendationList";
 import type { Recommendation } from "./recommendation-data";
@@ -113,6 +115,14 @@ export function RecommendationExplorer({
                 }
               />
             </dl>
+            <Link
+              href={ROUTES.RECOVERY_SIMPLE_PLACE_DETAIL(
+                selectedRecommendation.id,
+              )}
+              className="mt-7 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-neutral-900 px-6 py-3.5 text-base font-medium text-white transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
+            >
+              상세보기 <ArrowRight className="size-4" aria-hidden="true" />
+            </Link>
           </div>
         </div>
       </section>

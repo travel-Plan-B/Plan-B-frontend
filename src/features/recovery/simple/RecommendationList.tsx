@@ -1,11 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { PlaceCard } from "@/features/recommendation/components/PlaceCard";
 import { Tabs } from "@/shared/components/ui/Tabs/Tabs";
 import { TabsList } from "@/shared/components/ui/Tabs/TabsList";
 import { TabsTrigger } from "@/shared/components/ui/Tabs/TabsTrigger";
+import { ROUTES } from "@/shared/config/routes";
 
 import type { Recommendation, RecommendationSort } from "./recommendation-data";
 
@@ -25,6 +27,7 @@ export function RecommendationList({
   onSelect,
 }: RecommendationListProps) {
   const [sortBy, setSortBy] = useState<RecommendationSort>("recommended");
+  const router = useRouter();
 
   const sortedPlaces = useMemo(() => {
     if (sortBy === "recommended") return places;
@@ -81,6 +84,9 @@ export function RecommendationList({
             distance={place.travelTime}
             hours={place.hours}
             parking={place.parking}
+            onDetail={() =>
+              router.push(ROUTES.RECOVERY_SIMPLE_PLACE_DETAIL(place.id))
+            }
             onSelect={() => onSelect(place.id)}
             className="h-full"
           />

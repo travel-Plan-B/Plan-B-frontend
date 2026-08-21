@@ -21,7 +21,11 @@ const recoveryConditionVariant: Record<RecoveryConditionType, TagVariant> = {
   travelTime: "orange",
 };
 
-export function SimpleRecoveryRecommendPage() {
+export function SimpleRecoveryRecommendPage({
+  selectedPlaceId,
+}: {
+  selectedPlaceId?: string;
+}) {
   return (
     <RecoveryPageLayout
       title="추천 결과"
@@ -75,7 +79,7 @@ export function SimpleRecoveryRecommendPage() {
 
       <RecommendationExplorer
         recommendations={recommendations}
-        initialRecommendationId={INITIAL_RECOMMENDATION_ID}
+        initialRecommendationId={selectedPlaceId ?? INITIAL_RECOMMENDATION_ID}
       />
     </RecoveryPageLayout>
   );
