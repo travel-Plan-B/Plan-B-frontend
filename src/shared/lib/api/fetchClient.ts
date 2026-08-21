@@ -31,6 +31,12 @@ export async function fetchClient<T>(
   path: string,
   { params, body, ...options }: FetchClientOptions = {},
 ): Promise<T> {
+  if (!API_BASE_URL) {
+    throw new Error(
+      "NEXT_PUBLIC_API_BASE_URL이 설정되지 않았습니다. .env.local을 확인하세요.",
+    );
+  }
+
   try {
     const response = await ky(new URL(path, API_BASE_URL), {
       ...options,
