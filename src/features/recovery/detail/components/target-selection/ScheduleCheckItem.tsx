@@ -2,7 +2,7 @@ import { Check, Clock, GripVertical } from "lucide-react";
 
 import { Tag } from "@/shared/components/ui/Tag";
 import { cn } from "@/shared/lib/cn";
-import { CATEGORY_TAG_VARIANT } from "../../mocks/placeMock";
+import { getCategoryTagVariant } from "../../mocks/placeMock";
 import type { ScheduleItem } from "../../mocks/scheduleMock";
 
 /**
@@ -58,7 +58,7 @@ export function ScheduleCheckItem({
               {item.placeName}
             </span>
             <Tag
-              variant={CATEGORY_TAG_VARIANT[item.categoryTag] ?? "gray"}
+              variant={getCategoryTagVariant(item.categoryTag)}
               size="sm"
               className="shrink-0 border-0"
             >
