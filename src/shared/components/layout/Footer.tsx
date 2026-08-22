@@ -34,16 +34,16 @@ export function Footer({ className, ...props }: FooterProps) {
       className={cn("w-full border-t border-neutral-200", className)}
       {...props}
     >
-      <PageContainer className="flex items-center justify-between py-4">
+      <PageContainer className="flex max-w-320 flex-col items-start justify-between gap-6 px-6 py-8 sm:flex-row sm:items-center sm:px-12 sm:py-10 xl:px-16">
         <div className="flex flex-col items-start gap-2">
           <Image
             src="/images/PlanB_logo.png"
             alt="PlanB"
             width={863}
             height={319}
-            className="h-7 w-auto"
+            className="h-8 w-auto"
           />
-          <p className="flex items-center gap-2 text-xs text-neutral-700">
+          <p className="flex items-center gap-2 text-sm text-neutral-700">
             {`© ${new Date().getFullYear()} Plan B AI. All rights reserved.`}
           </p>
         </div>

@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   AlarmClock,
+  CalendarX,
   Clock,
   Heart,
   MapPin,
@@ -12,7 +13,6 @@ import {
 import type { StaticImageData } from "next/image";
 
 import type { IconBadgeVariant } from "@/shared/components/ui/IconBadge";
-import calendarIcon from "@/shared/assets/icons/calendar.svg";
 import clockIcon from "@/shared/assets/icons/clock.svg";
 import rainIcon from "@/shared/assets/icons/rain.svg";
 import walkIcon from "@/shared/assets/icons/walk.svg";
@@ -26,7 +26,7 @@ export type SituationType = "weather" | "unavailable" | "time-changed";
 
 export interface SituationOption {
   value: SituationType;
-  icon: StaticImageData;
+  icon: LucideIcon | StaticImageData;
   title: string;
   description: string;
 }
@@ -40,7 +40,7 @@ export const SITUATION_OPTIONS: SituationOption[] = [
   },
   {
     value: "unavailable",
-    icon: calendarIcon,
+    icon: CalendarX,
     title: "장소를 이용할 수 없어요",
     description: "목적지가 폐쇄되었거나 예약이 차서 이용할 수 없어요.",
   },

@@ -1,13 +1,19 @@
-"use client";
-
-import { RecoveryStartButton } from "./RecoveryStartButton";
+import { FinalCTASection } from "./FinalCTASection";
+import { HeroSection } from "./HeroSection";
+import { ProblemSection } from "./ProblemSection";
+import { RecoveryComparisonSection } from "./RecoveryComparisonSection";
+import { RecoveryProcessSection } from "./RecoveryProcessSection";
+import { RecoveryTypeSection } from "./RecoveryTypeSection";
 
 export function HomePage() {
   return (
-    <main className="flex min-h-[calc(100vh-140px)] flex-1 items-center justify-center p-6">
-      <div className="flex flex-col items-center justify-center gap-4 text-center">
-        <RecoveryStartButton size="lg" label="서비스 시작하기" />
-      </div>
-    </main>
+    <div className="relative left-1/2 flex w-screen -translate-x-1/2 flex-col bg-white pb-16 sm:pb-20">
+      <HeroSection />
+      <ProblemSection />
+      <RecoveryComparisonSection />
+      <RecoveryProcessSection />
+      <RecoveryTypeSection />
+      <FinalCTASection />
+    </div>
   );
 }

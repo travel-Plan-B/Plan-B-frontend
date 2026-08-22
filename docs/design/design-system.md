@@ -145,17 +145,20 @@ Tailwind CSS v4에서는 `@theme`에 `--color-{name}-{scale}` 형식으로 등�
 
 | Token      | HEX       |
 | ---------- | --------- |
+| Yellow 25  | `#FFFBF5` |
 | Yellow 50  | `#FFF4E6` |
 | Yellow 100 | `#FEEFD9` |
 | Yellow 400 | `#FDBF02` |
 | Yellow 500 | `#FFB020` |
 | Yellow 600 | `#FDB118` |
 | Yellow 700 | `#FD7E14` |
+| Rose 25    | `#FFF8FA` |
 | Rose 50    | `#FFEEF2` |
 | Rose 100   | `#FEE9EE` |
 | Rose 500   | `#FC608F` |
 | Rose 600   | `#FF4D8D` |
 | Rose 700   | `#FF4687` |
+| Purple 25  | `#FAF9FF` |
 | Purple 50  | `#F3F0FF` |
 | Purple 100 | `#ECEEFD` |
 | Purple 300 | `#A49AED` |

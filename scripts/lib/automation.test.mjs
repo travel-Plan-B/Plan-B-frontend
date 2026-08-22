@@ -1,22 +1,35 @@
 import assert from "node:assert/strict";
+import { execFileSync, spawnSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import test from "node:test";
+import { pathToFileURL } from "node:url";
 
 import {
+  fingerprintRepositoryIndex,
+  fingerprintRepositoryWorkingTree,
   fingerprintWorkingTree,
   getStagingSnapshotError,
   snapshotUntrackedFile,
 } from "./checkpoint-fingerprint.mjs";
 import { DENIED_TOOLS as CLAUDE_DENIED_TOOLS } from "./agents/claude.mjs";
-import { DENIED_TOOLS as COPILOT_DENIED_TOOLS } from "./agents/copilot.mjs";
+import {
+  ALLOWED_TOOLS as COPILOT_ALLOWED_TOOLS,
+  DENIED_TOOLS as COPILOT_DENIED_TOOLS,
+} from "./agents/copilot.mjs";
 import {
   buildAgentResultRepairPrompt,
   buildPrAgentPrompt,
 } from "./pr-agent-prompt.mjs";
 import {
+  CLI_STDERR_TAIL_BYTES,
   extractCopilotFinalResponse,
   extractCodexFinalResponse,
   getAgentJsonContractDiagnostics,
   normalizeAgentJsonResponse,
+  runCli,
+  truncateCapturedStderr,
 } from "./agents/shared.mjs";
 import {
   isQuickIssuePlaceholder,
@@ -51,6 +64,10 @@ import {
   normalizeGitPath,
   parseStagedNameStatus,
 } from "./validation-policy.mjs";
+import {
+  assertSafeAgentDiff,
+  buildSafeAgentDiff,
+} from "./safe-agent-diff.mjs";
 
 test("Windows Git 경로를 POSIX 형식으로 정규화한다", () => {
   assert.equal(
@@ -206,12 +223,10 @@ test("fingerprint가 일치하는 started checkpoint는 정상 재개할 수 있
 
 test("tracked 파일이 M 상태를 유지해도 unstaged 내용 변경을 감지한다", () => {
   const before = fingerprintWorkingTree({
-    trackedDiff: Buffer.from("binary-diff-before\0", "utf8"),
-    untrackedFiles: [],
+    records: [{ status: "M", path: "src/a.ts", size: 6, hash: "before" }],
   });
   const after = fingerprintWorkingTree({
-    trackedDiff: Buffer.from("binary-diff-after\0", "utf8"),
-    untrackedFiles: [],
+    records: [{ status: "M", path: "src/a.ts", size: 5, hash: "after" }],
   });
 
   assert.notEqual(before, after);
@@ -952,6 +967,161 @@ test("PR body 계약은 리뷰 정보와 사용자 실행 보고를 분리한다
   assert.doesNotMatch(prompt, /unrelatedFiles/u);
 });
 
+test("PR Agent prompt는 binary patch를 금지하고 text diff 분석은 유지한다", () => {
+  const prompt = buildPrAgentPrompt({
+    issue: 65,
+    context: {
+      branch: "dev",
+      base: "dev",
+      stagedFiles: ["public/images/home/hero-map-clean.png"],
+      unstagedFiles: ["src/features/home/HeroSection.tsx"],
+      untrackedFiles: [],
+      safeDiff: "A public/images/home/hero-map-clean.png [binary, 1.3 MB]\n+const hero = true;",
+      validationPolicy: { checks: ["lint", "typecheck"] },
+    },
+  });
+
+  assert.match(prompt, /raw `git diff`를 직접 실행하거나 binary patch 본문/u);
+  assert.match(prompt, /`git diff --binary`.*사용하지 마세요/u);
+  assert.match(prompt, /binary 파일.*metadata만 분석하세요/u);
+  assert.match(prompt, /text source\/config\/docs 파일.*safe textual diff/u);
+  assert.match(prompt, /hero-map-clean\.png/u);
+  assert.match(prompt, /safe textual diff/u);
+  assert.match(prompt, /\+const hero = true/u);
+  assert.match(prompt, /raw git diff를 직접 실행하지 않습니다/u);
+});
+
+test("Copilot은 raw git diff 권한 없이 안전한 Git metadata 조회만 허용한다", () => {
+  assert.equal(COPILOT_ALLOWED_TOOLS.includes("shell(git diff:*)"), false);
+  assert.equal(COPILOT_ALLOWED_TOOLS.includes("shell(git status:*)"), true);
+  assert.equal(COPILOT_ALLOWED_TOOLS.includes("shell(git log:*)"), true);
+  assert.equal(COPILOT_ALLOWED_TOOLS.includes("shell(git ls-files:*)"), true);
+});
+
+test("safe diff guard는 독립된 Git binary patch marker만 거부한다", () => {
+  assert.throws(
+    () => assertSafeAgentDiff("header\nGIT binary patch\nfooter"),
+    /binary patch/u,
+  );
+  assert.throws(
+    () => assertSafeAgentDiff("header\nliteral 1234\nfooter"),
+    /binary patch/u,
+  );
+  assert.throws(
+    () => assertSafeAgentDiff("header\ndelta 1234\nfooter"),
+    /binary patch/u,
+  );
+});
+
+test("safe diff guard는 source와 Markdown 내부 marker 문구를 허용한다", () => {
+  assert.doesNotThrow(() =>
+    assertSafeAgentDiff('+const marker = "GIT binary patch";'),
+  );
+  assert.doesNotThrow(() =>
+    assertSafeAgentDiff("+문서에서 `GIT binary patch` 출력을 설명합니다."),
+  );
+  assert.doesNotThrow(() =>
+    assertSafeAgentDiff(
+      "+const FORBIDDEN_BINARY_PATCH = /^GIT binary patch$|^(?:literal|delta) \\d+$/mu;",
+    ),
+  );
+});
+
+test("safe Agent diff는 staged binary fixture 본문을 제외하고 text patch는 포함한다", () => {
+  const fixtureRoot = mkdtempSync(join(tmpdir(), "planb-safe-diff-"));
+  try {
+    execFileSync("git", ["init"], { cwd: fixtureRoot, stdio: "ignore" });
+    mkdirSync(join(fixtureRoot, "public", "images", "home"), { recursive: true });
+    mkdirSync(join(fixtureRoot, "src"), { recursive: true });
+    writeFileSync(
+      join(fixtureRoot, "public", "images", "home", "hero-map-clean.png"),
+      Buffer.concat([
+        Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x00]),
+        Buffer.from("GIT binary patch\nliteral 1294768\nzcmVfixture"),
+      ]),
+    );
+    writeFileSync(join(fixtureRoot, "src", "Hero.tsx"), "export const Hero = () => <main />;\n");
+    writeFileSync(join(fixtureRoot, "src", "hero.css"), ".hero { color: teal; }\n");
+    writeFileSync(
+      join(fixtureRoot, "src", "markers.ts"),
+      'export const marker = "GIT binary patch";\n',
+    );
+    writeFileSync(
+      join(fixtureRoot, "README.md"),
+      "문서에서 `GIT binary patch` 출력을 설명합니다.\n",
+    );
+    writeFileSync(
+      join(fixtureRoot, "safe-agent-diff.mjs"),
+      "const FORBIDDEN_BINARY_PATCH = /^GIT binary patch$|^(?:literal|delta) \\d+$/mu;\n",
+    );
+    execFileSync("git", ["add", "-A"], { cwd: fixtureRoot });
+
+    const stagedChanges = parseStagedNameStatus(
+      execFileSync("git", ["diff", "--cached", "--name-status"], {
+        cwd: fixtureRoot,
+        encoding: "utf8",
+      }),
+    );
+    const safeDiff = buildSafeAgentDiff({
+      cwd: fixtureRoot,
+      stagedChanges,
+      unstagedChanges: [],
+      untrackedFiles: [],
+      gitOutput: (args) =>
+        execFileSync("git", args, { cwd: fixtureRoot, encoding: "utf8" }),
+    });
+
+    assert.doesNotMatch(safeDiff, /^GIT binary patch$|^literal 1294768$/mu);
+    assert.doesNotMatch(safeDiff, /zcmVfixture/u);
+    assert.match(safeDiff, /A public\/images\/home\/hero-map-clean\.png \[binary/u);
+    assert.match(safeDiff, /\+export const Hero/u);
+    assert.match(safeDiff, /\+\.hero \{ color: teal; \}/u);
+    assert.match(safeDiff, /\+export const marker = "GIT binary patch"/u);
+    assert.match(safeDiff, /\+문서에서 `GIT binary patch`/u);
+    assert.match(safeDiff, /safe-agent-diff\.mjs/u);
+  } finally {
+    rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test("runCli는 stdout을 캡처하고 요청된 경우 정상 stderr를 숨긴다", () => {
+  const stdout = runCli(
+    process.execPath,
+    ["-e", 'process.stdout.write("stdout-ok"); process.stderr.write("hidden-warning")'],
+    { displayName: "fixture", captureOutput: true, captureStderr: true },
+  );
+  assert.equal(stdout, "stdout-ok");
+});
+
+test("runCli 실패는 대용량 stderr 전체 대신 마지막 8KB만 보고한다", () => {
+  const moduleUrl = pathToFileURL(resolve("scripts/lib/agents/shared.mjs")).href;
+  const probe = spawnSync(
+    process.execPath,
+    [
+      "--input-type=module",
+      "-e",
+      `import { runCli } from ${JSON.stringify(moduleUrl)}; runCli(process.execPath, ["-e", "process.stderr.write('BINARY_PREFIX' + 'x'.repeat(20000) + 'FINAL_ERROR'); process.exit(7)"], { displayName: "fixture", captureOutput: true, captureStderr: true });`,
+    ],
+    { encoding: "utf8" },
+  );
+
+  assert.equal(probe.status, 1);
+  assert.match(probe.stderr, /stderr 마지막 8KB/u);
+  assert.match(probe.stderr, /FINAL_ERROR/u);
+  assert.doesNotMatch(probe.stderr, /BINARY_PREFIX/u);
+  assert.ok(Buffer.byteLength(probe.stderr) < CLI_STDERR_TAIL_BYTES + 1024);
+});
+
+test("stderr tail helper는 진단 끝부분과 생략 크기를 보존한다", () => {
+  const diagnostic = truncateCapturedStderr(
+    `PREFIX${"x".repeat(10000)}FINAL_ERROR`,
+    1024,
+  );
+  assert.match(diagnostic, /^\[stderr 앞부분 \d+ bytes 생략\]/u);
+  assert.match(diagnostic, /FINAL_ERROR$/u);
+  assert.doesNotMatch(diagnostic, /PREFIX/u);
+});
+
 test("Agent 실행 중 working tree 변경은 artifact와 staging 전에 거부한다", () => {
   assert.match(getAgentMutationError("before", "after"), /작업 트리가 변경/u);
   assert.equal(getAgentMutationError("same", "same"), null);
@@ -974,16 +1144,162 @@ test("Codex JSONL의 마지막 agent_message를 추출한다", () => {
   assert.equal(extractCodexFinalResponse(raw).output, validAgentJson);
 });
 
-test("fingerprint는 raw diff whitespace와 untracked metadata를 보존한다", () => {
+test("fingerprint는 content hash와 파일 metadata를 보존한다", () => {
   const base = { path: "tool", content: Buffer.from("same"), type: "file", mode: 0o100644 };
   assert.notEqual(
-    fingerprintWorkingTree({ trackedDiff: "line ", untrackedFiles: [base] }),
-    fingerprintWorkingTree({ trackedDiff: "line", untrackedFiles: [base] }),
+    fingerprintWorkingTree({ untrackedFiles: [base] }),
+    fingerprintWorkingTree({ untrackedFiles: [{ ...base, content: Buffer.from("changed") }] }),
   );
   assert.notEqual(
-    fingerprintWorkingTree({ trackedDiff: "", untrackedFiles: [base] }),
-    fingerprintWorkingTree({ trackedDiff: "", untrackedFiles: [{ ...base, mode: 0o100755 }] }),
+    fingerprintWorkingTree({ untrackedFiles: [base] }),
+    fingerprintWorkingTree({ untrackedFiles: [{ ...base, mode: 0o100755 }] }),
   );
+});
+
+test("repository fingerprint는 binary patch 없이 name-status metadata를 사용한다", () => {
+  const calls = [];
+  fingerprintRepositoryWorkingTree({
+    cwd: process.cwd(),
+    gitOutput: (args) => {
+      calls.push(args);
+      return "";
+    },
+  });
+  assert.deepEqual(calls[0], ["diff", "HEAD", "--name-status", "-z", "--no-ext-diff"]);
+  assert.equal(calls.flat().includes("--binary"), false);
+});
+
+test("index fingerprint는 특수문자 경로를 literal pathspec으로 조회한다", () => {
+  const paths = ["a[1].png", "img?.png", "file*.png"];
+  const lsFilesCalls = [];
+  const fingerprint = fingerprintRepositoryIndex({
+    gitOutput: (args) => {
+      if (args[0] === "diff") {
+        return paths.map((path) => `A\0${path}\0`).join("");
+      }
+      if (args[1] === "ls-files") {
+        lsFilesCalls.push(args);
+        const path = args.at(-1);
+        return `100644 abcdef1234567890 0\t${path}\0`;
+      }
+      if (args[0] === "cat-file") return "42\n";
+      throw new Error(`예상하지 못한 Git 호출: ${args.join(" ")}`);
+    },
+  });
+
+  assert.match(fingerprint, /^[0-9a-f]{64}$/u);
+  assert.deepEqual(
+    lsFilesCalls.map((args) => args.slice(0, -1)),
+    paths.map(() => ["--literal-pathspecs", "ls-files", "-s", "-z", "--"]),
+  );
+  assert.deepEqual(lsFilesCalls.map((args) => args.at(-1)), paths);
+});
+
+test("safe textual diff도 직접 전달한 경로를 literal pathspec으로 조회한다", () => {
+  const calls = [];
+  const safeDiff = buildSafeAgentDiff({
+    cwd: process.cwd(),
+    stagedChanges: [{ status: "M", path: "src/a[1]?.ts" }],
+    unstagedChanges: [],
+    untrackedFiles: [],
+    gitOutput: (args) => {
+      calls.push(args);
+      return args.includes("--numstat") ? "1\t1\tsrc/a[1]?.ts\n" : "+changed\n";
+    },
+  });
+
+  assert.match(safeDiff, /\+changed/u);
+  assert.equal(calls.length, 2);
+  for (const args of calls) {
+    assert.deepEqual(args.slice(0, 2), ["--literal-pathspecs", "diff"]);
+    assert.equal(args.at(-1), "src/a[1]?.ts");
+  }
+});
+
+test("hash fingerprint는 binary, text, untracked, staging 변경을 patch 생성 없이 검증한다", () => {
+  const fixtureRoot = mkdtempSync(join(tmpdir(), "planb-fingerprint-"));
+  const calls = [];
+  const git = (args) => {
+    calls.push(args);
+    return execFileSync("git", args, { cwd: fixtureRoot, encoding: "utf8" });
+  };
+  try {
+    execFileSync("git", ["init"], { cwd: fixtureRoot, stdio: "ignore" });
+    execFileSync("git", ["config", "user.email", "fixture@example.com"], { cwd: fixtureRoot });
+    execFileSync("git", ["config", "user.name", "Fixture"], { cwd: fixtureRoot });
+    mkdirSync(join(fixtureRoot, "src"), { recursive: true });
+    mkdirSync(join(fixtureRoot, "public"), { recursive: true });
+    writeFileSync(join(fixtureRoot, "src", "app.tsx"), "export const value = 1;\n");
+    writeFileSync(join(fixtureRoot, "public", "image.png"), Buffer.from([0x89, 0x50, 0x00, 1]));
+    execFileSync("git", ["add", "-A"], { cwd: fixtureRoot });
+    execFileSync("git", ["commit", "-m", "fixture"], { cwd: fixtureRoot, stdio: "ignore" });
+
+    const clean = fingerprintRepositoryWorkingTree({ cwd: fixtureRoot, gitOutput: git });
+    writeFileSync(join(fixtureRoot, "public", "image.png"), Buffer.from([0x89, 0x50, 0x00, 2]));
+    const binaryChanged = fingerprintRepositoryWorkingTree({ cwd: fixtureRoot, gitOutput: git });
+    assert.notEqual(binaryChanged, clean);
+
+    writeFileSync(join(fixtureRoot, "src", "app.tsx"), "export const value = 2;\n");
+    const textChanged = fingerprintRepositoryWorkingTree({ cwd: fixtureRoot, gitOutput: git });
+    assert.notEqual(textChanged, binaryChanged);
+
+    writeFileSync(join(fixtureRoot, "public", "new.png"), Buffer.from([0x89, 0x50, 3]));
+    const untrackedAdded = fingerprintRepositoryWorkingTree({ cwd: fixtureRoot, gitOutput: git });
+    writeFileSync(join(fixtureRoot, "public", "new.png"), Buffer.from([0x89, 0x50, 4]));
+    const untrackedChanged = fingerprintRepositoryWorkingTree({ cwd: fixtureRoot, gitOutput: git });
+    assert.notEqual(untrackedAdded, untrackedChanged);
+
+    const analysisSnapshot = untrackedChanged;
+    execFileSync("git", ["add", "public/image.png"], { cwd: fixtureRoot });
+    assert.match(
+      getStagingSnapshotError({
+        baseline: analysisSnapshot,
+        current: fingerprintRepositoryWorkingTree({ cwd: fixtureRoot, gitOutput: git }),
+        unstaged: git(["diff", "--name-only"]),
+        untracked: git(["ls-files", "--others", "--exclude-standard"]),
+      }),
+      /commit하지 않습니다/u,
+    );
+    execFileSync("git", ["add", "-A"], { cwd: fixtureRoot });
+    assert.equal(
+      fingerprintRepositoryWorkingTree({ cwd: fixtureRoot, gitOutput: git }),
+      analysisSnapshot,
+    );
+    const stagedBefore = fingerprintRepositoryIndex({ gitOutput: git });
+    writeFileSync(join(fixtureRoot, "public", "image.png"), Buffer.from([0x89, 0x50, 0x00, 5]));
+    assert.notEqual(
+      fingerprintRepositoryWorkingTree({ cwd: fixtureRoot, gitOutput: git }),
+      analysisSnapshot,
+    );
+    execFileSync("git", ["add", "public/image.png"], { cwd: fixtureRoot });
+    assert.notEqual(fingerprintRepositoryIndex({ gitOutput: git }), stagedBefore);
+
+    rmSync(join(fixtureRoot, "src", "app.tsx"));
+    const deleted = fingerprintRepositoryWorkingTree({ cwd: fixtureRoot, gitOutput: git });
+    assert.notEqual(deleted, analysisSnapshot);
+    rmSync(join(fixtureRoot, "public", "image.png"));
+    assert.notEqual(
+      fingerprintRepositoryWorkingTree({ cwd: fixtureRoot, gitOutput: git }),
+      deleted,
+    );
+    assert.equal(calls.flat().includes("--binary"), false);
+  } finally {
+    rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test("symlink snapshot은 link target을 hash에 반영한다", () => {
+  const options = (target) => ({
+    lstat: () => ({ mode: 0o120000, isFile: () => false, isSymbolicLink: () => true }),
+    readFile: () => {
+      throw new Error("symlink content를 file로 읽으면 안 됩니다.");
+    },
+    readlink: () => target,
+  });
+  const first = snapshotUntrackedFile("link", process.cwd(), options("first"));
+  const second = snapshotUntrackedFile("link", process.cwd(), options("second"));
+  assert.equal(first.type, "symlink");
+  assert.notEqual(fingerprintWorkingTree({ records: [first] }), fingerprintWorkingTree({ records: [second] }));
 });
 
 test("fingerprint는 Git path의 slash와 backslash를 서로 다르게 보존한다", () => {
@@ -1059,7 +1375,7 @@ test("unsupported untracked file type은 content read 전에 거부한다", () =
           return Buffer.alloc(0);
         },
       }),
-    /지원하지 않는 untracked 파일 형식/u,
+    /지원하지 않는 파일 형식/u,
   );
   assert.equal(read, false);
 });
@@ -1083,9 +1399,7 @@ test("staging 결과가 분석 snapshot과 다르면 commit 전에 차단한다"
     getStagingSnapshotError({
       baseline: "same",
       current: "same",
-      headDiff: "expected",
-      stagedDiff: "different",
-      unstaged: "",
+      unstaged: "src/missing.ts",
       untracked: "",
     }),
     /commit하지 않습니다/u,

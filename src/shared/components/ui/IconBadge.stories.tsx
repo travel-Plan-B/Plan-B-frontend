@@ -1,7 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { CalendarX } from "lucide-react";
 
-import calendarIcon from "@/shared/assets/icons/calendar.svg";
 import carIcon from "@/shared/assets/icons/car.svg";
 import clockIcon from "@/shared/assets/icons/clock.svg";
 import rainIcon from "@/shared/assets/icons/rain.svg";
@@ -43,7 +42,6 @@ type Story = StoryObj<typeof meta>;
 const icons = [
   { name: "Rain", icon: rainIcon },
   { name: "Clock", icon: clockIcon },
-  { name: "Calendar", icon: calendarIcon },
   { name: "Car", icon: carIcon },
   { name: "Walk", icon: walkIcon },
   { name: "Train", icon: trainIcon },
@@ -83,6 +81,12 @@ export const ReactIcon: Story = {
 export const Icons: Story = {
   render: () => (
     <div className="grid grid-cols-3 gap-6">
+      <div className="flex flex-col items-center gap-2">
+        <IconBadge variant="gray" aria-label="Calendar">
+          <CalendarX />
+        </IconBadge>
+        <span className="text-xs text-neutral-700">Calendar</span>
+      </div>
       {icons.map(({ name, icon }) => (
         <div key={name} className="flex flex-col items-center gap-2">
           <IconBadge icon={icon} variant="gray" aria-label={name} />
@@ -101,7 +105,7 @@ export const DesignComparison: Story = {
           날씨 / 시간 / 일정
         </h3>
         <div className="flex gap-6">
-          {icons.slice(0, 3).map(({ name, icon }, index) => (
+          {icons.slice(0, 2).map(({ name, icon }, index) => (
             <div key={name} className="flex flex-col items-center gap-2">
               <div className="flex gap-2">
                 <IconBadge icon={icon} variant="gray" />
@@ -113,13 +117,24 @@ export const DesignComparison: Story = {
               <span className="text-xs text-neutral-700">{name}</span>
             </div>
           ))}
+          <div className="flex flex-col items-center gap-2">
+            <div className="flex gap-2">
+              <IconBadge variant="gray">
+                <CalendarX />
+              </IconBadge>
+              <IconBadge variant="orange">
+                <CalendarX />
+              </IconBadge>
+            </div>
+            <span className="text-xs text-neutral-700">Calendar</span>
+          </div>
         </div>
       </section>
 
       <section className="flex flex-col gap-3">
         <h3 className="text-sm font-medium text-neutral-900">이동수단</h3>
         <div className="flex gap-6">
-          {icons.slice(3).map(({ name, icon }, index) => (
+          {icons.slice(2).map(({ name, icon }, index) => (
             <div key={name} className="flex flex-col items-center gap-2">
               <div className="flex gap-2">
                 <IconBadge icon={icon} variant="gray" />

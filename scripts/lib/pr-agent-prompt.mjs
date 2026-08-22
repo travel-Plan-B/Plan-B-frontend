@@ -10,12 +10,21 @@ export function buildPrAgentPrompt({ issue, context }) {
 - untracked: ${context.untrackedFiles.join(", ") || "없음"}
 - pr:finish 필수 검증: ${context.validationPolicy.checks.join(", ")}
 
+Orchestrator가 제공한 safe textual diff:
+${context.safeDiff || "변경 diff 없음"}
+
 Issue는 존재가 확인된 연결 번호일 뿐 작업 명세가 아닙니다. Issue 제목과 본문을 분석하거나 diff와 비교하지 마세요.
 현재 working tree의 모든 변경사항은 이번 PR에 포함하도록 확정되어 있습니다. 파일 포함 여부를 판단하지 마세요.
 
 허용되는 작업:
 - 파일 읽기
-- git status, git diff, git log, git ls-files 등 Git read-only 조회
+- git status, git log, git ls-files 등 Git read-only 조회
+
+Diff 조회 규칙:
+- raw \`git diff\`를 직접 실행하거나 binary patch 본문을 읽고 출력하지 마세요.
+- \`git diff --binary\` 또는 binary patch를 생성하는 옵션을 사용하지 마세요.
+- PNG, JPG, JPEG, WEBP, GIF, ICO 등 binary 파일은 위 safe diff에 제공된 경로, 상태, 크기 metadata만 분석하세요.
+- TS, TSX, JS, MJS, CSS, MD, JSON, YAML 등 text source/config/docs 파일은 위 safe textual diff의 실제 patch를 분석하세요.
 
 금지되는 작업:
 - mkdir, New-Item, Write, Edit 및 모든 파일/디렉터리 생성·수정·삭제
@@ -24,7 +33,7 @@ Issue는 존재가 확인된 연결 번호일 뿐 작업 명세가 아닙니다.
 - pnpm pr, pnpm pr:finish 및 repository 상태를 바꿀 수 있는 명령
 
 Agent 역할:
-1. 실제 diff를 읽고 type을 결정합니다.
+1. 위에서 orchestrator가 제공한 변경 파일 목록과 safe textual diff를 분석해 type을 결정합니다. raw git diff를 직접 실행하지 않습니다.
 2. commit용 한국어 subject를 작성합니다. type prefix와 (#${issue}) suffix는 넣지 않습니다.
 3. 새 branch에 사용할 kebab-case slug를 작성합니다.
 4. 작업 내용, 주요 변경 사항, 검증, 관련 Issue(Closes #${issue})를 담은 리뷰용 prBody를 작성합니다.

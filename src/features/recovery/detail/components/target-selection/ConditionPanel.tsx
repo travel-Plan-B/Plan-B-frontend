@@ -107,11 +107,20 @@ export function ConditionPanel({
             <RecoveryTypeOption
               key={option.value}
               icon={
-                <IconBadge
-                  icon={option.icon}
-                  variant={situation === option.value ? "mint" : "gray"}
-                  size="lg"
-                />
+                isImageIcon(option.icon) ? (
+                  <IconBadge
+                    icon={option.icon}
+                    variant={situation === option.value ? "mint" : "gray"}
+                    size="lg"
+                  />
+                ) : (
+                  <IconBadge
+                    variant={situation === option.value ? "mint" : "gray"}
+                    size="lg"
+                  >
+                    <IconComponent icon={option.icon} />
+                  </IconBadge>
+                )
               }
               title={option.title}
               description={option.description}

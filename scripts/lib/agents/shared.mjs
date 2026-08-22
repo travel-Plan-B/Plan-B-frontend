@@ -4,6 +4,20 @@ import { fail } from "../git-github.mjs";
 
 // Agent JSONL과 최종 응답이 커질 수 있어 Node 기본 1 MiB보다 여유 있게 둔다.
 export const AGENT_OUTPUT_MAX_BUFFER = 16 * 1024 * 1024;
+export const CLI_STDERR_TAIL_BYTES = 8 * 1024;
+
+export function truncateCapturedStderr(stderr, maxBytes = CLI_STDERR_TAIL_BYTES) {
+  const normalized = String(stderr || "").trim();
+  const bytes = Buffer.from(normalized);
+  if (bytes.byteLength <= maxBytes) return normalized;
+
+  const omittedBytes = bytes.byteLength - maxBytes;
+  const tail = bytes
+    .subarray(omittedBytes)
+    .toString("utf8")
+    .replace(/^\uFFFD+/u, "");
+  return `[stderr 앞부분 ${omittedBytes} bytes 생략]\n${tail}`;
+}
 
 export class AgentOutputError extends TypeError {
   constructor(
@@ -98,8 +112,9 @@ export function assertAuth(command, args, displayName) {
 export function runCli(
   command,
   args,
-  { cwd, displayName, input, captureOutput = false } = {},
+  { cwd, displayName, input, captureOutput = false, captureStderr = false } = {},
 ) {
+  const shouldCaptureStderr = captureOutput && captureStderr;
   const result = spawnResolved(command, args, {
     cwd,
     encoding: "utf8",
@@ -107,7 +122,11 @@ export function runCli(
     input,
     maxBuffer: captureOutput ? AGENT_OUTPUT_MAX_BUFFER : undefined,
     stdio: captureOutput
-      ? [input ? "pipe" : "inherit", "pipe", "inherit"]
+      ? [
+          input ? "pipe" : "inherit",
+          "pipe",
+          shouldCaptureStderr ? "pipe" : "inherit",
+        ]
       : input
         ? ["pipe", "inherit", "inherit"]
         : "inherit",
@@ -119,8 +138,11 @@ export function runCli(
     fail(`${displayName} 실행에 실패했습니다.\n${result.error.message}`);
   }
   if (result.status !== 0) {
+    const stderr = shouldCaptureStderr
+      ? truncateCapturedStderr(result.stderr)
+      : "";
     fail(
-      `${displayName} 실행에 실패했습니다. 다른 agent로 자동 전환하지 않습니다.`,
+      `${displayName} 실행에 실패했습니다. 다른 agent로 자동 전환하지 않습니다.${stderr ? `\n--- stderr 마지막 ${CLI_STDERR_TAIL_BYTES / 1024}KB ---\n${stderr}` : ""}`,
     );
   }
   return captureOutput ? result.stdout || "" : undefined;

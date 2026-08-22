@@ -25,6 +25,7 @@
 
   /* Semantic — Yellow */
   --color-yellow-*: initial;
+  --color-yellow-25: #fffbf5;
   --color-yellow-50: #fff4e6;
   --color-yellow-100: #feefd9;
   --color-yellow-400: #fdbf02;
@@ -34,6 +35,7 @@
 
   /* Semantic — Rose */
   --color-rose-*: initial;
+  --color-rose-25: #fff8fa;
   --color-rose-50: #ffeef2;
   --color-rose-100: #fee9ee;
   --color-rose-500: #fc608f;
@@ -42,6 +44,7 @@
 
   /* Semantic — Purple */
   --color-purple-*: initial;
+  --color-purple-25: #faf9ff;
   --color-purple-50: #f3f0ff;
   --color-purple-100: #eceefd;
   --color-purple-300: #a49aed;
