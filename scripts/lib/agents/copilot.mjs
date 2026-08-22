@@ -6,10 +6,9 @@ import {
   runCli,
 } from "./shared.mjs";
 
-const ALLOWED_TOOLS = [
+export const ALLOWED_TOOLS = [
   "read",
   "shell(git status:*)",
-  "shell(git diff:*)",
   "shell(git ls-files:*)",
   "shell(git log:*)",
   "shell(gh issue list:*)",
@@ -57,10 +56,11 @@ export function runAgent({ prompt, cwd }) {
       ...permissionArgs,
     ],
     {
-    cwd,
-    displayName: "GitHub Copilot",
-    input: prompt,
-    captureOutput: true,
+      cwd,
+      displayName: "GitHub Copilot",
+      input: prompt,
+      captureOutput: true,
+      captureStderr: true,
     },
   );
   return extractCopilotFinalResponse(rawOutput);

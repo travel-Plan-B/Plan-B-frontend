@@ -1,9 +1,9 @@
 "use client";
 
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { CalendarX } from "lucide-react";
 import { useState } from "react";
 
-import calendarIcon from "@/shared/assets/icons/calendar.svg";
 import clockIcon from "@/shared/assets/icons/clock.svg";
 import rainIcon from "@/shared/assets/icons/rain.svg";
 import { IconBadge } from "@/shared/components/ui/IconBadge";
@@ -72,7 +72,7 @@ const recoveryTypes = [
   },
   {
     value: "closed",
-    icon: calendarIcon,
+    icon: null,
     title: "장소가 휴무예요",
     description: "방문하려던 장소가 문을 닫았어요",
   },
@@ -84,7 +84,7 @@ const recoveryTypes = [
   },
 ] satisfies Array<{
   value: RecoveryType;
-  icon: typeof rainIcon;
+  icon: typeof rainIcon | null;
   title: string;
   description: string;
 }>;
@@ -99,11 +99,20 @@ function RecoveryTypeExample() {
           <RecoveryTypeOption
             key={option.value}
             icon={
-              <IconBadge
-                icon={option.icon}
-                variant={selectedType === option.value ? "mint" : "gray"}
-                size="lg"
-              />
+              option.icon ? (
+                <IconBadge
+                  icon={option.icon}
+                  variant={selectedType === option.value ? "mint" : "gray"}
+                  size="lg"
+                />
+              ) : (
+                <IconBadge
+                  variant={selectedType === option.value ? "mint" : "gray"}
+                  size="lg"
+                >
+                  <CalendarX strokeWidth={1.75} />
+                </IconBadge>
+              )
             }
             title={option.title}
             description={option.description}

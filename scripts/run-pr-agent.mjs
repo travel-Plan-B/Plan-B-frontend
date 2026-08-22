@@ -41,7 +41,9 @@ import {
 import {
   determineRequiredChecks,
   normalizeGitPath,
+  parseStagedNameStatus,
 } from "./lib/validation-policy.mjs";
+import { buildSafeAgentDiff } from "./lib/safe-agent-diff.mjs";
 import {
   clearAgentArtifacts,
   getAgentMutationError,
@@ -251,7 +253,6 @@ function readJsonFile(file, label) {
 function changesFingerprint() {
   return fingerprintRepositoryWorkingTree({
     cwd,
-    rawGitOutput: (gitArgs) => rawOutputOf("git", gitArgs),
     gitOutput: (gitArgs) => rawOutputOf("git", gitArgs),
   });
 }
@@ -274,14 +275,14 @@ process.env.PLANB_PR_GIT_CHECKPOINT_FILE = gitCheckpointFile;
 
 clearAgentArtifacts(absoluteTempDir);
 
-const stagedFiles = outputOf("git", ["diff", "--cached", "--name-only"])
-  .split(/\r?\n/u)
-  .filter(Boolean)
-  .map(normalizeGitPath);
-const unstagedFiles = outputOf("git", ["diff", "--name-only"])
-  .split(/\r?\n/u)
-  .filter(Boolean)
-  .map(normalizeGitPath);
+const stagedChanges = parseStagedNameStatus(
+  outputOf("git", ["diff", "--cached", "--name-status"]),
+);
+const stagedFiles = stagedChanges.map(({ path }) => normalizeGitPath(path));
+const unstagedChanges = parseStagedNameStatus(
+  outputOf("git", ["diff", "--name-status"]),
+);
+const unstagedFiles = unstagedChanges.map(({ path }) => normalizeGitPath(path));
 const untrackedFiles = outputOf("git", [
   "ls-files",
   "--others",
@@ -294,6 +295,13 @@ const changedFiles = [
   ...new Set([...stagedFiles, ...unstagedFiles, ...untrackedFiles]),
 ];
 const validationPolicy = determineRequiredChecks(changedFiles, { mode });
+const safeDiff = buildSafeAgentDiff({
+  cwd,
+  stagedChanges,
+  unstagedChanges,
+  untrackedFiles,
+  gitOutput: (gitArgs) => rawOutputOf("git", gitArgs),
+});
 const cachedDevRelation =
   branch === "dev"
     ? "현재 dev 브랜치"
@@ -311,6 +319,7 @@ const agentPrompt = buildPrAgentPrompt({
     stagedFiles,
     unstagedFiles,
     untrackedFiles,
+    safeDiff,
     cachedDevRelation,
     validationPolicy,
   },
@@ -464,8 +473,6 @@ if (!hasGitCheckpoint) {
     const preStageError = getStagingSnapshotError({
       baseline: analysisBaselineFingerprint,
       current: changesFingerprint(),
-      headDiff: "pending",
-      stagedDiff: "pending",
       unstaged: "",
       untracked: "",
     });
@@ -490,9 +497,7 @@ if (!hasGitCheckpoint) {
   if (!staged) fail("staging 후 commit할 변경사항이 없습니다.");
   const stagedSnapshotError = getStagingSnapshotError({
     baseline: analysisBaselineFingerprint,
-    current: analysisBaselineFingerprint,
-    headDiff: rawOutputOf("git", ["diff", "HEAD", "--binary", "--no-ext-diff"]),
-    stagedDiff: rawOutputOf("git", ["diff", "--cached", "--binary", "--no-ext-diff"]),
+    current: changesFingerprint(),
     unstaged: outputOf("git", ["diff", "--name-only"]),
     untracked: outputOf("git", ["ls-files", "--others", "--exclude-standard"]),
   });

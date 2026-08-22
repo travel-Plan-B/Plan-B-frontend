@@ -1,7 +1,9 @@
-import { createHash } from "node:crypto";
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { relative, resolve } from "node:path";
-import { fingerprintRepositoryWorkingTree } from "./lib/checkpoint-fingerprint.mjs";
+import {
+  fingerprintRepositoryIndex,
+  fingerprintRepositoryWorkingTree,
+} from "./lib/checkpoint-fingerprint.mjs";
 import {
   assertBranchContainsLatestDev,
   assertDevIsCurrent,
@@ -110,20 +112,15 @@ function logCheckpointRecovery() {
   );
 }
 
-function fingerprint(value) {
-  return createHash("sha256").update(value).digest("hex");
-}
-
 function stagedFingerprint() {
-  return fingerprint(
-    rawOutputOf("git", ["diff", "--cached", "--binary", "--no-ext-diff"]),
-  );
+  return fingerprintRepositoryIndex({
+    gitOutput: (gitArgs) => rawOutputOf("git", gitArgs),
+  });
 }
 
 function workingTreeFingerprint() {
   return fingerprintRepositoryWorkingTree({
     cwd: process.cwd(),
-    rawGitOutput: (gitArgs) => rawOutputOf("git", gitArgs),
     gitOutput: (gitArgs) => rawOutputOf("git", gitArgs),
   });
 }
