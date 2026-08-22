@@ -1,11 +1,15 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { ChevronDown, GripVertical, Trash2 } from "lucide-react";
+import { GripVertical, Trash2 } from "lucide-react";
 
 import carIcon from "@/shared/assets/icons/car.svg";
 import trainIcon from "@/shared/assets/icons/train.svg";
 import walkIcon from "@/shared/assets/icons/walk.svg";
 import { Tag } from "@/shared/components/ui/Tag";
+import {
+  TimePicker,
+  type TimePickerValue,
+} from "@/shared/components/ui/TimePicker";
 import { cn } from "@/shared/lib/cn";
 import { getCategoryTagVariant } from "../../mocks/placeMock";
 import type { ScheduleItem, TransportMode } from "../../mocks/scheduleMock";
@@ -18,35 +22,62 @@ const TRANSPORT_ICONS: Record<TransportMode, typeof carIcon> = {
   transit: trainIcon,
 };
 
+const FIELD_BUTTON_CLASSNAME =
+  "w-full justify-between gap-1 rounded-lg border-neutral-200 bg-neutral-50 px-2 py-1 text-xs text-neutral-700 hover:border-neutral-400";
+
+const VISIT_HOUR_OPTIONS = Array.from({ length: 24 }, (_, hour) => ({
+  value: hour,
+  label: String(hour).padStart(2, "0"),
+}));
+const VISIT_MINUTE_OPTIONS = [0, 10, 20, 30, 40, 50].map((minute) => ({
+  value: minute,
+  label: String(minute).padStart(2, "0"),
+}));
+const STAY_HOUR_OPTIONS = Array.from({ length: 4 }, (_, hour) => ({
+  value: hour,
+  label: `${hour}시간`,
+}));
+const STAY_MINUTE_OPTIONS = [0, 30].map((minute) => ({
+  value: minute,
+  label: `${minute}분`,
+}));
+
+function parseVisitTime(value: string): TimePickerValue {
+  const [hour, minute] = value.split(":").map(Number);
+  return { hour: hour || 0, minute: minute || 0 };
+}
+
+function parseStayDuration(value: string): TimePickerValue {
+  const hour = Number(/(\d+)시간/.exec(value)?.[1] ?? 0);
+  const minute = Number(/(\d+)분/.exec(value)?.[1] ?? 0);
+  return { hour, minute };
+}
+
+function formatStayDuration({ hour, minute }: TimePickerValue): string {
+  if (hour === 0) return `${minute}분`;
+  if (minute === 0) return `${hour}시간`;
+  return `${hour}시간 ${minute}분`;
+}
+
 /**
  * ScheduleInputPanel 일정 목록의 행 하나. 행 전체를 잡고 위아래로 드래그해 순서를 바꿀 수 있다.
- * 내부 인터랙티브 요소(FieldButton/이동수단/삭제)는 onPointerDown에서 stopPropagation해
+ * 내부 인터랙티브 요소(TimePicker/이동수단/삭제)는 onPointerDown에서 stopPropagation해
  * 클릭이 드래그로 오인식되지 않게 한다.
  *
- * TODO: FieldButton(방문시간/체류시간) 타임피커 연동.
  * grid-cols는 ScheduleInputPanel 헤더 행과 같은 값으로 유지.
  */
 export interface ScheduleItemRowProps {
   item: ScheduleItem;
+  onVisitTimeChange: (value: string) => void;
+  onStayDurationChange: (value: string) => void;
   onTransportChange: (mode: TransportMode) => void;
   onRemove: () => void;
 }
 
-function FieldButton({ label }: { label: string }) {
-  return (
-    <button
-      type="button"
-      onPointerDown={(event) => event.stopPropagation()}
-      className="flex w-full items-center justify-between gap-1 rounded-lg border border-neutral-200 bg-neutral-50 px-2 py-1 text-xs text-neutral-700 hover:border-neutral-400"
-    >
-      {label}
-      <ChevronDown className="size-3 text-neutral-500" />
-    </button>
-  );
-}
-
 export function ScheduleItemRow({
   item,
+  onVisitTimeChange,
+  onStayDurationChange,
   onTransportChange,
   onRemove,
 }: ScheduleItemRowProps) {
@@ -83,8 +114,34 @@ export function ScheduleItemRow({
         </Tag>
       </div>
 
-      <FieldButton label={item.visitTime} />
-      <FieldButton label={item.stayDuration} />
+      <span onPointerDown={(event) => event.stopPropagation()}>
+        <TimePicker
+          title="방문 시간 선택"
+          value={parseVisitTime(item.visitTime)}
+          onChange={(value) =>
+            onVisitTimeChange(
+              `${String(value.hour).padStart(2, "0")}:${String(value.minute).padStart(2, "0")}`,
+            )
+          }
+          hourOptions={VISIT_HOUR_OPTIONS}
+          minuteOptions={VISIT_MINUTE_OPTIONS}
+          columnLabels={{ hour: "시", minute: "분" }}
+          className={FIELD_BUTTON_CLASSNAME}
+        />
+      </span>
+      <span onPointerDown={(event) => event.stopPropagation()}>
+        <TimePicker
+          title="체류 시간 선택"
+          value={parseStayDuration(item.stayDuration)}
+          onChange={(value) => onStayDurationChange(formatStayDuration(value))}
+          hourOptions={STAY_HOUR_OPTIONS}
+          minuteOptions={STAY_MINUTE_OPTIONS}
+          columnLabels={{ hour: "시간", minute: "분" }}
+          formatValue={formatStayDuration}
+          isValid={(value) => value.hour > 0 || value.minute > 0}
+          className={FIELD_BUTTON_CLASSNAME}
+        />
+      </span>
 
       <div className="flex items-center justify-start gap-2">
         {TRANSPORT_ORDER.map((mode) => {

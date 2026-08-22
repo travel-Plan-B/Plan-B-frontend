@@ -20,6 +20,7 @@ import {
   EmptyState,
 } from "@/shared/components/ui/EmptyState";
 import { cn } from "@/shared/lib/cn";
+import { computeTravelInfo } from "../../lib/travelInfo";
 import { ScheduleItemRow } from "./ScheduleItemRow";
 import { TravelInfoRow } from "./TravelInfoRow";
 import type {
@@ -91,6 +92,32 @@ export function ScheduleItemList({
     onItemsChange(currentDay.day, items);
   };
 
+  /**
+   * 방문 시간 타임피커에서 확인 클릭 시 해당 항목만 갱신.
+   * 첫 컬럼(시간)과 방문 시간 컬럼이 지금까지 항상 같은 값을 보여줬어서, 방문 시간을
+   * 바꾸면 첫 컬럼도 같이 바뀌어야 사용자가 "방문 시간을 고쳤는데 안 바뀐" 것처럼 안 보인다.
+   */
+  const updateVisitTime = (itemId: string, value: string) => {
+    if (!currentDay) return;
+    onItemsChange(
+      currentDay.day,
+      currentDay.items.map((item) =>
+        item.id === itemId ? { ...item, time: value, visitTime: value } : item,
+      ),
+    );
+  };
+
+  /** 체류 시간 타임피커에서 확인 클릭 시 해당 항목만 갱신. */
+  const updateStayDuration = (itemId: string, value: string) => {
+    if (!currentDay) return;
+    onItemsChange(
+      currentDay.day,
+      currentDay.items.map((item) =>
+        item.id === itemId ? { ...item, stayDuration: value } : item,
+      ),
+    );
+  };
+
   /** 일정 항목 하나의 이동수단 토글 버튼 클릭 시 해당 항목만 갱신. */
   const updateTransport = (itemId: string, mode: TransportMode) => {
     if (!currentDay) return;
@@ -156,20 +183,33 @@ export function ScheduleItemList({
               strategy={verticalListSortingStrategy}
             >
               <div className="flex flex-col pt-1">
-                {currentDay.items.map((item) => (
-                  <div key={item.id}>
-                    <ScheduleItemRow
-                      item={item}
-                      onTransportChange={(mode) =>
-                        updateTransport(item.id, mode)
-                      }
-                      onRemove={() => removeItem(item.id)}
-                    />
-                    {item.travelInfo && (
-                      <TravelInfoRow travelInfo={item.travelInfo} />
-                    )}
-                  </div>
-                ))}
+                {currentDay.items.map((item, index) => {
+                  // 다음 항목과의 이동 정보는 저장해두지 않고 매번 다시 계산한다 —
+                  // 이동수단 토글이나 재정렬로 순서가 바뀌어도 항상 최신 상태로 맞다.
+                  const nextItem = currentDay.items[index + 1];
+                  const travelInfo = nextItem
+                    ? computeTravelInfo(item, nextItem, item.transport)
+                    : undefined;
+
+                  return (
+                    <div key={item.id}>
+                      <ScheduleItemRow
+                        item={item}
+                        onVisitTimeChange={(value) =>
+                          updateVisitTime(item.id, value)
+                        }
+                        onStayDurationChange={(value) =>
+                          updateStayDuration(item.id, value)
+                        }
+                        onTransportChange={(mode) =>
+                          updateTransport(item.id, mode)
+                        }
+                        onRemove={() => removeItem(item.id)}
+                      />
+                      {travelInfo && <TravelInfoRow travelInfo={travelInfo} />}
+                    </div>
+                  );
+                })}
               </div>
             </SortableContext>
           </DndContext>
