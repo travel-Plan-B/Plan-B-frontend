@@ -100,12 +100,21 @@ export function ScheduleMapPanel({ days }: ScheduleMapPanelProps) {
     [itemsWithCoords],
   );
 
+  // 경로는 itemsWithCoords(좌표 있는 것만 압축한 목록)가 아니라 원래 방문
+  // 순서(currentDay.items)를 그대로 훑는다 — 압축된 목록을 쓰면 좌표 없는
+  // 항목을 건너뛰고 그 앞뒤를 직접 연결하게 되어, 실제로는 없는 구간을
+  // 그 사이 항목의 이동수단/예상시간으로 잘못 그리게 된다. 인접한 두 항목이
+  // "둘 다" 좌표를 가질 때만 그 구간을 그린다.
   const routes = useMemo<MapRouteData[]>(() => {
+    if (!currentDay) return [];
     const segments: MapRouteData[] = [];
-    for (let i = 0; i < itemsWithCoords.length - 1; i += 1) {
-      const from = itemsWithCoords[i];
-      const to = itemsWithCoords[i + 1];
+    const { items } = currentDay;
+    for (let i = 0; i < items.length - 1; i += 1) {
+      const from = items[i];
+      const to = items[i + 1];
       if (!from || !to) continue;
+      if (from.lat == null || from.lng == null) continue;
+      if (to.lat == null || to.lng == null) continue;
 
       const travelInfo = computeTravelInfo(from, to, from.transport);
       segments.push({
@@ -120,7 +129,7 @@ export function ScheduleMapPanel({ days }: ScheduleMapPanelProps) {
       });
     }
     return segments;
-  }, [itemsWithCoords]);
+  }, [currentDay]);
 
   if (days.length === 0) {
     return (

@@ -18,15 +18,40 @@ function loadKakaoMapsScript(appKey: string): Promise<void> {
     const script = document.createElement("script");
     script.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${appKey}&autoload=false`;
     script.async = true;
-    script.onload = () => window.kakao.maps.load(resolve);
+
     // 실패한 캐시를 그대로 두면 이후 마운트되는 모든 <Map>이 재시도 없이
     // 즉시 "error"만 받게 된다 — 캐시를 비우고 실패한 스크립트 태그도
     // 지워서, 다음 마운트(탭 재진입 등)가 실제로 다시 시도하게 한다.
-    script.onerror = () => {
+    const fail = (error: Error) => {
+      window.clearTimeout(timeoutId);
       script.remove();
       scriptLoadPromise = null;
-      reject(new Error("카카오맵 SDK 로드 실패"));
+      reject(error);
     };
+
+    // kakao.maps.load의 콜백이 어떤 이유로든 끝내 호출되지 않으면(스크립트는
+    // 받아왔지만 SDK 내부 초기화가 멈추는 경우 등) Promise가 영원히 pending
+    // 상태로 남아 <Map>이 "loading"에서 멈춘다 — 일정 시간 뒤엔 실패로 처리한다.
+    const timeoutId = window.setTimeout(
+      () => fail(new Error("카카오맵 SDK 로드 시간 초과")),
+      10000,
+    );
+
+    script.onload = () => {
+      try {
+        window.kakao.maps.load(() => {
+          window.clearTimeout(timeoutId);
+          resolve();
+        });
+      } catch (error) {
+        fail(
+          error instanceof Error
+            ? error
+            : new Error("카카오맵 SDK 초기화 실패"),
+        );
+      }
+    };
+    script.onerror = () => fail(new Error("카카오맵 SDK 로드 실패"));
     document.head.appendChild(script);
   });
 
