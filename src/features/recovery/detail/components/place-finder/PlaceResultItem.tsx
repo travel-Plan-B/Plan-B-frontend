@@ -40,7 +40,7 @@ export function PlaceResultItem({
           </span>
           <Tag
             variant={getCategoryTagVariant(place.categoryTag)}
-            size="sm"
+            size="xs"
             className="shrink-0 border-0"
           >
             {place.categoryTag}

@@ -1,8 +1,6 @@
 /**
  * 여행 일정 타임라인(ScheduleInputPanel)용 타입 + 목업 데이터.
  * buildScheduleDays가 여행 기간으로 DAY 1..N을 만들고 MOCK_ITEMS_BY_DAY로 채운다.
- *
- * TODO(#73): 실제 일정 데이터 연결(드래그앤드롭).
  */
 export type TransportMode = "car" | "walk" | "transit";
 
