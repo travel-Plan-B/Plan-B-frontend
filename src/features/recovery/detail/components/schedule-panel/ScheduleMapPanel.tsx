@@ -11,7 +11,13 @@ import {
 import { cn } from "@/shared/lib/cn";
 import { computeTravelInfo } from "../../lib/travelInfo";
 import { getCategoryTagVariant } from "../../mocks/placeMock";
-import type { ScheduleDay, TransportMode } from "../../mocks/scheduleMock";
+import type {
+  ScheduleDay,
+  ScheduleItem,
+  TransportMode,
+} from "../../mocks/scheduleMock";
+
+type ScheduleItemWithCoords = ScheduleItem & { lat: number; lng: number };
 
 /** design-system.md Tag 색상 팔레트와 맞춘 카테고리별 마커 색상. */
 const CATEGORY_PIN_COLOR: Record<
@@ -71,41 +77,42 @@ export function ScheduleMapPanel({ days }: ScheduleMapPanelProps) {
     return () => document.removeEventListener("mousedown", handlePointerDown);
   }, [dayMenuOpen]);
 
-  const markers = useMemo<MapMarkerData[]>(() => {
+  // 좌표가 없는 항목은 지도에 표시할 수 없어서, 마커/경로 둘 다 이 필터링된
+  // 목록 하나를 공유한다 — 조건을 두 곳에 따로 두면 나중에 어긋나기 쉽다.
+  const itemsWithCoords = useMemo<ScheduleItemWithCoords[]>(() => {
     if (!currentDay) return [];
-    return currentDay.items
-      .filter(
-        (item): item is typeof item & { lat: number; lng: number } =>
-          item.lat != null && item.lng != null,
-      )
-      .map((item) => ({
+    return currentDay.items.filter(
+      (item): item is ScheduleItemWithCoords =>
+        item.lat != null && item.lng != null,
+    );
+  }, [currentDay]);
+
+  const markers = useMemo<MapMarkerData[]>(
+    () =>
+      itemsWithCoords.map((item) => ({
         id: item.id,
         lat: item.lat,
         lng: item.lng,
         title: item.placeName,
         description: item.visitTime,
         color: CATEGORY_PIN_COLOR[getCategoryTagVariant(item.categoryTag)],
-      }));
-  }, [currentDay]);
+      })),
+    [itemsWithCoords],
+  );
 
   const routes = useMemo<MapRouteData[]>(() => {
-    if (!currentDay) return [];
-    const withCoords = currentDay.items.filter(
-      (item) => item.lat != null && item.lng != null,
-    );
-
     const segments: MapRouteData[] = [];
-    for (let i = 0; i < withCoords.length - 1; i += 1) {
-      const from = withCoords[i];
-      const to = withCoords[i + 1];
+    for (let i = 0; i < itemsWithCoords.length - 1; i += 1) {
+      const from = itemsWithCoords[i];
+      const to = itemsWithCoords[i + 1];
       if (!from || !to) continue;
 
       const travelInfo = computeTravelInfo(from, to, from.transport);
       segments.push({
         id: `${from.id}-${to.id}`,
         path: [
-          { lat: from.lat as number, lng: from.lng as number },
-          { lat: to.lat as number, lng: to.lng as number },
+          { lat: from.lat, lng: from.lng },
+          { lat: to.lat, lng: to.lng },
         ],
         color: TRANSPORT_ROUTE_COLOR[from.transport],
         dashed: from.transport !== "car",
@@ -113,7 +120,7 @@ export function ScheduleMapPanel({ days }: ScheduleMapPanelProps) {
       });
     }
     return segments;
-  }, [currentDay]);
+  }, [itemsWithCoords]);
 
   if (days.length === 0) {
     return (

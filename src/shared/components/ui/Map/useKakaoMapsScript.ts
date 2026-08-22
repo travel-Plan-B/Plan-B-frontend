@@ -19,7 +19,14 @@ function loadKakaoMapsScript(appKey: string): Promise<void> {
     script.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${appKey}&autoload=false`;
     script.async = true;
     script.onload = () => window.kakao.maps.load(resolve);
-    script.onerror = () => reject(new Error("카카오맵 SDK 로드 실패"));
+    // 실패한 캐시를 그대로 두면 이후 마운트되는 모든 <Map>이 재시도 없이
+    // 즉시 "error"만 받게 된다 — 캐시를 비우고 실패한 스크립트 태그도
+    // 지워서, 다음 마운트(탭 재진입 등)가 실제로 다시 시도하게 한다.
+    script.onerror = () => {
+      script.remove();
+      scriptLoadPromise = null;
+      reject(new Error("카카오맵 SDK 로드 실패"));
+    };
     document.head.appendChild(script);
   });
 
