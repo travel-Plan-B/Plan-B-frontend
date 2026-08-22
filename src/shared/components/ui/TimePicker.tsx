@@ -91,6 +91,10 @@ export function TimePicker({
           <div
             ref={panelRef}
             style={panelPositionStyle}
+            // Portal이라 DOM 트리는 body 바로 밑이지만 React 트리는 그대로라, 여기서 난
+            // 포인터 이벤트가 부모(예: 드래그 정렬 가능한 행)까지 버블링될 수 있다 ->
+            // 휠 스크롤/버튼 클릭이 그쪽 리스너로 새지 않게 여기서 막는다.
+            onPointerDown={(event) => event.stopPropagation()}
             className="z-50 w-64 rounded-2xl border border-neutral-200 bg-white p-6 shadow-lg"
           >
             <div className="mb-4 flex items-center gap-2">

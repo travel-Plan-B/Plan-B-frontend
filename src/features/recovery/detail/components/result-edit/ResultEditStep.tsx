@@ -1,17 +1,16 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import { RecoveryPageLayout } from "@/features/recovery/components/RecoveryPageLayout";
 import { Button } from "@/shared/components/ui/Button";
 import { Tag } from "@/shared/components/ui/Tag";
 import { DETAIL_RECOVERY_STEPS } from "../../steps";
 import {
-  BEST_RECOMMENDATION_ID,
   CHANGED_SCHEDULE,
   RESULT_CONDITIONS,
-  RESULT_ITEMS_BY_DAY,
   RESULT_RECOMMENDATIONS,
+  type ResultScheduleItem,
 } from "../../mocks/resultEditMock";
 import {
   buildScheduleDays,
@@ -31,13 +30,31 @@ import { OtherRecommendationsPanel } from "./OtherRecommendationsPanel";
 const MOCK_START = new Date(2026, 7, 3);
 const MOCK_END = new Date(2026, 7, 7);
 
+/**
+ * 편집한 일정/선택한 추천은 4단계로 넘어갔다 돌아와도 남아있어야 해서
+ * RecoveryFlow가 들고 내려준다.
+ */
 export interface ResultEditStepProps {
+  itemsByDay: Record<number, ResultScheduleItem[]>;
+  onItemsByDayChange: (
+    update: (
+      prev: Record<number, ResultScheduleItem[]>,
+    ) => Record<number, ResultScheduleItem[]>,
+  ) => void;
+  selectedId: string;
+  onSelectedIdChange: (id: string) => void;
   onPrev?: () => void;
   onNext?: () => void;
 }
 
-export function ResultEditStep({ onPrev, onNext }: ResultEditStepProps) {
-  const [itemsByDay, setItemsByDay] = useState(RESULT_ITEMS_BY_DAY);
+export function ResultEditStep({
+  itemsByDay,
+  onItemsByDayChange: setItemsByDay,
+  selectedId,
+  onSelectedIdChange: setSelectedId,
+  onPrev,
+  onNext,
+}: ResultEditStepProps) {
   const days = useMemo(
     () =>
       buildScheduleDays(MOCK_START, MOCK_END).map((day) => ({
@@ -76,7 +93,6 @@ export function ResultEditStep({ onPrev, onNext }: ResultEditStepProps) {
     }));
   };
 
-  const [selectedId, setSelectedId] = useState(BEST_RECOMMENDATION_ID);
   const selectedRecommendation =
     RESULT_RECOMMENDATIONS.find(({ id }) => id === selectedId) ??
     RESULT_RECOMMENDATIONS[0];

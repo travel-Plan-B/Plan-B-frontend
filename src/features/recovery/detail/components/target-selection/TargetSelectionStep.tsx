@@ -1,7 +1,7 @@
 "use client";
 
 import { MapPin } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import { RecoveryPageLayout } from "@/features/recovery/components/RecoveryPageLayout";
 import { Button } from "@/shared/components/ui/Button";
@@ -21,12 +21,32 @@ const MOCK_REGION = "제주도";
 const MOCK_START = new Date(2026, 7, 3);
 const MOCK_END = new Date(2026, 7, 7);
 
+/**
+ * 선택/조건 답변은 3단계로 넘어갔다 돌아와도 남아있어야 해서
+ * RecoveryFlow가 들고 내려준다.
+ */
 export interface TargetSelectionStepProps {
+  selectedIds: Set<string>;
+  onSelectedIdsChange: (update: (prev: Set<string>) => Set<string>) => void;
+  situation: SituationType;
+  onSituationChange: (situation: SituationType) => void;
+  subAnswer: string | null;
+  onSubAnswerChange: (subAnswer: string | null) => void;
+  style: StyleType;
+  onStyleChange: (style: StyleType) => void;
   onPrev?: () => void;
   onNext?: () => void;
 }
 
 export function TargetSelectionStep({
+  selectedIds,
+  onSelectedIdsChange: setSelectedIds,
+  situation,
+  onSituationChange: setSituation,
+  subAnswer,
+  onSubAnswerChange: setSubAnswer,
+  style,
+  onStyleChange: setStyle,
   onPrev,
   onNext,
 }: TargetSelectionStepProps) {
@@ -39,15 +59,6 @@ export function TargetSelectionStep({
     [],
   );
 
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(
-    () =>
-      new Set(
-        Object.values(MOCK_ITEMS_BY_DAY)
-          .flat()
-          .slice(0, 2)
-          .map((item) => item.id),
-      ),
-  );
   const toggleItem = (itemId: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -59,10 +70,6 @@ export function TargetSelectionStep({
       return next;
     });
   };
-
-  const [situation, setSituation] = useState<SituationType>("weather");
-  const [subAnswer, setSubAnswer] = useState<string | null>("outdoor-walking");
-  const [style, setStyle] = useState<StyleType>("new");
 
   /** 상황이 바뀌면 이전 상황의 하위 질문 답은 더 이상 유효하지 않으므로 초기화. */
   const changeSituation = (value: SituationType) => {

@@ -59,25 +59,34 @@ function createScheduleItemFromPlace(
   };
 }
 
+/**
+ * 여행 지역/기간/일정은 2단계로 넘어갔다가 돌아와도 남아있어야 해서
+ * RecoveryFlow가 들고 내려준다(상위 컴포넌트가 언마운트하지 않는 한 유지됨).
+ */
 export interface TravelScheduleStepProps {
+  region: string;
+  onRegionChange: (region: string) => void;
+  dateRange: DateRange;
+  onDateRangeChange: (dateRange: DateRange) => void;
+  itemsByDay: Record<number, ScheduleItem[]>;
+  onItemsByDayChange: (
+    update: (
+      prev: Record<number, ScheduleItem[]>,
+    ) => Record<number, ScheduleItem[]>,
+  ) => void;
   onNext?: () => void;
 }
 
-export function TravelScheduleStep({ onNext }: TravelScheduleStepProps) {
-  const [region, setRegion] = useState("");
-  const [dateRange, setDateRange] = useState<DateRange>({
-    start: null,
-    end: null,
-  });
+export function TravelScheduleStep({
+  region,
+  onRegionChange: setRegion,
+  dateRange,
+  onDateRangeChange: setDateRange,
+  itemsByDay,
+  onItemsByDayChange: setItemsByDay,
+  onNext,
+}: TravelScheduleStepProps) {
   const [view, setView] = useState<"schedule" | "map">("schedule");
-
-  /**
-   * "다음" 클릭 시 모든 DAY에 일정이 있는지 검증하는 데도 쓰여서 여기서 들고 있음.
-   * 목데이터로 미리 채우지 않는다 — 보관함에서 실제로 드래그한 항목만 들어간다.
-   */
-  const [itemsByDay, setItemsByDay] = useState<Record<number, ScheduleItem[]>>(
-    {},
-  );
 
   // 보관함 카드 드래그 중 DragOverlay에 보여줄 장소(놓기 전까지는 원본 목록 UI는 그대로 둔다).
   const [draggingPlace, setDraggingPlace] = useState<Place | null>(null);
