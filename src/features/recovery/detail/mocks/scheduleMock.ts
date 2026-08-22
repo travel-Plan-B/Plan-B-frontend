@@ -18,12 +18,14 @@ export interface ScheduleItem {
     estimatedMinutes: number;
     distanceKm: number;
   };
+  /** 보관함에서 실제로 드래그해 추가된 항목만 갖는다. 날씨 조회에 쓴다. */
+  lat?: number;
+  lng?: number;
 }
 
 export interface ScheduleDay {
   day: number;
   dateLabel: string;
-  temperature: number;
   items: ScheduleItem[];
 }
 
@@ -91,7 +93,6 @@ export function buildScheduleDays(start: Date, end: Date): ScheduleDay[] {
     days.push({
       day: dayNumber,
       dateLabel: formatDayLabel(cursor),
-      temperature: 22,
       items: MOCK_ITEMS_BY_DAY[dayNumber] ?? [],
     });
     cursor.setDate(cursor.getDate() + 1);

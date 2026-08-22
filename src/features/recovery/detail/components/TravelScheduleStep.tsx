@@ -54,6 +54,8 @@ function createScheduleItemFromPlace(
     visitTime: time,
     stayDuration: "1시간",
     transport: "car",
+    lat: place.lat,
+    lng: place.lng,
   };
 }
 
