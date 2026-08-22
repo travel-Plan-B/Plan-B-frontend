@@ -39,15 +39,18 @@ const DEFAULT_CENTER = { lat: 37.5665, lng: 126.978 };
 
 // 클래식한 "핀" 모양 마커. 끝(꼬리)이 좌표를 정확히 가리키도록 CustomOverlay의
 // yAnchor를 1로 맞춰 쓴다(핀 이미지 에셋 없이 SVG만으로 색상별 마커를 만든다).
+// color는 MapProps를 통해 호출하는 쪽이 임의의 문자열을 넘길 수 있어서,
+// innerHTML 문자열에 그대로 끼워 넣지 않고 setAttribute로 넣는다.
 function createMarkerElement(color: string): HTMLDivElement {
   const el = document.createElement("div");
   el.className = "cursor-pointer drop-shadow-md";
   el.innerHTML = `
     <svg width="28" height="36" viewBox="0 0 28 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M14 0C6.268 0 0 6.268 0 14c0 10.5 14 22 14 22s14-11.5 14-22C28 6.268 21.732 0 14 0Z" fill="${color}"/>
+      <path d="M14 0C6.268 0 0 6.268 0 14c0 10.5 14 22 14 22s14-11.5 14-22C28 6.268 21.732 0 14 0Z"/>
       <circle cx="14" cy="14" r="5.5" fill="white"/>
     </svg>
   `;
+  el.querySelector("path")?.setAttribute("fill", color);
   return el;
 }
 

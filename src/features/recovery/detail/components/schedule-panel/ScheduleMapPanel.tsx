@@ -149,7 +149,7 @@ export function ScheduleMapPanel({ days }: ScheduleMapPanelProps) {
             onClick={() => setDayMenuOpen((prev) => !prev)}
             className="flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-sm font-semibold text-neutral-900 shadow-md"
           >
-            DAY {activeDay}
+            DAY {currentDay?.day}
             <ChevronDown className="size-3.5 text-neutral-500" />
           </button>
           {dayMenuOpen && (
@@ -164,7 +164,7 @@ export function ScheduleMapPanel({ days }: ScheduleMapPanelProps) {
                   }}
                   className={cn(
                     "block w-full px-3 py-1.5 text-left text-sm hover:bg-neutral-50",
-                    day.day === activeDay
+                    day.day === currentDay?.day
                       ? "font-semibold text-primary-600"
                       : "text-neutral-700",
                   )}
