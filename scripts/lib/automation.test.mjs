@@ -1169,6 +1169,53 @@ test("repository fingerprint는 binary patch 없이 name-status metadata를 사�
   assert.equal(calls.flat().includes("--binary"), false);
 });
 
+test("index fingerprint는 특수문자 경로를 literal pathspec으로 조회한다", () => {
+  const paths = ["a[1].png", "img?.png", "file*.png"];
+  const lsFilesCalls = [];
+  const fingerprint = fingerprintRepositoryIndex({
+    gitOutput: (args) => {
+      if (args[0] === "diff") {
+        return paths.map((path) => `A\0${path}\0`).join("");
+      }
+      if (args[1] === "ls-files") {
+        lsFilesCalls.push(args);
+        const path = args.at(-1);
+        return `100644 abcdef1234567890 0\t${path}\0`;
+      }
+      if (args[0] === "cat-file") return "42\n";
+      throw new Error(`예상하지 못한 Git 호출: ${args.join(" ")}`);
+    },
+  });
+
+  assert.match(fingerprint, /^[0-9a-f]{64}$/u);
+  assert.deepEqual(
+    lsFilesCalls.map((args) => args.slice(0, -1)),
+    paths.map(() => ["--literal-pathspecs", "ls-files", "-s", "-z", "--"]),
+  );
+  assert.deepEqual(lsFilesCalls.map((args) => args.at(-1)), paths);
+});
+
+test("safe textual diff도 직접 전달한 경로를 literal pathspec으로 조회한다", () => {
+  const calls = [];
+  const safeDiff = buildSafeAgentDiff({
+    cwd: process.cwd(),
+    stagedChanges: [{ status: "M", path: "src/a[1]?.ts" }],
+    unstagedChanges: [],
+    untrackedFiles: [],
+    gitOutput: (args) => {
+      calls.push(args);
+      return args.includes("--numstat") ? "1\t1\tsrc/a[1]?.ts\n" : "+changed\n";
+    },
+  });
+
+  assert.match(safeDiff, /\+changed/u);
+  assert.equal(calls.length, 2);
+  for (const args of calls) {
+    assert.deepEqual(args.slice(0, 2), ["--literal-pathspecs", "diff"]);
+    assert.equal(args.at(-1), "src/a[1]?.ts");
+  }
+});
+
 test("hash fingerprint는 binary, text, untracked, staging 변경을 patch 생성 없이 검증한다", () => {
   const fixtureRoot = mkdtempSync(join(tmpdir(), "planb-fingerprint-"));
   const calls = [];

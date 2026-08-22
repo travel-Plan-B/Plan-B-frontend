@@ -107,7 +107,14 @@ export function fingerprintRepositoryIndex({ gitOutput }) {
     if (change.status === "D") {
       return { ...change, type: "deleted", mode: 0, size: 0, hash: "-" };
     }
-    const entry = gitOutput(["ls-files", "-s", "-z", "--", change.path]);
+    const entry = gitOutput([
+      "--literal-pathspecs",
+      "ls-files",
+      "-s",
+      "-z",
+      "--",
+      change.path,
+    ]);
     const match = entry.match(/^(\d+) ([0-9a-f]+) \d+\t/u);
     if (!match) throw new TypeError(`Git index 정보를 읽을 수 없습니다: ${change.path}`);
     const [, mode, oid] = match;

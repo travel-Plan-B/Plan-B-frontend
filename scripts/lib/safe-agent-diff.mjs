@@ -37,7 +37,9 @@ function isTextPath(path) {
 
 function trackedDiff({ change, cwd, staged, gitOutput }) {
   if (!isTextPath(change.path)) return binarySummary(change, cwd);
-  const prefix = staged ? ["diff", "--cached"] : ["diff"];
+  const prefix = staged
+    ? ["--literal-pathspecs", "diff", "--cached"]
+    : ["--literal-pathspecs", "diff"];
   const numstat = gitOutput([...prefix, "--numstat", "--no-ext-diff", "--", change.path]);
   if (/^-\t-\t/mu.test(numstat)) return binarySummary(change, cwd);
   return gitOutput([...prefix, "--no-ext-diff", "--no-color", "--", change.path]);

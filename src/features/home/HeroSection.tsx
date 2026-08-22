@@ -94,7 +94,7 @@ export function HeroSection() {
           fill
           priority
           sizes="(max-width: 1280px) 100vw, 1280px"
-          className="object-cover object-[62%_center] md:object-center"
+          className="object-cover object-center"
         />
         <div
           className="absolute inset-0 bg-gradient-to-r from-white via-white/95 to-white/15 md:via-white/70 md:to-transparent"

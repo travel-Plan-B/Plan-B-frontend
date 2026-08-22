@@ -70,7 +70,7 @@ export function HeroRouteOverlay() {
   return (
     <svg
       viewBox="0 0 1280 720"
-      preserveAspectRatio="xMidYMid meet"
+      preserveAspectRatio="xMidYMid slice"
       className="pointer-events-none absolute inset-0 z-[2] h-full w-full"
       aria-hidden="true"
     >
