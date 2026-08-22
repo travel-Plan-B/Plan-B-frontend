@@ -33,6 +33,7 @@ import { DETAIL_RECOVERY_STEPS } from "../steps";
 import { buildScheduleDays, type ScheduleItem } from "../mocks/scheduleMock";
 import { PlaceFinderPanel } from "./place-finder/PlaceFinderPanel";
 import { ScheduleInputPanel } from "./schedule-panel/ScheduleInputPanel";
+import { ScheduleMapPanel } from "./schedule-panel/ScheduleMapPanel";
 
 /**
  * 보관함 카드를 특정 DAY에 드롭했을 때, 기본 시간/체류시간을 채워 일정 항목으로 변환.
@@ -131,6 +132,13 @@ export function TravelScheduleStep({
     }));
   }, [dateRange.start, dateRange.end, itemsByDay]);
 
+  // 여행 기간을 정하고 일정을 최소 하나는 등록해야 지도에 보여줄 게 생긴다 —
+  // 그 전까지는 "지도" 탭 자체를 막아서 빈 지도를 보여주지 않는다. 일정을 등록
+  // 해뒀다가 전부 지운 경우에도(막힌 탭에 그대로 머무르지 않도록) 렌더링 시점에
+  // "일정" 뷰로 되돌린다 — 이펙트에서 setState하면 렌더가 한 번 더 도는 걸 피한다.
+  const hasAnySchedule = days.some((day) => day.items.length > 0);
+  const effectiveView = hasAnySchedule ? view : "schedule";
+
   /**
    * "다음" 버튼은 항상 눌리게 해두고, 클릭 시점에 검증해서 무엇이 빠졌는지
    * 토스트로 바로 알려준다 — 그냥 비활성화만 해두면 사용자가 이유를 알 수 없어서.
@@ -191,7 +199,7 @@ export function TravelScheduleStep({
           </div>
 
           <Tabs
-            value={view}
+            value={effectiveView}
             onChange={(value) => setView(value as typeof view)}
             variant="segmented"
           >
@@ -200,7 +208,16 @@ export function TravelScheduleStep({
                 <List className="size-3.5" aria-hidden="true" />
                 일정
               </TabsTrigger>
-              <TabsTrigger value="map" className="gap-1 text-xs">
+              <TabsTrigger
+                value="map"
+                disabled={!hasAnySchedule}
+                title={
+                  hasAnySchedule
+                    ? undefined
+                    : "여행 기간을 정하고 일정을 추가하면 지도를 볼 수 있어요"
+                }
+                className="gap-1 text-xs"
+              >
                 <MapIcon className="size-3.5" aria-hidden="true" />
                 지도
               </TabsTrigger>
@@ -213,14 +230,18 @@ export function TravelScheduleStep({
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
-          <div className="flex h-160 gap-4">
+          <div className="grid h-160 grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-4">
             <PlaceFinderPanel />
-            <ScheduleInputPanel
-              days={days}
-              onItemsChange={(day, items) =>
-                setItemsByDay((prev) => ({ ...prev, [day]: items }))
-              }
-            />
+            {effectiveView === "schedule" ? (
+              <ScheduleInputPanel
+                days={days}
+                onItemsChange={(day, items) =>
+                  setItemsByDay((prev) => ({ ...prev, [day]: items }))
+                }
+              />
+            ) : (
+              <ScheduleMapPanel days={days} />
+            )}
           </div>
 
           <DragOverlay>

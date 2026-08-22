@@ -36,7 +36,7 @@ export function ScheduleInputPanel({
   };
 
   return (
-    <div className="min-w-70 flex flex-3 flex-col gap-3 rounded-2xl border border-neutral-200 bg-white shadow-lg p-4">
+    <div className="flex flex-col gap-3 overflow-hidden rounded-2xl border border-neutral-200 bg-white p-4 shadow-lg">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0 flex-1">
           <p className="text-fluid-lg font-semibold text-neutral-900">
