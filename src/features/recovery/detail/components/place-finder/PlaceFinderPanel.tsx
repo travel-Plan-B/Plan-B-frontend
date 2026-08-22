@@ -58,7 +58,7 @@ export function PlaceFinderPanel() {
   const [confirmClearOpen, setConfirmClearOpen] = useState(false);
 
   return (
-    <div className="min-w-70 flex flex-2 flex-col gap-3 rounded-2xl border border-neutral-200 bg-white px-4 pt-4 pb-0 shadow-lg">
+    <div className="flex flex-col gap-3 overflow-hidden rounded-2xl border border-neutral-200 bg-white px-4 pt-4 pb-0 shadow-lg">
       <Tabs
         value={tab}
         onChange={(value) => setTab(value as typeof tab)}
