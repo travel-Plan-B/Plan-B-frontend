@@ -36,6 +36,8 @@ export interface Place {
   imageUrl: string | null;
   rating: number | null;
   reviewCount: number | null;
+  lat: number;
+  lng: number;
 }
 
 export function toPlace(dto: PlaceSearchResultDto): Place {
@@ -47,5 +49,7 @@ export function toPlace(dto: PlaceSearchResultDto): Place {
     imageUrl: dto.image_url,
     rating: dto.rating,
     reviewCount: dto.user_rating_count,
+    lat: dto.lat,
+    lng: dto.lng,
   };
 }
