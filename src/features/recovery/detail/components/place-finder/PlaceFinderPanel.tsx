@@ -116,7 +116,7 @@ export function PlaceFinderPanel() {
             </p>
           )}
 
-          <div className="flex flex-1 flex-col overflow-y-auto">
+          <div className="flex flex-1 flex-col overflow-y-auto pr-1 [scrollbar-gutter:stable]">
             {isLoading || isFetching ? (
               <div className="flex flex-1 items-center justify-center">
                 <Spinner />
@@ -201,7 +201,7 @@ export function PlaceFinderPanel() {
               className="flex-1 py-3"
             />
           ) : (
-            <div className="flex flex-1 flex-col gap-2 overflow-y-auto">
+            <div className="flex flex-1 flex-col gap-2 overflow-y-auto pr-1 [scrollbar-gutter:stable]">
               {filteredStoredPlaces.map((place) => (
                 <StoredPlaceItem
                   key={place.id}

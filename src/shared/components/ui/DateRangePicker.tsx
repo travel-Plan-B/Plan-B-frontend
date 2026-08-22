@@ -61,8 +61,14 @@ export function DateRangePicker({
     panelRef,
     panelPositionStyle,
     handleOpen,
-    handleConfirm,
   } = usePopoverPicker(value, onChange);
+
+  // 하루만 선택하고(당일치기) 바로 확인을 누르면 end가 비어있으니 start로 채워준다.
+  const handleDateConfirm = () => {
+    if (!draft.start) return;
+    onChange(draft.end ? draft : { start: draft.start, end: draft.start });
+    setOpen(false);
+  };
   const [viewDate, setViewDate] = useState(() => value.start ?? new Date());
 
   const today = startOfDay(new Date());
@@ -214,7 +220,7 @@ export function DateRangePicker({
                 size="sm"
                 className="flex-1 text-sm"
                 disabled={!draft.start}
-                onClick={handleConfirm}
+                onClick={handleDateConfirm}
               >
                 확인
               </Button>

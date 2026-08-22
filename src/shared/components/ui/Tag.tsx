@@ -4,7 +4,7 @@ import { cn } from "@/shared/lib/cn";
 
 export type TagVariant = "purple" | "pink" | "orange" | "mint" | "gray";
 export type TagAppearance = "soft" | "solid";
-export type TagSize = "sm" | "md" | "lg";
+export type TagSize = "xs" | "sm" | "md" | "lg";
 
 export interface TagProps extends HTMLAttributes<HTMLSpanElement> {
   variant: TagVariant;
@@ -34,6 +34,7 @@ const appearanceStyles: Record<TagAppearance, Record<TagVariant, string>> = {
 };
 
 const sizeStyles: Record<TagSize, string> = {
+  xs: "px-1.5 py-0 text-tiny leading-4",
   sm: "px-2 py-0.5 text-xs leading-4",
   md: "px-3 py-1 text-xs leading-4",
   lg: "px-4 py-1.5 text-sm leading-5",
