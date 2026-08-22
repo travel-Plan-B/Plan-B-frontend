@@ -1,6 +1,5 @@
 "use client";
 
-import { Sun } from "lucide-react";
 import { useState } from "react";
 
 import {
@@ -9,7 +8,7 @@ import {
 } from "@/shared/components/ui/EmptyState";
 import { Tabs } from "@/shared/components/ui/Tabs/Tabs";
 import { TabsList } from "@/shared/components/ui/Tabs/TabsList";
-import { TabsTrigger } from "@/shared/components/ui/Tabs/TabsTrigger";
+import { DayTabTrigger } from "../weather/DayTabTrigger";
 import type { ScheduleDay } from "../../mocks/scheduleMock";
 import { ScheduleCheckItem } from "./ScheduleCheckItem";
 
@@ -58,21 +57,22 @@ export function ScheduleSelectPanel({
             variant="date"
           >
             <TabsList className="overflow-x-auto">
-              {days.map((day) => (
-                <TabsTrigger
-                  key={day.day}
-                  value={String(day.day)}
-                  className="flex-col items-start gap-0.5"
-                >
-                  <span className="flex items-center gap-1">
-                    DAY {day.day}
-                    <Sun className="size-3" aria-hidden="true" />
-                  </span>
-                  <span className="text-tiny font-normal text-neutral-700">
-                    {day.dateLabel}
-                  </span>
-                </TabsTrigger>
-              ))}
+              {days.map((day) => {
+                // 그 DAY 날씨의 기준 좌표: 첫 일정 항목(좌표를 가진 항목) 위치.
+                const weatherPoint = day.items.find(
+                  (item) => item.lat != null && item.lng != null,
+                );
+
+                return (
+                  <DayTabTrigger
+                    key={day.day}
+                    day={day.day}
+                    dateLabel={day.dateLabel}
+                    lat={weatherPoint?.lat ?? null}
+                    lng={weatherPoint?.lng ?? null}
+                  />
+                );
+              })}
             </TabsList>
           </Tabs>
 
