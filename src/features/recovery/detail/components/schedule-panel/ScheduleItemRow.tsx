@@ -68,6 +68,8 @@ function formatStayDuration({ hour, minute }: TimePickerValue): string {
  */
 export interface ScheduleItemRowProps {
   item: ScheduleItem;
+  /** 그 DAY의 마지막 일정이면 다음 장소로 이동할 일이 없어 이동수단 선택이 의미가 없다. */
+  isLast?: boolean;
   onVisitTimeChange: (value: string) => void;
   onStayDurationChange: (value: string) => void;
   onTransportChange: (mode: TransportMode) => void;
@@ -76,6 +78,7 @@ export interface ScheduleItemRowProps {
 
 export function ScheduleItemRow({
   item,
+  isLast = false,
   onVisitTimeChange,
   onStayDurationChange,
   onTransportChange,
@@ -143,7 +146,12 @@ export function ScheduleItemRow({
         />
       </span>
 
-      <div className="flex items-center justify-start gap-2">
+      <div
+        className="flex items-center justify-start gap-2"
+        title={
+          isLast ? "마지막 일정은 이동수단을 선택할 필요가 없어요" : undefined
+        }
+      >
         {TRANSPORT_ORDER.map((mode) => {
           const isSelected = item.transport === mode;
 
@@ -151,6 +159,7 @@ export function ScheduleItemRow({
             <button
               key={mode}
               type="button"
+              disabled={isLast}
               onClick={() => onTransportChange(mode)}
               onPointerDown={(event) => event.stopPropagation()}
               aria-pressed={isSelected}
@@ -159,6 +168,7 @@ export function ScheduleItemRow({
                 isSelected
                   ? "border-primary-300 bg-primary-50 text-primary-700"
                   : "border-neutral-200 text-neutral-800 hover:border-neutral-400",
+                "disabled:cursor-not-allowed disabled:border-none disabled:bg-neutral-900/10 disabled:text-neutral-900/40 disabled:hover:border-transparent",
               )}
             >
               <span

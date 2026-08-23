@@ -195,6 +195,7 @@ export function ScheduleItemList({
                     <div key={item.id}>
                       <ScheduleItemRow
                         item={item}
+                        isLast={!nextItem}
                         onVisitTimeChange={(value) =>
                           updateVisitTime(item.id, value)
                         }
