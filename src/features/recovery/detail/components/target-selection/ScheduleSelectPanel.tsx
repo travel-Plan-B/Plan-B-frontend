@@ -29,11 +29,10 @@ export function ScheduleSelectPanel({
 }: ScheduleSelectPanelProps) {
   const [activeDay, setActiveDay] = useState(1);
   const currentDay = days.find((day) => day.day === activeDay) ?? days[0];
-  const selectedCount = days.reduce(
-    (count, day) =>
-      count + day.items.filter((item) => selectedIds.has(item.id)).length,
-    0,
-  );
+  // 그 DAY 탭 아래 보이는 목록 기준 선택 개수라, 지금 보고 있는 DAY의 항목만 센다
+  // (전체 DAY 합계를 세면 다른 DAY로 넘어가도 이전 DAY의 선택 수가 그대로 보였다).
+  const selectedCount =
+    currentDay?.items.filter((item) => selectedIds.has(item.id)).length ?? 0;
 
   return (
     <div className="min-w-70 flex flex-2 flex-col gap-3 rounded-2xl border border-neutral-200 bg-white p-4 shadow-lg">

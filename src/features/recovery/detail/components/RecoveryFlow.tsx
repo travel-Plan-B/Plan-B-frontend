@@ -9,7 +9,7 @@ import {
   RESULT_ITEMS_BY_DAY,
   type ResultScheduleItem,
 } from "../mocks/resultEditMock";
-import { MOCK_ITEMS_BY_DAY, type ScheduleItem } from "../mocks/scheduleMock";
+import type { ScheduleItem } from "../mocks/scheduleMock";
 import { ResultConfirmStep } from "./result-confirm/ResultConfirmStep";
 import { ResultEditStep } from "./result-edit/ResultEditStep";
 import { TargetSelectionStep } from "./target-selection/TargetSelectionStep";
@@ -45,15 +45,7 @@ export function RecoveryFlow() {
   );
 
   // 2단계 상태. 3단계로 넘어갔다 돌아와도 남아있어야 해서 마찬가지로 여기서 들고 있는다.
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(
-    () =>
-      new Set(
-        Object.values(MOCK_ITEMS_BY_DAY)
-          .flat()
-          .slice(0, 2)
-          .map((item) => item.id),
-      ),
-  );
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [situation, setSituation] = useState<SituationType>("weather");
   const [subAnswer, setSubAnswer] = useState<string | null>("outdoor-walking");
   const [style, setStyle] = useState<StyleType>("new");
@@ -81,6 +73,9 @@ export function RecoveryFlow() {
         )}
         {step === 2 && (
           <TargetSelectionStep
+            region={region}
+            dateRange={dateRange}
+            itemsByDay={itemsByDay}
             selectedIds={selectedIds}
             onSelectedIdsChange={setSelectedIds}
             situation={situation}

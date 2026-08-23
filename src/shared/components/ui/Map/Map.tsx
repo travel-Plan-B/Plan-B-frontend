@@ -58,7 +58,10 @@ function createMarkerElement(color: string): HTMLDivElement {
 // 결과에서 온 사용자 데이터라 innerHTML로 넣으면 XSS 위험이 있다.
 function createOverlayElement(marker: MapMarkerData): HTMLDivElement {
   const el = document.createElement("div");
-  el.className = "min-w-28 max-w-44 rounded-xl bg-white px-3 py-2 shadow-lg";
+  // 카카오맵이 오버레이 wrapper에 white-space:nowrap을 강제로 걸어서 상속되기 때문에,
+  // whitespace-normal로 끊어주지 않으면 긴 제목이 줄바꿈 없이 카드 밖으로 흘러넘친다.
+  el.className =
+    "min-w-40 max-w-60 rounded-xl bg-white px-3 py-2 whitespace-normal shadow-lg";
   // 마커(핀 높이 36px) 바로 위에 붙도록 마커와 같은 좌표 기준으로 끌어올린다.
   // yAnchor로는 핀 높이만큼 정확히 밀어올리기 까다로워서 margin으로 처리한다.
   el.style.marginBottom = "40px";
@@ -195,10 +198,12 @@ export function Map({ markers, routes = [], className }: MapProps) {
 
     boundsRef.current = bounds;
     // DAY를 바꿔 markers가 통째로 달라져도(지도 인스턴스는 최초 한 번만 만들어
-    // 재사용하므로) 매번 새 마커 기준으로 다시 맞춰줘야 한다.
+    // 재사용하므로) 매번 새 마커 기준으로 다시 맞춰줘야 한다. 마커가 하나도
+    // 없는 DAY로 전환한 경우에는(예: 다른 DAY만 일정이 있을 때) 기본 좌표로
+    // 튕기지 않도록 뷰포트를 그대로 둔다.
     if (markers.length > 1) {
       map.setBounds(bounds);
-    } else {
+    } else if (markers.length === 1) {
       map.setCenter(center);
     }
 

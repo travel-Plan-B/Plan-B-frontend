@@ -1,11 +1,11 @@
 "use client";
 
-import { Droplet, RefreshCw, Thermometer, Umbrella, Wind } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import type { CSSProperties, Ref } from "react";
 
 import { Spinner } from "@/shared/components/ui/Spinner";
 import { cn } from "@/shared/lib/cn";
-import { SKY_LABELS } from "./weatherIcons";
+import { SKY_ICONS, SKY_LABELS, WEATHER_STAT_ICONS } from "./weatherIcons";
 import type { Weather } from "../../api/weather";
 
 export interface WeatherDetailPopoverProps {
@@ -18,8 +18,6 @@ export interface WeatherDetailPopoverProps {
   isError: boolean;
   isFetching: boolean;
   onRefetch: () => void;
-  Icon: typeof Thermometer;
-  iconColor: string;
 }
 
 /** DayWeatherBadge가 호버/클릭 시 띄우는 "현재 날씨 상세 정보" 팝오버 내용. */
@@ -33,8 +31,6 @@ export function WeatherDetailPopover({
   isError,
   isFetching,
   onRefetch,
-  Icon,
-  iconColor,
 }: WeatherDetailPopoverProps) {
   return (
     <div
@@ -42,10 +38,15 @@ export function WeatherDetailPopover({
       style={style}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
-      className="z-50 w-72 rounded-2xl border border-neutral-200 bg-white p-4 shadow-lg"
+      className="relative z-50 w-60 rounded-2xl border border-neutral-200 bg-white p-3 shadow-lg"
     >
+      {/* 트리거 아이콘과 시각적으로 연결되도록 말풍선 꼬리를 붙인다. */}
+      <div
+        className="absolute -top-1.5 left-4 size-3 rotate-45 rounded-tl-[2px] border-t border-l border-neutral-200 bg-white"
+        aria-hidden="true"
+      />
       <div className="flex items-center justify-between gap-2">
-        <p className="text-sm font-semibold text-neutral-900">
+        <p className="text-xs font-semibold text-neutral-900">
           현재 날씨 상세 정보
         </p>
         {weather && (
@@ -64,19 +65,26 @@ export function WeatherDetailPopover({
           날씨 정보를 가져올 수 없어요.
         </p>
       ) : (
-        <div className="mt-3 flex items-center gap-4">
+        <div className="mt-2.5 flex items-center gap-3">
           <div className="flex flex-col items-center gap-1">
-            <Icon className={cn("size-10", iconColor)} aria-hidden="true" />
-            <span className="text-sm font-semibold text-neutral-900">
+            {/* eslint-disable-next-line @next/next/no-img-element -- 작은 아이콘 SVG라 next/image 최적화가 불필요하고, SVG를 next/image로 쓰려면 next.config에 dangerouslyAllowSVG가 필요해 보안 표면만 넓어진다. */}
+            <img
+              src={SKY_ICONS[weather.skyCondition].src}
+              alt={SKY_LABELS[weather.skyCondition]}
+              className="size-14 drop-shadow-md"
+            />
+            <span className="text-xs font-semibold text-neutral-900">
               {SKY_LABELS[weather.skyCondition]}
             </span>
           </div>
-          <div className="flex flex-1 flex-col gap-1.5 text-sm">
+          <div className="flex flex-1 flex-col gap-1.5 text-xs">
             <div className="flex items-center justify-between">
               <span className="flex items-center gap-1 text-neutral-600">
-                <Thermometer
-                  className="size-3.5 text-rose-500"
-                  aria-hidden="true"
+                {/* eslint-disable-next-line @next/next/no-img-element -- 작은 아이콘 SVG라 next/image 최적화가 불필요하고, SVG를 next/image로 쓰려면 next.config에 dangerouslyAllowSVG가 필요해 보안 표면만 넓어진다. */}
+                <img
+                  src={WEATHER_STAT_ICONS.temperature.src}
+                  alt=""
+                  className="size-6"
                 />
                 기온
               </span>
@@ -86,10 +94,11 @@ export function WeatherDetailPopover({
             </div>
             <div className="flex items-center justify-between">
               <span className="flex items-center gap-1 text-neutral-600">
-                {/* design-system.md에 파랑 토큰이 없어 이 아이콘만 Tailwind 기본 blue-500을 예외적으로 사용 */}
-                <Droplet
-                  className="size-3.5 text-blue-500"
-                  aria-hidden="true"
+                {/* eslint-disable-next-line @next/next/no-img-element -- 위와 동일한 이유 */}
+                <img
+                  src={WEATHER_STAT_ICONS.humidity.src}
+                  alt=""
+                  className="size-5"
                 />
                 습도
               </span>
@@ -99,9 +108,11 @@ export function WeatherDetailPopover({
             </div>
             <div className="flex items-center justify-between">
               <span className="flex items-center gap-1 text-neutral-600">
-                <Wind
-                  className="size-3.5 text-neutral-500"
-                  aria-hidden="true"
+                {/* eslint-disable-next-line @next/next/no-img-element -- 위와 동일한 이유 */}
+                <img
+                  src={WEATHER_STAT_ICONS.wind.src}
+                  alt=""
+                  className="size-5"
                 />
                 바람
               </span>
@@ -111,9 +122,11 @@ export function WeatherDetailPopover({
             </div>
             <div className="flex items-center justify-between">
               <span className="flex items-center gap-1 text-neutral-600">
-                <Umbrella
-                  className="size-3.5 text-rose-500"
-                  aria-hidden="true"
+                {/* eslint-disable-next-line @next/next/no-img-element -- 위와 동일한 이유 */}
+                <img
+                  src={WEATHER_STAT_ICONS.precipitation.src}
+                  alt=""
+                  className="size-5"
                 />
                 강수확률
               </span>
@@ -132,7 +145,7 @@ export function WeatherDetailPopover({
           onRefetch();
         }}
         disabled={isFetching}
-        className="mt-3 flex w-full items-center justify-center gap-1 border-t border-neutral-100 pt-3 text-xs text-neutral-600 hover:text-neutral-900 disabled:opacity-50"
+        className="mt-2.5 flex w-full items-center justify-center gap-1 border-t border-neutral-100 pt-2.5 text-xs text-neutral-600 hover:text-neutral-900 disabled:opacity-50"
       >
         <RefreshCw
           className={cn("size-3.5", isFetching && "animate-spin")}

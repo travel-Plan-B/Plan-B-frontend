@@ -204,7 +204,7 @@ export function TravelScheduleStep({
             variant="segmented"
           >
             <TabsList className="bg-white py-1 shadow-md">
-              <TabsTrigger value="schedule" className="gap-1 text-xs">
+              <TabsTrigger value="schedule" className="gap-1 py-1 text-xs">
                 <List className="size-3.5" aria-hidden="true" />
                 일정
               </TabsTrigger>
@@ -216,7 +216,7 @@ export function TravelScheduleStep({
                     ? undefined
                     : "여행 기간을 정하고 일정을 추가하면 지도를 볼 수 있어요"
                 }
-                className="gap-1 text-xs"
+                className="gap-1 py-1 text-xs"
               >
                 <MapIcon className="size-3.5" aria-hidden="true" />
                 지도

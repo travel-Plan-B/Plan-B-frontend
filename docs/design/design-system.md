@@ -107,7 +107,7 @@ PlanB는 기본 폰트로 `Pretendard`만 사용한다. Noto Sans KR 등 다른 
 - 아이콘은 [Lucide Icons](https://lucide.dev)를 기본으로 사용한다. 새 아이콘이 필요하면 Lucide에서 먼저 찾고, 없을 때만 커스텀 SVG를 추가한다.
 - 아이콘 크기는 Typography와 맞춰 `16px` / `20px` / `24px` 중에서 선택한다. 임의 크기(`18px`, `22px` 등)를 쓰지 않는다.
 - 아이콘 색상은 Color 팔레트 토큰을 따른다. 아이콘만을 위한 임의 HEX를 만들지 않는다.
-- 예외: 날씨 아이콘은 기상청 API에서 제공하는 아이콘을 그대로 사용한다. Lucide로 대체하지 않는다.
+- 예외: 날씨 아이콘은 [Meteocons](https://meteocons.com)(`@meteocons/svg`, `fill` 스타일)를 사용한다. Lucide로 대체하지 않는다.
 
 ## 3. Color
 
