@@ -1,14 +1,12 @@
 "use client";
 
-import { Sun } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { toast } from "@/shared/components/ui/Toast/toast";
 import { useAnchoredPosition } from "@/shared/hooks/useAnchoredPosition";
-import { cn } from "@/shared/lib/cn";
 import { useWeatherQuery } from "../../api/weatherQueries";
-import { SKY_ICONS, SKY_ICON_COLORS } from "./weatherIcons";
+import { SKY_ICONS, SKY_LABELS } from "./weatherIcons";
 import { WeatherDetailPopover } from "./WeatherDetailPopover";
 
 export interface DayWeatherBadgeProps {
@@ -76,15 +74,13 @@ export function DayWeatherBadge({ lat, lng }: DayWeatherBadgeProps) {
         aria-label="날씨 상세 정보 (일정 필요)"
         className="inline-flex cursor-help"
       >
-        <Sun className="size-3 text-neutral-300" aria-hidden="true" />
+        <span
+          className="block size-6 rounded-full bg-neutral-100"
+          aria-hidden="true"
+        />
       </span>
     );
   }
-
-  const Icon = weather ? SKY_ICONS[weather.skyCondition] : Sun;
-  const iconColor = weather
-    ? SKY_ICON_COLORS[weather.skyCondition]
-    : "text-neutral-400";
 
   return (
     <>
@@ -108,7 +104,23 @@ export function DayWeatherBadge({ lat, lng }: DayWeatherBadgeProps) {
         aria-label="날씨 상세 정보"
         className="inline-flex cursor-pointer"
       >
-        <Icon className={cn("size-3", iconColor)} aria-hidden="true" />
+        {weather ? (
+          // 구름 계열 아이콘이 옅은 하늘색이라 흰 배경 탭 위에서는 거의 안 보인다 —
+          // 배경을 깔지 않고 드롭섀도우로만 살짝 띄운다.
+          // eslint-disable-next-line @next/next/no-img-element -- 작은 아이콘 SVG라 next/image 최적화가 불필요하고, SVG를 next/image로 쓰려면 next.config에 dangerouslyAllowSVG가 필요해 보안 표면만 넓어진다.
+          <img
+            src={SKY_ICONS[weather.skyCondition].src}
+            alt={SKY_LABELS[weather.skyCondition]}
+            className="size-6 drop-shadow-md"
+          />
+        ) : (
+          // 로딩 중에는 (이전처럼) 다른 날씨 아이콘을 먼저 보여줬다가 실제 아이콘으로
+          // 바뀌면 "아이콘이 갑자기 바뀐다"는 인상을 주므로, 아이콘 대신 스켈레톤을 보여준다.
+          <span
+            className="block size-6 animate-pulse rounded-full bg-neutral-200"
+            aria-hidden="true"
+          />
+        )}
       </span>
 
       {open &&
@@ -123,8 +135,6 @@ export function DayWeatherBadge({ lat, lng }: DayWeatherBadgeProps) {
             isError={isError}
             isFetching={isFetching}
             onRefetch={refetch}
-            Icon={Icon}
-            iconColor={iconColor}
           />,
           document.body,
         )}
