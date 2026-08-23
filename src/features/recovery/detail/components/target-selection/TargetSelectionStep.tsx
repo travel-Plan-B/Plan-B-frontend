@@ -1,31 +1,30 @@
 "use client";
 
 import { MapPin } from "lucide-react";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 
 import { RecoveryPageLayout } from "@/features/recovery/components/RecoveryPageLayout";
 import { Button } from "@/shared/components/ui/Button";
+import type { DateRange } from "@/shared/components/ui/DateRangePicker";
 import { Input } from "@/shared/components/ui/Input";
+import { formatDate } from "@/shared/lib/date";
 import { DETAIL_RECOVERY_STEPS } from "../../steps";
 import type { SituationType, StyleType } from "../../mocks/conditionMock";
-import { buildScheduleDays, MOCK_ITEMS_BY_DAY } from "../../mocks/scheduleMock";
+import { buildScheduleDays, type ScheduleItem } from "../../mocks/scheduleMock";
 import { ConditionPanel } from "./ConditionPanel";
 import { ScheduleSelectPanel } from "./ScheduleSelectPanel";
 
 /**
  * 디테일모드 2단계 "복구할 일정을 선택해주세요" 화면.
- * 1단계 데이터 연결은 범위 밖(#81)이라 여행 지역/기간/일정 모두 목업 값을 쓴다.
- * 여행 기간은 1단계의 "최대 5일" 제약과 동일하게 5일치로 맞춘다.
- */
-const MOCK_REGION = "제주도";
-const MOCK_START = new Date(2026, 7, 3);
-const MOCK_END = new Date(2026, 7, 7);
-
-/**
+ * 여행 지역/기간/일정은 1단계에서 입력한 값을 RecoveryFlow가 그대로 내려준다.
+ *
  * 선택/조건 답변은 3단계로 넘어갔다 돌아와도 남아있어야 해서
  * RecoveryFlow가 들고 내려준다.
  */
 export interface TargetSelectionStepProps {
+  region: string;
+  dateRange: DateRange;
+  itemsByDay: Record<number, ScheduleItem[]>;
   selectedIds: Set<string>;
   onSelectedIdsChange: (update: (prev: Set<string>) => Set<string>) => void;
   situation: SituationType;
@@ -39,6 +38,9 @@ export interface TargetSelectionStepProps {
 }
 
 export function TargetSelectionStep({
+  region,
+  dateRange,
+  itemsByDay,
   selectedIds,
   onSelectedIdsChange: setSelectedIds,
   situation,
@@ -50,14 +52,27 @@ export function TargetSelectionStep({
   onPrev,
   onNext,
 }: TargetSelectionStepProps) {
-  const days = useMemo(
-    () =>
-      buildScheduleDays(MOCK_START, MOCK_END).map((day) => ({
-        ...day,
-        items: MOCK_ITEMS_BY_DAY[day.day] ?? [],
-      })),
-    [],
-  );
+  const days = useMemo(() => {
+    if (!dateRange.start || !dateRange.end) return [];
+    return buildScheduleDays(dateRange.start, dateRange.end).map((day) => ({
+      ...day,
+      items: itemsByDay[day.day] ?? [],
+    }));
+  }, [dateRange.start, dateRange.end, itemsByDay]);
+
+  // 1단계로 돌아가 일정을 지우거나 기간을 바꾸면 days가 바뀌는데, 그때 더 이상
+  // 존재하지 않는 항목의 id가 selectedIds에 남아있으면 화면엔 선택된 게 하나도
+  // 없는데도 selectedIds.size만 0이 아니라서 다음 버튼이 활성화된다 — days가
+  // 바뀔 때마다 실제로 존재하는 id만 남기도록 정리한다.
+  useEffect(() => {
+    const validIds = new Set(
+      days.flatMap((day) => day.items.map((item) => item.id)),
+    );
+    setSelectedIds((prev) => {
+      const next = new Set([...prev].filter((id) => validIds.has(id)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [days, setSelectedIds]);
 
   const toggleItem = (itemId: string) => {
     setSelectedIds((prev) => {
@@ -92,11 +107,7 @@ export function TargetSelectionStep({
             </span>
             <div className="relative flex-1">
               <MapPin className="pointer-events-none absolute top-1/2 left-4 z-10 size-4 -translate-y-1/2 text-neutral-600" />
-              <Input
-                value={MOCK_REGION}
-                readOnly
-                className="pl-10 py-1.5 text-sm"
-              />
+              <Input value={region} readOnly className="pl-10 py-1.5 text-sm" />
             </div>
           </label>
           <label className="flex w-96 items-center gap-2">
@@ -104,7 +115,11 @@ export function TargetSelectionStep({
               여행 기간
             </span>
             <Input
-              value="2026.08.03 ~ 2026.08.07"
+              value={
+                dateRange.start && dateRange.end
+                  ? `${formatDate(dateRange.start)} - ${formatDate(dateRange.end)}`
+                  : ""
+              }
               readOnly
               className="py-1.5 text-sm"
             />
