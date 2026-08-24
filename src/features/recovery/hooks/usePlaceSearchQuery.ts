@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { searchPlaces } from "./searchPlaces";
+
+import { searchPlaces } from "@/features/recovery/api/places";
 
 export const placeKeys = {
   all: ["places"] as const,
@@ -8,6 +9,7 @@ export const placeKeys = {
 
 export function usePlaceSearchQuery(query: string) {
   const trimmed = query.trim();
+
   return useQuery({
     queryKey: placeKeys.search(trimmed),
     queryFn: () => searchPlaces(trimmed),

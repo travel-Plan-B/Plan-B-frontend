@@ -17,7 +17,7 @@ const TRANSPORT_OPTIONS = [
 }>;
 
 interface TransportSelectorProps {
-  value: TransportType;
+  value: TransportType | null;
   onChange: (value: TransportType) => void;
 }
 

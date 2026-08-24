@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
-import type { Place } from "../api/types";
+import type { Place } from "@/features/recovery/api/places";
 
 interface StoredPlacesStore {
   storedPlaces: Place[];

@@ -1,10 +1,6 @@
-/**
- * REQ-DETAIL-001 (GET /api/v1/places/search) 타입.
- * OpenAPI 스펙에는 응답 스키마가 비어 있어(response_model 미지정),
- * 실제 서버 응답을 기준으로 직접 정의했다. docs/api/api-spec.md 참고.
- */
+import { fetchClient } from "@/shared/lib/api/fetchClient";
 
-/** 서버가 그대로 내려주는 raw 응답 (snake_case). */
+/** 서버가 내려주는 장소 검색 결과 (snake_case). */
 export interface PlaceSearchResultDto {
   source: string;
   source_id: string;
@@ -27,7 +23,6 @@ export interface PlaceSearchResponseDto {
   places: PlaceSearchResultDto[];
 }
 
-/** PlaceFinderPanel 등 UI가 실제로 쓰는 필드만 남긴 도메인 모델. */
 export interface Place {
   id: string;
   name: string;
@@ -40,7 +35,7 @@ export interface Place {
   lng: number;
 }
 
-export function toPlace(dto: PlaceSearchResultDto): Place {
+function toPlace(dto: PlaceSearchResultDto): Place {
   return {
     id: `${dto.source}:${dto.source_id}`,
     name: dto.name,
@@ -52,4 +47,13 @@ export function toPlace(dto: PlaceSearchResultDto): Place {
     lat: dto.lat,
     lng: dto.lng,
   };
+}
+
+export async function searchPlaces(query: string): Promise<Place[]> {
+  const data = await fetchClient<PlaceSearchResponseDto>(
+    "/api/v1/places/search",
+    { params: { query } },
+  );
+
+  return data.places.map(toPlace);
 }

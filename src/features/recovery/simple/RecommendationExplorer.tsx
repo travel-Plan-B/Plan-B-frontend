@@ -12,8 +12,8 @@ import Link from "next/link";
 import { useState, type ReactNode } from "react";
 
 import { PlaceRating } from "@/features/recommendation/components/PlaceCard";
-import { PlaceCardImage } from "@/features/recommendation/components/PlaceCardImage";
 import { IconBadge } from "@/shared/components/ui/IconBadge";
+import { PlaceImage } from "@/shared/components/ui/PlaceImage";
 import { Tag } from "@/shared/components/ui/Tag";
 import { ROUTES } from "@/shared/config/routes";
 
@@ -53,7 +53,7 @@ export function RecommendationExplorer({
         </h2>
         <div className="mt-6 overflow-hidden rounded-2xl border border-neutral-200 bg-white lg:grid lg:grid-cols-2">
           <div className="relative aspect-4/3 bg-neutral-100 lg:aspect-auto lg:min-h-full">
-            <PlaceCardImage
+            <PlaceImage
               imageUrl={selectedRecommendation.imageUrl}
               imageAlt={selectedRecommendation.imageAlt}
               sizes="(max-width: 1024px) 100vw, 50vw"

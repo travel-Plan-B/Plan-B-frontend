@@ -1,23 +1,4 @@
-import type { TagVariant } from "@/shared/components/ui/Tag";
-import type { PlaceSearchResultDto } from "../api/types";
-
-/**
- * 검색/보관함/일정 결과의 category_tag -> Tag 색상 variant 매핑.
- * design-system.md Tag 예시 기준. 매핑에 없는 값은 gray로 대체한다.
- * PlaceResultItem/StoredPlaceItem/ScheduleItemRow 등이 모두 이 매핑을 공유한다.
- */
-export const CATEGORY_TAG_VARIANT: Record<string, TagVariant> = {
-  관광: "purple",
-  관광지: "purple",
-  음식점: "pink",
-  식당: "pink",
-  카페: "orange",
-  숙박: "mint",
-};
-
-export function getCategoryTagVariant(categoryTag: string): TagVariant {
-  return CATEGORY_TAG_VARIANT[categoryTag] ?? "gray";
-}
+import type { PlaceSearchResultDto } from "@/features/recovery/api/places";
 
 /**
  * REQ-DETAIL-001 목업 데이터 (MSW용). 실제 백엔드(GET /api/v1/places/search) 응답 형태를 그대로 따른다.

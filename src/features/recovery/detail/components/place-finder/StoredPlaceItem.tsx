@@ -3,8 +3,8 @@ import { GripVertical, X } from "lucide-react";
 
 import { Tag } from "@/shared/components/ui/Tag";
 import { cn } from "@/shared/lib/cn";
-import type { Place } from "../../api/types";
-import { getCategoryTagVariant } from "../../mocks/placeMock";
+import type { Place } from "@/features/recovery/api/places";
+import { getCategoryTagVariant } from "@/features/recovery/lib/categoryTag";
 
 /** PlaceFinderPanel의 "장소 보관함" 탭 목록 한 줄. 카드 전체를 드래그해 일정 DAY 영역에 놓을 수 있다. */
 export interface StoredPlaceItemProps {

@@ -1,5 +1,5 @@
 import { http, HttpResponse } from "msw";
-import type { PlaceSearchResponseDto } from "@/features/recovery/detail/api/types";
+import type { PlaceSearchResponseDto } from "@/features/recovery/api/places";
 import { findMockPlaces } from "@/features/recovery/detail/mocks/placeMock";
 
 export const handlers = [

@@ -33,16 +33,19 @@ export function useAnchoredPosition(
       if (!triggerRef.current || !panelRef.current) return;
 
       const margin = 8;
+      const gap = 8;
       const rect = triggerRef.current.getBoundingClientRect();
       const panelRect = panelRef.current.getBoundingClientRect();
+      const maxPanelWidth = window.innerWidth - margin * 2;
+      const panelWidth = Math.min(panelRect.width, maxPanelWidth);
+      const maxLeft = window.innerWidth - panelWidth - margin;
 
-      const left = Math.min(
-        Math.max(rect.left, margin),
-        window.innerWidth - panelRect.width - margin,
-      );
+      // 기본은 trigger의 왼쪽 시작점에 맞추고, viewport 경계에 닿을 때만
+      // 좌우 margin 안으로 보정한다.
+      const left = Math.max(margin, Math.min(rect.left, maxLeft));
 
-      const spaceBelow = window.innerHeight - rect.bottom - margin;
-      const spaceAbove = rect.top - margin;
+      const spaceBelow = window.innerHeight - rect.bottom - gap - margin;
+      const spaceAbove = rect.top - gap - margin;
       const openUpward =
         panelRect.height > spaceBelow && spaceAbove > spaceBelow;
 
@@ -50,8 +53,9 @@ export function useAnchoredPosition(
         position: "fixed",
         left,
         top: openUpward
-          ? Math.max(rect.top - panelRect.height - 4, margin)
-          : rect.bottom + 4,
+          ? Math.max(rect.top - panelRect.height - gap, margin)
+          : rect.bottom + gap,
+        maxWidth: maxPanelWidth,
         maxHeight: openUpward ? spaceAbove : spaceBelow,
         overflowY: "auto",
       });
