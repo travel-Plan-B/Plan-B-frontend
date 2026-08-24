@@ -61,12 +61,14 @@ export function ScheduleSelectPanel({
 
   const currentDay =
     visibleDays.find((day) => day.day === activeDay) ?? visibleDays[0];
-  const selectedCount =
-    currentDay?.items.filter((item) => selectedIds.has(item.id)).length ?? 0;
   // 탭 필터로 다 걸러진 건지, 애초에 이 DAY에 일정 자체가 없는 건지 구분해야
   // "모두 개별로 설정돼 있어요" 같은 문구가 진짜 빈 DAY에서도 잘못 뜨지 않는다.
   const rawCurrentDay = days.find((day) => day.day === activeDay) ?? days[0];
   const dayHasNoItems = (rawCurrentDay?.items.length ?? 0) === 0;
+  // 선택 개수는 탭과 무관하게 그 DAY 전체 기준이라 필터 전(rawCurrentDay) 목록으로 센다
+  // — currentDay로 세면 공통 탭에서 개별 선택 항목이, 개별 탭에서 공통 선택 항목이 빠진다.
+  const selectedCount =
+    rawCurrentDay?.items.filter((item) => selectedIds.has(item.id)).length ?? 0;
 
   return (
     <div className="min-w-70 flex flex-2 flex-col gap-3 rounded-2xl border border-neutral-200 bg-white p-4 shadow-lg">
@@ -106,8 +108,9 @@ export function ScheduleSelectPanel({
             variant="date"
           >
             <TabsList className="overflow-x-auto">
-              {visibleDays.map((day) => {
+              {days.map((day) => {
                 // 그 DAY 날씨의 기준 좌표: 첫 일정 항목(좌표를 가진 항목) 위치.
+                // 탭 필터로 좌표 가진 항목이 빠질 수 있어 필터 전(days) 목록에서 찾는다.
                 const weatherPoint = day.items.find(
                   (item) => item.lat != null && item.lng != null,
                 );
