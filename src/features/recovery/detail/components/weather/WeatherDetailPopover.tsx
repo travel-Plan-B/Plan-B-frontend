@@ -2,11 +2,38 @@
 
 import { RefreshCw } from "lucide-react";
 import type { CSSProperties, Ref } from "react";
+import type { StaticImageData } from "next/image";
 
 import { Spinner } from "@/shared/components/ui/Spinner";
 import { cn } from "@/shared/lib/cn";
 import { SKY_ICONS, SKY_LABELS, WEATHER_STAT_ICONS } from "./weatherIcons";
 import type { Weather } from "../../api/weather";
+
+interface WeatherStatRowProps {
+  icon: StaticImageData;
+  iconClassName: string;
+  label: string;
+  value: string;
+}
+
+/** 기온/습도/바람/강수확률 한 줄(아이콘 + 라벨 + 값). 4번 반복되던 마크업을 여기로 모았다. */
+function WeatherStatRow({
+  icon,
+  iconClassName,
+  label,
+  value,
+}: WeatherStatRowProps) {
+  return (
+    <div className="flex items-center justify-between">
+      <span className="flex items-center gap-1 text-neutral-600">
+        {/* eslint-disable-next-line @next/next/no-img-element -- 작은 아이콘 SVG라 next/image 최적화가 불필요하고, SVG를 next/image로 쓰려면 next.config에 dangerouslyAllowSVG가 필요해 보안 표면만 넓어진다. */}
+        <img src={icon.src} alt="" className={iconClassName} />
+        {label}
+      </span>
+      <span className="font-medium text-neutral-900">{value}</span>
+    </div>
+  );
+}
 
 export interface WeatherDetailPopoverProps {
   panelRef: Ref<HTMLDivElement>;
@@ -42,7 +69,7 @@ export function WeatherDetailPopover({
     >
       {/* 트리거 아이콘과 시각적으로 연결되도록 말풍선 꼬리를 붙인다. */}
       <div
-        className="absolute -top-1.5 left-4 size-3 rotate-45 rounded-tl-[2px] border-t border-l border-neutral-200 bg-white"
+        className="absolute -top-1.5 left-4 size-3 rotate-45 rounded-tl-xs border-t border-l border-neutral-200 bg-white"
         aria-hidden="true"
       />
       <div className="flex items-center justify-between gap-2">
@@ -78,62 +105,30 @@ export function WeatherDetailPopover({
             </span>
           </div>
           <div className="flex flex-1 flex-col gap-1.5 text-xs">
-            <div className="flex items-center justify-between">
-              <span className="flex items-center gap-1 text-neutral-600">
-                {/* eslint-disable-next-line @next/next/no-img-element -- 작은 아이콘 SVG라 next/image 최적화가 불필요하고, SVG를 next/image로 쓰려면 next.config에 dangerouslyAllowSVG가 필요해 보안 표면만 넓어진다. */}
-                <img
-                  src={WEATHER_STAT_ICONS.temperature.src}
-                  alt=""
-                  className="size-6"
-                />
-                기온
-              </span>
-              <span className="font-medium text-neutral-900">
-                {weather.temperature}°C
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="flex items-center gap-1 text-neutral-600">
-                {/* eslint-disable-next-line @next/next/no-img-element -- 위와 동일한 이유 */}
-                <img
-                  src={WEATHER_STAT_ICONS.humidity.src}
-                  alt=""
-                  className="size-5"
-                />
-                습도
-              </span>
-              <span className="font-medium text-neutral-900">
-                {weather.humidity}%
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="flex items-center gap-1 text-neutral-600">
-                {/* eslint-disable-next-line @next/next/no-img-element -- 위와 동일한 이유 */}
-                <img
-                  src={WEATHER_STAT_ICONS.wind.src}
-                  alt=""
-                  className="size-5"
-                />
-                바람
-              </span>
-              <span className="font-medium text-neutral-900">
-                {weather.windSpeedMs}m/s
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="flex items-center gap-1 text-neutral-600">
-                {/* eslint-disable-next-line @next/next/no-img-element -- 위와 동일한 이유 */}
-                <img
-                  src={WEATHER_STAT_ICONS.precipitation.src}
-                  alt=""
-                  className="size-5"
-                />
-                강수확률
-              </span>
-              <span className="font-medium text-neutral-900">
-                {weather.precipitationProbability}%
-              </span>
-            </div>
+            <WeatherStatRow
+              icon={WEATHER_STAT_ICONS.temperature}
+              iconClassName="size-6"
+              label="기온"
+              value={`${weather.temperature}°C`}
+            />
+            <WeatherStatRow
+              icon={WEATHER_STAT_ICONS.humidity}
+              iconClassName="size-5"
+              label="습도"
+              value={`${weather.humidity}%`}
+            />
+            <WeatherStatRow
+              icon={WEATHER_STAT_ICONS.wind}
+              iconClassName="size-5"
+              label="바람"
+              value={`${weather.windSpeedMs}m/s`}
+            />
+            <WeatherStatRow
+              icon={WEATHER_STAT_ICONS.precipitation}
+              iconClassName="size-5"
+              label="강수확률"
+              value={`${weather.precipitationProbability}%`}
+            />
           </div>
         </div>
       )}

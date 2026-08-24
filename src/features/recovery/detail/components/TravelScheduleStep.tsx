@@ -149,11 +149,12 @@ export function TravelScheduleStep({
       return;
     }
 
-    const emptyDays = days.filter((day) => day.items.length === 0);
-    if (emptyDays.length > 0) {
-      toast.error(
-        `${emptyDays.map((day) => `DAY ${day.day}`).join(", ")}에 일정을 추가해주세요.`,
-      );
+    const hasEmptyDay = days.some((day) => day.items.length === 0);
+    if (hasEmptyDay) {
+      // 토스트 카드 폭이 344px로 고정(design-system.md)이라, 빈 DAY를 나열하면
+      // 개수에 따라 한 줄을 넘겨 줄바꿈된다. 어떤 DAY인지는 화면의 DAY 탭에서
+      // 바로 보이니, 토스트는 짧고 항상 한 줄에 들어가는 문구로 고정한다.
+      toast.error("일정이 없는 DAY가 있어요.");
       return;
     }
 
