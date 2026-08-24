@@ -2,12 +2,9 @@ import { create } from "zustand";
 import type { StoreApi } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import type { DateRange } from "@/shared/components/ui/DateRangePicker";
+import type { DetailRecommendResult } from "../api/detailRecommend";
 import type { SituationType, StyleType } from "../mocks/conditionMock";
-import {
-  BEST_RECOMMENDATION_ID,
-  RESULT_ITEMS_BY_DAY,
-  type ResultScheduleItem,
-} from "../mocks/resultEditMock";
+import type { ResultScheduleItem } from "../mocks/resultEditMock";
 import type { ScheduleItem } from "../mocks/scheduleMock";
 
 /** useState 세터처럼 값 하나 또는 (prev) => next 업데이터 함수 둘 다 받는다. */
@@ -18,17 +15,43 @@ function resolve<T>(update: Updater<T>, prev: T): T {
     : update;
 }
 
+/**
+ * 복구 대상 항목 하나의 "어떤 문제/어떤 스타일" 답. 같은 날이어도 항목마다
+ * 이유가 다를 수 있어서(예: A는 날씨, B는 폐업) 항목 단위로 따로 둔다.
+ */
+export interface RecoveryCondition {
+  situation: SituationType;
+  subAnswer: string | null;
+  style: StyleType;
+}
+
+export const DEFAULT_RECOVERY_CONDITION: RecoveryCondition = {
+  situation: "weather",
+  subAnswer: "outdoor-walking",
+  style: "new",
+};
+
 interface RecoveryDraftData {
   step: number;
   region: string;
   dateRange: DateRange;
   itemsByDay: Record<number, ScheduleItem[]>;
   selectedIds: Set<string>;
-  situation: SituationType;
-  subAnswer: string | null;
-  style: StyleType;
+  /** 체크한 항목이 기본으로 쓰는 공통 복구 조건. */
+  sharedCondition: RecoveryCondition;
+  /**
+   * "개별로 설정"한 항목만 공통 조건 대신 자기만의 조건을 쓴다. 대부분은
+   * 공통 조건을 그대로 쓰는 게 흔해서(예외만 따로), 여기 없으면 sharedCondition을
+   * 쓴다. 체크 해제하면 같이 지운다.
+   */
+  overrideConditionByItemId: Record<string, RecoveryCondition>;
   resultItemsByDay: Record<number, ResultScheduleItem[]>;
-  selectedRecommendationId: string;
+  /** 2단계에서 선택한 항목마다 REQ-DETAIL-002로 받아온 추천 후보. */
+  recommendationsByItemId: Record<string, DetailRecommendResult>;
+  /** 3단계에서 지금 어떤 항목의 추천을 보고 있는지(왼쪽 DAY 목록 클릭으로 전환). */
+  activeRecommendItemId: string | null;
+  /** 항목마다 "추천 상세" 패널에 띄울 후보로 고른 candidate id. */
+  selectedRecommendationIdByItemId: Record<string, string>;
 }
 
 const initialDraft: RecoveryDraftData = {
@@ -37,11 +60,12 @@ const initialDraft: RecoveryDraftData = {
   dateRange: { start: null, end: null },
   itemsByDay: {},
   selectedIds: new Set(),
-  situation: "weather",
-  subAnswer: "outdoor-walking",
-  style: "new",
-  resultItemsByDay: RESULT_ITEMS_BY_DAY,
-  selectedRecommendationId: BEST_RECOMMENDATION_ID,
+  sharedCondition: DEFAULT_RECOVERY_CONDITION,
+  overrideConditionByItemId: {},
+  resultItemsByDay: {},
+  recommendationsByItemId: {},
+  activeRecommendItemId: null,
+  selectedRecommendationIdByItemId: {},
 };
 
 /** `setStep`처럼 각 필드마다 useState 세터와 같은 모양의 setter 이름을 만든다. */

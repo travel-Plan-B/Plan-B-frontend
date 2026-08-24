@@ -142,7 +142,7 @@ export function ScheduleItemList({
     <div
       ref={setDropRef}
       className={cn(
-        "flex flex-1 flex-col rounded-xl border-2 border-transparent transition-colors",
+        "flex min-h-0 flex-1 flex-col rounded-xl border-2 border-transparent transition-colors",
         isOver && "border-dashed border-primary-300 bg-primary-50",
       )}
     >

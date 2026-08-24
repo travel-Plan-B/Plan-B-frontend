@@ -6,11 +6,17 @@ import carIcon from "@/shared/assets/icons/car.svg";
 import trainIcon from "@/shared/assets/icons/train.svg";
 import walkIcon from "@/shared/assets/icons/walk.svg";
 import { Tag } from "@/shared/components/ui/Tag";
-import {
-  TimePicker,
-  type TimePickerValue,
-} from "@/shared/components/ui/TimePicker";
+import { TimePicker } from "@/shared/components/ui/TimePicker";
 import { cn } from "@/shared/lib/cn";
+import {
+  formatStayDuration,
+  parseStayDuration,
+  parseVisitTime,
+  STAY_HOUR_OPTIONS,
+  STAY_MINUTE_OPTIONS,
+  VISIT_HOUR_OPTIONS,
+  VISIT_MINUTE_OPTIONS,
+} from "../../lib/scheduleTime";
 import { getCategoryTagVariant } from "../../mocks/placeMock";
 import type { ScheduleItem, TransportMode } from "../../mocks/scheduleMock";
 
@@ -24,40 +30,6 @@ const TRANSPORT_ICONS: Record<TransportMode, typeof carIcon> = {
 
 const FIELD_BUTTON_CLASSNAME =
   "w-full justify-between gap-1 rounded-lg border-neutral-200 bg-neutral-50 px-2 py-1 text-xs text-neutral-700 hover:border-neutral-400";
-
-const VISIT_HOUR_OPTIONS = Array.from({ length: 24 }, (_, hour) => ({
-  value: hour,
-  label: String(hour).padStart(2, "0"),
-}));
-const VISIT_MINUTE_OPTIONS = [0, 10, 20, 30, 40, 50].map((minute) => ({
-  value: minute,
-  label: String(minute).padStart(2, "0"),
-}));
-const STAY_HOUR_OPTIONS = Array.from({ length: 4 }, (_, hour) => ({
-  value: hour,
-  label: `${hour}시간`,
-}));
-const STAY_MINUTE_OPTIONS = [0, 30].map((minute) => ({
-  value: minute,
-  label: `${minute}분`,
-}));
-
-function parseVisitTime(value: string): TimePickerValue {
-  const [hour, minute] = value.split(":").map(Number);
-  return { hour: hour || 0, minute: minute || 0 };
-}
-
-function parseStayDuration(value: string): TimePickerValue {
-  const hour = Number(/(\d+)시간/.exec(value)?.[1] ?? 0);
-  const minute = Number(/(\d+)분/.exec(value)?.[1] ?? 0);
-  return { hour, minute };
-}
-
-function formatStayDuration({ hour, minute }: TimePickerValue): string {
-  if (hour === 0) return `${minute}분`;
-  if (minute === 0) return `${hour}시간`;
-  return `${hour}시간 ${minute}분`;
-}
 
 /**
  * ScheduleInputPanel 일정 목록의 행 하나. 행 전체를 잡고 위아래로 드래그해 순서를 바꿀 수 있다.

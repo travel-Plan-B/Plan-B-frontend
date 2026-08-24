@@ -11,8 +11,13 @@ const TRANSIT_WAIT_BUFFER_MINUTES = 8;
 
 const EARTH_RADIUS_KM = 6371;
 
-/** 두 좌표 사이의 직선거리(km). 하버사인 공식으로 지구를 구로 근사한다. */
-function haversineDistanceKm(
+/**
+ * 두 좌표 사이의 직선거리(km). 하버사인 공식으로 지구를 구로 근사한다.
+ * detailRecommend.ts도 이 계산을 그대로 쓴다(대중교통 이동시간을 백엔드
+ * 대신 프론트에서 직접 추정할 때) — 속도 상수가 두 군데서 따로 놀지 않도록
+ * 여기서만 export한다.
+ */
+export function haversineDistanceKm(
   from: { lat: number; lng: number },
   to: { lat: number; lng: number },
 ): number {
@@ -25,6 +30,21 @@ function haversineDistanceKm(
       Math.cos(toRad(to.lat)) *
       Math.sin(dLng / 2) ** 2;
   return EARTH_RADIUS_KM * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+/** 직선거리(km) + 이동수단으로 예상 이동시간(분)을 추정한다. */
+export function estimateTravelMinutes(
+  distanceKm: number,
+  mode: TransportMode,
+): number {
+  const speedKmh =
+    mode === "walk"
+      ? WALK_SPEED_KMH
+      : mode === "transit"
+        ? TRANSIT_SPEED_KMH
+        : CAR_SPEED_KMH;
+  const bufferMinutes = mode === "transit" ? TRANSIT_WAIT_BUFFER_MINUTES : 0;
+  return Math.max(1, Math.round((distanceKm / speedKmh) * 60 + bufferMinutes));
 }
 
 export type TravelInfo = NonNullable<ScheduleItem["travelInfo"]>;
@@ -57,17 +77,7 @@ export function computeTravelInfo(
     { lat: from.lat, lng: from.lng },
     { lat: to.lat, lng: to.lng },
   );
-  const speedKmh =
-    mode === "walk"
-      ? WALK_SPEED_KMH
-      : mode === "transit"
-        ? TRANSIT_SPEED_KMH
-        : CAR_SPEED_KMH;
-  const bufferMinutes = mode === "transit" ? TRANSIT_WAIT_BUFFER_MINUTES : 0;
-  const estimatedMinutes = Math.max(
-    1,
-    Math.round((distanceKm / speedKmh) * 60 + bufferMinutes),
-  );
+  const estimatedMinutes = estimateTravelMinutes(distanceKm, mode);
 
   return {
     mode,

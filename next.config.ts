@@ -17,6 +17,13 @@ const nextConfig: NextConfig = {
         port: "",
         pathname: "/**",
       },
+      {
+        // REQ-EXT-002(TourAPI) 이미지 CDN. 실제 응답이 http로 내려온다(https 아님).
+        protocol: "http",
+        hostname: "tong.visitkorea.or.kr",
+        port: "",
+        pathname: "/**",
+      },
     ],
   },
 };

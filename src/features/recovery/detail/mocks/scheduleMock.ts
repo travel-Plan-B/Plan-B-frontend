@@ -21,6 +21,13 @@ export interface ScheduleItem {
   /** 보관함에서 실제로 드래그해 추가된 항목만 갖는다. 날씨 조회에 쓴다. */
   lat?: number;
   lng?: number;
+  /**
+   * 보관함에서 실제로 드래그해 추가된 항목만 갖는다(Place.placeId/source 그대로).
+   * REQ-DETAIL-002(항목별 추천 요청) 호출에 필요한 장소 식별자라 직접 입력한
+   * 항목(목데이터 등)은 이 필드가 없어 추천 대상으로 선택할 수 없다.
+   */
+  placeId?: string;
+  source?: string;
 }
 
 export interface ScheduleDay {
