@@ -2,7 +2,7 @@ import { Check, Clock } from "lucide-react";
 
 import { Tag } from "@/shared/components/ui/Tag";
 import { cn } from "@/shared/lib/cn";
-import { getCategoryTagVariant } from "../../mocks/placeMock";
+import { getCategoryTagVariant } from "@/features/recovery/lib/categoryTag";
 import type { ScheduleItem } from "../../mocks/scheduleMock";
 
 /**

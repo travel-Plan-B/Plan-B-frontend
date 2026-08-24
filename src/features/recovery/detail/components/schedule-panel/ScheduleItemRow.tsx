@@ -11,7 +11,7 @@ import {
   type TimePickerValue,
 } from "@/shared/components/ui/TimePicker";
 import { cn } from "@/shared/lib/cn";
-import { getCategoryTagVariant } from "../../mocks/placeMock";
+import { getCategoryTagVariant } from "@/features/recovery/lib/categoryTag";
 import type { ScheduleItem, TransportMode } from "../../mocks/scheduleMock";
 
 const TRANSPORT_ORDER: TransportMode[] = ["walk", "car", "transit"];

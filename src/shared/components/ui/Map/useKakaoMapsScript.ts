@@ -16,7 +16,7 @@ function loadKakaoMapsScript(appKey: string): Promise<void> {
     }
 
     const script = document.createElement("script");
-    script.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${appKey}&autoload=false`;
+    script.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${appKey}&autoload=false&libraries=services`;
     script.async = true;
 
     // 실패한 캐시를 그대로 두면 이후 마운트되는 모든 <Map>이 재시도 없이
@@ -58,6 +58,16 @@ function loadKakaoMapsScript(appKey: string): Promise<void> {
   return scriptLoadPromise;
 }
 
+export function loadKakaoMapsSdk(): Promise<void> {
+  const appKey = process.env.NEXT_PUBLIC_KAKAO_MAP_JS_KEY;
+
+  if (!appKey) {
+    return Promise.reject(new Error("Kakao Maps JavaScript key is missing."));
+  }
+
+  return loadKakaoMapsScript(appKey);
+}
+
 /**
  * 카카오맵 JS SDK를 불러온다. 키가 없으면(.env에 NEXT_PUBLIC_KAKAO_MAP_JS_KEY
  * 미설정) 아예 스크립트를 삽입하지 않고 "no-key" 상태로 바로 알려준다.
@@ -72,7 +82,7 @@ export function useKakaoMapsScript(): KakaoMapsScriptStatus {
     if (!appKey) return;
 
     let cancelled = false;
-    loadKakaoMapsScript(appKey)
+    loadKakaoMapsSdk()
       .then(() => {
         if (!cancelled) setStatus("loaded");
       })

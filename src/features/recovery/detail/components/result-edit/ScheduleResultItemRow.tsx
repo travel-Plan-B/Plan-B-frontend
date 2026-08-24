@@ -5,7 +5,7 @@ import trainIcon from "@/shared/assets/icons/train.svg";
 import walkIcon from "@/shared/assets/icons/walk.svg";
 import { Tag } from "@/shared/components/ui/Tag";
 import { cn } from "@/shared/lib/cn";
-import { getCategoryTagVariant } from "../../mocks/placeMock";
+import { getCategoryTagVariant } from "@/features/recovery/lib/categoryTag";
 import type { TransportMode } from "../../mocks/scheduleMock";
 import type { ResultScheduleItem } from "../../mocks/resultEditMock";
 

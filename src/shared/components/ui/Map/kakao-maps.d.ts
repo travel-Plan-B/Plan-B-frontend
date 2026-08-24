@@ -90,6 +90,31 @@ declare namespace kakao.maps {
     ): void;
   }
 
+  namespace services {
+    enum Status {
+      OK = "OK",
+      ZERO_RESULT = "ZERO_RESULT",
+      ERROR = "ERROR",
+    }
+
+    interface AddressResult {
+      address: {
+        address_name: string;
+      };
+      road_address: {
+        address_name: string;
+      } | null;
+    }
+
+    class Geocoder {
+      coord2Address(
+        lng: number,
+        lat: number,
+        callback: (result: AddressResult[], status: Status) => void,
+      ): void;
+    }
+  }
+
   function load(callback: () => void): void;
 }
 

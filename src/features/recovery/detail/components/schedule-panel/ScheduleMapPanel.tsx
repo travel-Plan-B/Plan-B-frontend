@@ -10,7 +10,7 @@ import {
 } from "@/shared/components/ui/Map/Map";
 import { cn } from "@/shared/lib/cn";
 import { computeTravelInfo } from "../../lib/travelInfo";
-import { getCategoryTagVariant } from "../../mocks/placeMock";
+import { getCategoryTagVariant } from "@/features/recovery/lib/categoryTag";
 import type {
   ScheduleDay,
   ScheduleItem,

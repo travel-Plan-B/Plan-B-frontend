@@ -2,6 +2,8 @@
 
 import { FolderOpen, Search, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useDebouncedValue } from "@/features/recovery/hooks/useDebouncedValue";
+import { usePlaceSearchQuery } from "@/features/recovery/hooks/usePlaceSearchQuery";
 import { Button } from "@/shared/components/ui/Button";
 import {
   EMPTY_STATE_IMAGES,
@@ -15,8 +17,6 @@ import { TabsList } from "@/shared/components/ui/Tabs/TabsList";
 import { TabsTrigger } from "@/shared/components/ui/Tabs/TabsTrigger";
 import { toast } from "@/shared/components/ui/Toast/toast";
 import { cn } from "@/shared/lib/cn";
-import { usePlaceSearchQuery } from "../../api/placeQueries";
-import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import { useStoredPlaces } from "../../hooks/useStoredPlaces";
 import { PlaceResultItem } from "./PlaceResultItem";
 import { StoredPlaceItem } from "./StoredPlaceItem";

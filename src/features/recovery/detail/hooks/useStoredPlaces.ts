@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import type { Place } from "../api/types";
+import type { Place } from "@/features/recovery/api/places";
 import { useStoredPlacesStore } from "../store/useStoredPlacesStore";
 
 const ALL_CATEGORY = "전체";

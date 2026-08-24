@@ -21,13 +21,15 @@ export interface TimePickerValue {
 }
 
 export interface TimePickerProps {
+  id?: string;
   title: string;
-  value: TimePickerValue;
+  value: TimePickerValue | null;
   onChange: (value: TimePickerValue) => void;
   hourOptions: TimePickerOption[];
   minuteOptions: TimePickerOption[];
   columnLabels?: { hour: string; minute: string };
   formatValue?: (value: TimePickerValue) => string;
+  placeholder?: string;
   // "확인" 누르기 전까지 잘못된 조합(예: 체류 0시간 0분)을 걸러내기 위한 검증 함수.
   // 기본값은 항상 true라서 아무 제약이 없고, 컴포넌트를 쓰는 쪽에서 필요할 때만 넘기면 됨.
   isValid?: (value: TimePickerValue) => boolean;
@@ -39,12 +41,13 @@ const defaultFormat = (value: TimePickerValue) =>
   `${String(value.hour).padStart(2, "0")}:${String(value.minute).padStart(2, "0")}`;
 
 const wheelClassNames = {
-  optionItem: "text-sm text-neutral-400",
+  optionItem: "text-sm text-neutral-700 data-[disabled=true]:text-neutral-400",
   highlightWrapper: "rounded-lg bg-primary-50",
   highlightItem: "text-sm font-semibold text-neutral-900",
 };
 
 export function TimePicker({
+  id,
   title,
   value,
   onChange,
@@ -52,10 +55,15 @@ export function TimePicker({
   minuteOptions,
   columnLabels,
   formatValue = defaultFormat,
+  placeholder = "시간 선택",
   isValid = () => true,
   disabled = false,
   className,
 }: TimePickerProps) {
+  const emptyValue = {
+    hour: hourOptions[0]?.value ?? 0,
+    minute: minuteOptions[0]?.value ?? 0,
+  };
   const {
     open,
     setOpen,
@@ -66,11 +74,12 @@ export function TimePicker({
     panelPositionStyle,
     handleOpen,
     handleConfirm,
-  } = usePopoverPicker(value, onChange);
+  } = usePopoverPicker(value ?? emptyValue, onChange);
 
   return (
     <>
       <button
+        id={id}
         ref={triggerRef}
         type="button"
         disabled={disabled}
@@ -81,7 +90,9 @@ export function TimePicker({
           className,
         )}
       >
-        <span>{formatValue(value)}</span>
+        <span className={cn(value === null && "text-neutral-500")}>
+          {value === null ? placeholder : formatValue(value)}
+        </span>
         <ChevronDown className="size-4 text-neutral-900" />
       </button>
       {open &&
@@ -95,7 +106,7 @@ export function TimePicker({
             // 포인터 이벤트가 부모(예: 드래그 정렬 가능한 행)까지 버블링될 수 있다 ->
             // 휠 스크롤/버튼 클릭이 그쪽 리스너로 새지 않게 여기서 막는다.
             onPointerDown={(event) => event.stopPropagation()}
-            className="z-50 w-64 rounded-2xl border border-neutral-200 bg-white p-6 shadow-lg"
+            className="z-50 w-80 rounded-2xl border border-neutral-200 bg-white p-6 shadow-lg"
           >
             <div className="mb-4 flex items-center gap-2">
               <span className="flex size-6 items-center justify-center rounded-full bg-primary-50">
