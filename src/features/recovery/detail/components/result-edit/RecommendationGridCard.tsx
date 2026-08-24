@@ -1,8 +1,8 @@
 import { Clock, Footprints, ParkingCircle } from "lucide-react";
 
-import { PlaceCardImage } from "@/features/recommendation/components/PlaceCardImage";
 import { PlaceRating } from "@/features/recommendation/components/PlaceCard";
 import { Button } from "@/shared/components/ui/Button";
+import { PlaceImage } from "@/shared/components/ui/PlaceImage";
 import { Tag } from "@/shared/components/ui/Tag";
 import type { ResultRecommendation } from "../../mocks/resultEditMock";
 
@@ -56,7 +56,7 @@ export function RecommendationGridCard({
   return (
     <article className="flex w-full flex-col overflow-hidden rounded-2xl border border-neutral-200 bg-white">
       <div className="relative aspect-video bg-neutral-100">
-        <PlaceCardImage
+        <PlaceImage
           imageUrl={place.imageUrl}
           imageAlt={place.imageAlt}
           sizes="320px"

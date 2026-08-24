@@ -1,9 +1,9 @@
 import { Star } from "lucide-react";
 import type { ReactNode } from "react";
 
-import { PlaceCardImage } from "@/features/recommendation/components/PlaceCardImage";
 import type { Place } from "@/features/recovery/api/places";
 import { getCategoryTagVariant } from "@/features/recovery/lib/categoryTag";
+import { PlaceImage } from "@/shared/components/ui/PlaceImage";
 import { Tag } from "@/shared/components/ui/Tag";
 import { cn } from "@/shared/lib/cn";
 
@@ -29,7 +29,7 @@ export function PlaceSearchResultItem({
     <>
       {hasSearchMetadata && (
         <div className="relative size-12 shrink-0 overflow-hidden rounded-lg">
-          <PlaceCardImage
+          <PlaceImage
             imageUrl={place.imageUrl ?? undefined}
             imageAlt={place.name}
             sizes="48px"

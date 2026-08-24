@@ -209,12 +209,6 @@ export function SimpleRecoveryInfoPage() {
                   ...current,
                   destinationQuery: selectedDestination.name,
                   selectedDestination,
-                  currentLocationInput: `${selectedDestination.name} · ${selectedDestination.address}`,
-                  currentLocation: {
-                    address: selectedDestination.address,
-                    lat: selectedDestination.lat,
-                    lng: selectedDestination.lng,
-                  },
                 }))
               }
             />

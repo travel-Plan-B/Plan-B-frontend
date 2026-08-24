@@ -5,7 +5,7 @@ import { useState } from "react";
 
 import { ImagePlaceholder } from "@/shared/components/ui/ImagePlaceholder";
 
-interface PlaceCardImageProps {
+interface PlaceImageProps {
   imageUrl?: string;
   imageAlt: string;
   sizes: string;
@@ -13,7 +13,7 @@ interface PlaceCardImageProps {
   showFallbackLabel?: boolean;
 }
 
-type LoadableImageProps = Required<PlaceCardImageProps>;
+type LoadableImageProps = Required<PlaceImageProps>;
 
 function LoadableImage({
   imageUrl,
@@ -51,12 +51,12 @@ function PlaceImagePlaceholder({
   );
 }
 
-export function PlaceCardImage({
+export function PlaceImage({
   imageUrl,
   imageAlt,
   sizes,
   showFallbackLabel = true,
-}: PlaceCardImageProps) {
+}: PlaceImageProps) {
   if (!imageUrl) {
     return <PlaceImagePlaceholder showFallbackLabel={showFallbackLabel} />;
   }

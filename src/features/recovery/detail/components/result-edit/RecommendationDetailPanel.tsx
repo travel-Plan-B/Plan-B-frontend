@@ -1,8 +1,8 @@
 import { Car, Clock as ClockIcon, ParkingCircle, Sparkles } from "lucide-react";
 
-import { PlaceCardImage } from "@/features/recommendation/components/PlaceCardImage";
 import { PlaceRating } from "@/features/recommendation/components/PlaceCard";
 import { Button } from "@/shared/components/ui/Button";
+import { PlaceImage } from "@/shared/components/ui/PlaceImage";
 import { Tag } from "@/shared/components/ui/Tag";
 import type { ResultRecommendation } from "../../mocks/resultEditMock";
 
@@ -49,7 +49,7 @@ export function RecommendationDetailPanel({
   return (
     <div className="flex flex-col gap-4 rounded-2xl border border-neutral-200 bg-white p-4 shadow-lg">
       <div className="relative aspect-video overflow-hidden rounded-xl bg-neutral-100">
-        <PlaceCardImage
+        <PlaceImage
           imageUrl={recommendation.imageUrl}
           imageAlt={recommendation.imageAlt}
           sizes="(max-width: 1024px) 100vw, 600px"
