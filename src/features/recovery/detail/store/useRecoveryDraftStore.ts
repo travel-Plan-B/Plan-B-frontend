@@ -2,9 +2,12 @@ import { create } from "zustand";
 import type { StoreApi } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import type { DateRange } from "@/shared/components/ui/DateRangePicker";
-import type { DetailRecommendResult } from "../api/detailRecommend";
 import type { SituationType, StyleType } from "../mocks/conditionMock";
-import type { ResultScheduleItem } from "../mocks/resultEditMock";
+import {
+  BEST_RECOMMENDATION_ID,
+  RESULT_ITEMS_BY_DAY,
+  type ResultScheduleItem,
+} from "../mocks/resultEditMock";
 import type { ScheduleItem } from "../mocks/scheduleMock";
 
 /** useState 세터처럼 값 하나 또는 (prev) => next 업데이터 함수 둘 다 받는다. */
@@ -46,12 +49,7 @@ interface RecoveryDraftData {
    */
   overrideConditionByItemId: Record<string, RecoveryCondition>;
   resultItemsByDay: Record<number, ResultScheduleItem[]>;
-  /** 2단계에서 선택한 항목마다 REQ-DETAIL-002로 받아온 추천 후보. */
-  recommendationsByItemId: Record<string, DetailRecommendResult>;
-  /** 3단계에서 지금 어떤 항목의 추천을 보고 있는지(왼쪽 DAY 목록 클릭으로 전환). */
-  activeRecommendItemId: string | null;
-  /** 항목마다 "추천 상세" 패널에 띄울 후보로 고른 candidate id. */
-  selectedRecommendationIdByItemId: Record<string, string>;
+  selectedRecommendationId: string;
 }
 
 const initialDraft: RecoveryDraftData = {
@@ -62,10 +60,8 @@ const initialDraft: RecoveryDraftData = {
   selectedIds: new Set(),
   sharedCondition: DEFAULT_RECOVERY_CONDITION,
   overrideConditionByItemId: {},
-  resultItemsByDay: {},
-  recommendationsByItemId: {},
-  activeRecommendItemId: null,
-  selectedRecommendationIdByItemId: {},
+  resultItemsByDay: RESULT_ITEMS_BY_DAY,
+  selectedRecommendationId: BEST_RECOMMENDATION_ID,
 };
 
 /** `setStep`처럼 각 필드마다 useState 세터와 같은 모양의 setter 이름을 만든다. */

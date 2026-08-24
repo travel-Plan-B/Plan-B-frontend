@@ -57,8 +57,6 @@ function createScheduleItemFromPlace(
     transport: "car",
     lat: place.lat,
     lng: place.lng,
-    placeId: place.placeId,
-    source: place.source,
   };
 }
 

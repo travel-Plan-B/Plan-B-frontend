@@ -1,6 +1,6 @@
 "use client";
 
-import { RotateCw } from "lucide-react";
+import { RefreshCw, RotateCw } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Button } from "@/shared/components/ui/Button";
@@ -22,8 +22,12 @@ const SORT_OPTIONS: Array<{ value: SortOption; label: string }> = [
 /** 한 줄(3열)만큼만 먼저 보여주고, "추천 더보기"를 누르면 나머지를 한 번에 펼친다. */
 const INITIAL_VISIBLE_COUNT = 3;
 
-/** 상세보기는 이 이슈 범위 밖(#83)이라 UI만 두고 별도 동작은 없다. */
+/**
+ * 상세보기·새로운 추천 받기는 이 이슈 범위 밖(#83)이라 UI만 두고
+ * 별도 동작은 없다. 실제 재추천 로직은 별도 이슈에서 진행한다.
+ */
 function handleDetail() {}
+function handleNewRecommendations() {}
 
 export interface OtherRecommendationsPanelProps {
   places: ResultRecommendation[];
@@ -100,6 +104,15 @@ export function OtherRecommendationsPanel({
           추천 더보기
         </Button>
       )}
+
+      <Button
+        variant="default"
+        className="w-full gap-2 rounded-full"
+        onClick={handleNewRecommendations}
+      >
+        <RefreshCw className="size-4" aria-hidden="true" />
+        새로운 추천 받기
+      </Button>
     </div>
   );
 }
