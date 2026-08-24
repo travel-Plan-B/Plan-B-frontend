@@ -47,7 +47,7 @@ export function ToastCard({ type, message }: ToastCardProps) {
           <span className="text-sm leading-none font-bold">!</span>
         )}
       </span>
-      <p className="text-base font-bold text-neutral-900">{message}</p>
+      <p className="text-sm font-bold text-neutral-900">{message}</p>
     </div>
   );
 }

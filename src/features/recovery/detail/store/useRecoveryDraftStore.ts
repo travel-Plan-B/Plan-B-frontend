@@ -18,15 +18,36 @@ function resolve<T>(update: Updater<T>, prev: T): T {
     : update;
 }
 
+/**
+ * 복구 대상 항목 하나의 "어떤 문제/어떤 스타일" 답. 같은 날이어도 항목마다
+ * 이유가 다를 수 있어서(예: A는 날씨, B는 폐업) 항목 단위로 따로 둔다.
+ */
+export interface RecoveryCondition {
+  situation: SituationType;
+  subAnswer: string | null;
+  style: StyleType;
+}
+
+export const DEFAULT_RECOVERY_CONDITION: RecoveryCondition = {
+  situation: "weather",
+  subAnswer: "outdoor-walking",
+  style: "new",
+};
+
 interface RecoveryDraftData {
   step: number;
   region: string;
   dateRange: DateRange;
   itemsByDay: Record<number, ScheduleItem[]>;
   selectedIds: Set<string>;
-  situation: SituationType;
-  subAnswer: string | null;
-  style: StyleType;
+  /** 체크한 항목이 기본으로 쓰는 공통 복구 조건. */
+  sharedCondition: RecoveryCondition;
+  /**
+   * "개별로 설정"한 항목만 공통 조건 대신 자기만의 조건을 쓴다. 대부분은
+   * 공통 조건을 그대로 쓰는 게 흔해서(예외만 따로), 여기 없으면 sharedCondition을
+   * 쓴다. 체크 해제하면 같이 지운다.
+   */
+  overrideConditionByItemId: Record<string, RecoveryCondition>;
   resultItemsByDay: Record<number, ResultScheduleItem[]>;
   selectedRecommendationId: string;
 }
@@ -37,9 +58,8 @@ const initialDraft: RecoveryDraftData = {
   dateRange: { start: null, end: null },
   itemsByDay: {},
   selectedIds: new Set(),
-  situation: "weather",
-  subAnswer: "outdoor-walking",
-  style: "new",
+  sharedCondition: DEFAULT_RECOVERY_CONDITION,
+  overrideConditionByItemId: {},
   resultItemsByDay: RESULT_ITEMS_BY_DAY,
   selectedRecommendationId: BEST_RECOMMENDATION_ID,
 };

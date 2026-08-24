@@ -31,9 +31,8 @@ export function RecoveryFlow() {
     dateRange,
     itemsByDay,
     selectedIds,
-    situation,
-    subAnswer,
-    style,
+    sharedCondition,
+    overrideConditionByItemId,
     resultItemsByDay,
     selectedRecommendationId,
     setStep,
@@ -41,9 +40,8 @@ export function RecoveryFlow() {
     setDateRange,
     setItemsByDay,
     setSelectedIds,
-    setSituation,
-    setSubAnswer,
-    setStyle,
+    setSharedCondition,
+    setOverrideConditionByItemId,
     setResultItemsByDay,
     setSelectedRecommendationId,
     restart,
@@ -86,12 +84,10 @@ export function RecoveryFlow() {
             itemsByDay={itemsByDay}
             selectedIds={selectedIds}
             onSelectedIdsChange={setSelectedIds}
-            situation={situation}
-            onSituationChange={setSituation}
-            subAnswer={subAnswer}
-            onSubAnswerChange={setSubAnswer}
-            style={style}
-            onStyleChange={setStyle}
+            sharedCondition={sharedCondition}
+            onSharedConditionChange={setSharedCondition}
+            overrideConditionByItemId={overrideConditionByItemId}
+            onOverrideConditionByItemIdChange={setOverrideConditionByItemId}
             onPrev={goPrev}
             onNext={goNext}
           />
