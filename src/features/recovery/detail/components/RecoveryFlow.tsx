@@ -1,15 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect } from "react";
 
-import type { DateRange } from "@/shared/components/ui/DateRangePicker";
-import type { SituationType, StyleType } from "../mocks/conditionMock";
-import {
-  BEST_RECOMMENDATION_ID,
-  RESULT_ITEMS_BY_DAY,
-  type ResultScheduleItem,
-} from "../mocks/resultEditMock";
-import type { ScheduleItem } from "../mocks/scheduleMock";
+import { useRecoveryDraftStore } from "../store/useRecoveryDraftStore";
 import { ResultConfirmStep } from "./result-confirm/ResultConfirmStep";
 import { ResultEditStep } from "./result-edit/ResultEditStep";
 import { TargetSelectionStep } from "./target-selection/TargetSelectionStep";
@@ -21,41 +14,56 @@ import { TravelScheduleStep } from "./TravelScheduleStep";
  * 단계 간 공유 데이터도 이 컴포넌트(또는 여기서 쓰는 훅)가 들고 있으면 되고,
  * URL/RHF만으로 부족해질 때만 store 도입을 검토한다 (folder-structure.md 참고).
  *
+ * → 새로고침하면 입력한 내용이 다 날아가는 문제가 있어서, 단계 간 공유
+ * state는 useState 대신 zustand persist store(useRecoveryDraftStore)로
+ * 옮겼다. localStorage에 자동 저장되고, 지우면(restart) localStorage에서도
+ * 같이 빠진다. 장소 보관함(useStoredPlacesStore)과 동일한 패턴이다.
+ *
  * 모든 단계 화면이 구현됐으므로 4까지 진행시킨다. 새 단계를 추가할 때마다
  * 이 값을 올리면 된다.
  */
 const MAX_IMPLEMENTED_STEP = 4;
 
 export function RecoveryFlow() {
-  const [step, setStep] = useState(1);
+  const {
+    step,
+    region,
+    dateRange,
+    itemsByDay,
+    selectedIds,
+    situation,
+    subAnswer,
+    style,
+    resultItemsByDay,
+    selectedRecommendationId,
+    setStep,
+    setRegion,
+    setDateRange,
+    setItemsByDay,
+    setSelectedIds,
+    setSituation,
+    setSubAnswer,
+    setStyle,
+    setResultItemsByDay,
+    setSelectedRecommendationId,
+    restart,
+    hasHydrated,
+  } = useRecoveryDraftStore();
+
   const goNext = () =>
     setStep((prev) => Math.min(prev + 1, MAX_IMPLEMENTED_STEP));
   const goPrev = () => setStep((prev) => Math.max(prev - 1, 1));
-  const goRestart = () => setStep(1);
 
-  // 1단계 상태. 2단계로 넘어갔다 돌아와도 남아있어야 해서 각 단계 컴포넌트가
-  // 아니라 여기(언마운트되지 않는 부모)가 들고 있는다.
-  const [region, setRegion] = useState("");
-  const [dateRange, setDateRange] = useState<DateRange>({
-    start: null,
-    end: null,
-  });
-  const [itemsByDay, setItemsByDay] = useState<Record<number, ScheduleItem[]>>(
-    {},
-  );
+  // 스토어가 skipHydration으로 생성되므로(useRecoveryDraftStore.ts 참고),
+  // 마운트 후 여기서 직접 rehydrate를 트리거한다 — 그래야 서버 렌더와
+  // 클라이언트 첫 렌더가 둘 다 hasHydrated: false로 일치한 뒤, 그 다음
+  // 렌더에서만 localStorage 값이 반영된다.
+  useEffect(() => {
+    void useRecoveryDraftStore.persist.rehydrate();
+  }, []);
 
-  // 2단계 상태. 3단계로 넘어갔다 돌아와도 남아있어야 해서 마찬가지로 여기서 들고 있는다.
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [situation, setSituation] = useState<SituationType>("weather");
-  const [subAnswer, setSubAnswer] = useState<string | null>("outdoor-walking");
-  const [style, setStyle] = useState<StyleType>("new");
-
-  // 3단계 상태. 4단계로 넘어갔다 돌아와도 남아있어야 해서 마찬가지로 여기서 들고 있는다.
-  const [resultItemsByDay, setResultItemsByDay] =
-    useState<Record<number, ResultScheduleItem[]>>(RESULT_ITEMS_BY_DAY);
-  const [selectedRecommendationId, setSelectedRecommendationId] = useState(
-    BEST_RECOMMENDATION_ID,
-  );
+  // 하이드레이션 전에는 아무 것도 그리지 않는다(장소 보관함과 동일한 방식).
+  if (!hasHydrated) return null;
 
   return (
     <>
@@ -99,7 +107,7 @@ export function RecoveryFlow() {
           />
         )}
         {step === 4 && (
-          <ResultConfirmStep onPrev={goPrev} onRestart={goRestart} />
+          <ResultConfirmStep onPrev={goPrev} onRestart={restart} />
         )}
       </div>
       <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 py-12 text-center min-[1024px]:hidden">
