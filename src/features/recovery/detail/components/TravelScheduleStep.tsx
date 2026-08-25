@@ -14,7 +14,7 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { GripVertical, List, MapPin, Map as MapIcon } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { RecoveryPageLayout } from "@/features/recovery/components/RecoveryPageLayout";
 import { BottomActionBar } from "@/shared/components/layout/BottomActionBar";
 import {
@@ -30,6 +30,7 @@ import { toast } from "@/shared/components/ui/Toast/toast";
 import type { Place } from "@/features/recovery/api/places";
 import { getCategoryTagVariant } from "@/features/recovery/lib/categoryTag";
 import { DETAIL_RECOVERY_STEPS } from "../steps";
+import { checkAllConflicts } from "../lib/scheduleConflicts";
 import { buildScheduleDays, type ScheduleItem } from "../mocks/scheduleMock";
 import { PlaceFinderPanel } from "./place-finder/PlaceFinderPanel";
 import { ScheduleInputPanel } from "./schedule-panel/ScheduleInputPanel";
@@ -93,6 +94,24 @@ export function TravelScheduleStep({
 
   // 보관함 카드 드래그 중 DragOverlay에 보여줄 장소(놓기 전까지는 원본 목록 UI는 그대로 둔다).
   const [draggingPlace, setDraggingPlace] = useState<Place | null>(null);
+
+  // "다음" 클릭 시 전체 DAY를 검증해서 겹치는 일정이 있으면 다음 단계로
+  // 넘어가는 대신 토스트로 안내한다(#121) — 어떤 항목이 겹치는지는 이미
+  // 화면의 빨간 테두리 + 인라인 경고(ScheduleItemRow)로 보이니 토스트는
+  // 짧게 "시간을 확인해달라"는 안내만 한다.
+  const [isCheckingConflicts, setIsCheckingConflicts] = useState(false);
+  // 충돌 검사(비동기, API 왕복 있음)가 끝나기 전에 사용자가 여행 기간이나
+  // 일정을 계속 편집할 수 있다 — 그러면 검사 결과가 이미 낡은 스냅샷이
+  // 된다(#122 리뷰). handleNextClick의 클로저는 클릭 시점 값을 그대로 들고
+  // 있어서 최신 값과 비교가 안 되니, 매 렌더 최신 값을 이 ref에 담아둔다.
+  // useEffect(커밋 후 비동기)가 아니라 useLayoutEffect(커밋 직후 동기)를
+  // 써야 한다 — checkAllConflicts의 await가 풀리는 시점과 useEffect 실행
+  // 시점이 미묘하게 겹치면, ref가 아직 안 갱신된 채로 "안 바뀜"으로
+  // 오판할 수 있다(#122 리뷰).
+  const latestInputsRef = useRef({ itemsByDay, dateRange });
+  useLayoutEffect(() => {
+    latestInputsRef.current = { itemsByDay, dateRange };
+  });
   // 클릭과 드래그를 구분하기 위해 일정 거리(px) 이상 움직여야 드래그로 인식.
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -144,8 +163,10 @@ export function TravelScheduleStep({
   /**
    * "다음" 버튼은 항상 눌리게 해두고, 클릭 시점에 검증해서 무엇이 빠졌는지
    * 토스트로 바로 알려준다 — 그냥 비활성화만 해두면 사용자가 이유를 알 수 없어서.
+   * 마지막으로 전체 DAY의 일정 충돌을 검사해서(#121), 겹치는 게 있으면
+   * 다음 단계로 넘어가는 대신 토스트로 안내한다.
    */
-  const handleNextClick = () => {
+  const handleNextClick = async () => {
     if (!dateRange.end) {
       toast.error("여행 기간을 선택해주세요.");
       return;
@@ -157,6 +178,33 @@ export function TravelScheduleStep({
       // 개수에 따라 한 줄을 넘겨 줄바꿈된다. 어떤 DAY인지는 화면의 DAY 탭에서
       // 바로 보이니, 토스트는 짧고 항상 한 줄에 들어가는 문구로 고정한다.
       toast.error("일정이 없는 DAY가 있어요.");
+      return;
+    }
+
+    // itemsByDay를 그대로 넘기면 안 된다 — 여행 기간을 줄였을 때 store의
+    // setDateRange가 예전 DAY의 항목을 정리하지 않아서, 화면에 안 보이는
+    // DAY가 itemsByDay에 남아있을 수 있다(#122 리뷰). 그 DAY에서 충돌이
+    // 나면 사용자가 고칠 방법이 없는 채로 막히니, 지금 보이는 days만 검사한다.
+    const visibleItemsByDay = Object.fromEntries(
+      days.map((day) => [day.day, day.items]),
+    );
+    setIsCheckingConflicts(true);
+    const found = await checkAllConflicts(visibleItemsByDay);
+    setIsCheckingConflicts(false);
+
+    // 검사하는 동안 여행 기간이나 일정이 바뀌었으면 방금 받은 결과는 이미
+    // 낡은 스냅샷이다(#122 리뷰) — 그대로 진행하거나 안내하면 최신 상태와
+    // 안 맞을 수 있으니 조용히 멈춘다. 사용자가 "다음"을 다시 누르면 그때
+    // 최신 상태로 재검사된다.
+    if (
+      latestInputsRef.current.itemsByDay !== itemsByDay ||
+      latestInputsRef.current.dateRange !== dateRange
+    ) {
+      return;
+    }
+
+    if (found.length > 0) {
+      toast.error("겹치는 일정이 있어요. 시간을 확인해주세요.");
       return;
     }
 
@@ -269,7 +317,11 @@ export function TravelScheduleStep({
           </DragOverlay>
         </DndContext>
 
-        <BottomActionBar onNext={handleNextClick} />
+        <BottomActionBar
+          onNext={handleNextClick}
+          nextLabel={isCheckingConflicts ? "일정 확인 중..." : undefined}
+          nextDisabled={isCheckingConflicts}
+        />
       </div>
     </RecoveryPageLayout>
   );
