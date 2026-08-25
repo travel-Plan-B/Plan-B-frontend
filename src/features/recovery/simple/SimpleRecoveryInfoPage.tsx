@@ -2,19 +2,28 @@
 
 import { LocateFixed, MapPin } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState, type ChangeEvent, type FormEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+} from "react";
+
+import {
+  requestSimpleRecommendations,
+  toSimpleRecommendationRequest,
+} from "@/features/recovery/simple/api/simpleRecommendations";
 
 import { RecoveryPageLayout } from "@/features/recovery/components/RecoveryPageLayout";
-import {
-  DestinationSearch,
-  type SelectedDestination,
-} from "@/features/recovery/simple/DestinationSearch";
-import {
-  TransportSelector,
-  type TransportType,
-} from "@/features/recovery/simple/TransportSelector";
+import { DestinationSearch } from "@/features/recovery/simple/DestinationSearch";
+import { TransportSelector } from "@/features/recovery/simple/TransportSelector";
 import { SIMPLE_RECOVERY_STEPS } from "@/features/recovery/simple/steps";
-import { reverseGeocodeCoordinates } from "@/features/recovery/simple/reverseGeocode";
+import {
+  geocodeAddress,
+  reverseGeocodeCoordinates,
+} from "@/features/recovery/simple/reverseGeocode";
+import { useSimpleRecoveryStore } from "@/features/recovery/simple/store/useSimpleRecoveryStore";
 import { Button } from "@/shared/components/ui/Button";
 import { Input } from "@/shared/components/ui/Input";
 import {
@@ -22,21 +31,8 @@ import {
   type TimePickerValue,
 } from "@/shared/components/ui/TimePicker";
 import { ROUTES } from "@/shared/config/routes";
-
-interface SimpleRecoveryBasicInfo {
-  currentLocationInput: string;
-  currentLocation: CurrentLocation | null;
-  destinationQuery: string;
-  selectedDestination: SelectedDestination | null;
-  arrivalTime: string;
-  transport: TransportType | null;
-}
-
-interface CurrentLocation {
-  address: string;
-  lat: number | null;
-  lng: number | null;
-}
+import { Spinner } from "@/shared/components/ui/Spinner";
+import { toast } from "@/shared/components/ui/Toast/toast";
 
 const ARRIVAL_HOUR_OPTIONS = Array.from({ length: 24 }, (_, hour) => ({
   value: hour,
@@ -58,24 +54,32 @@ function formatTime({ hour, minute }: TimePickerValue): string {
   return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
 }
 
-const INITIAL_FORM: SimpleRecoveryBasicInfo = {
-  currentLocationInput: "",
-  currentLocation: null,
-  destinationQuery: "",
-  selectedDestination: null,
-  arrivalTime: "",
-  transport: null,
-};
-
 export function SimpleRecoveryInfoPage() {
   const router = useRouter();
-  const [formData, setFormData] =
-    useState<SimpleRecoveryBasicInfo>(INITIAL_FORM);
+  const reason = useSimpleRecoveryStore((state) => state.reason);
+  const formData = useSimpleRecoveryStore((state) => state.info);
+  const setFormData = useSimpleRecoveryStore((state) => state.setInfo);
+  const setRecommendationResponse = useSimpleRecoveryStore(
+    (state) => state.setRecommendationResponse,
+  );
   const [isLocating, setIsLocating] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const submissionLockRef = useRef(false);
   const [locationError, setLocationError] = useState<string | null>(null);
   const canSubmit = Boolean(
-    formData.currentLocation?.address.trim() && formData.arrivalTime,
+    reason &&
+    formData.currentLocation?.address.trim() &&
+    formData.selectedDestination &&
+    formData.arrivalTime &&
+    formData.transport,
   );
+
+  useEffect(() => {
+    if (!reason) {
+      toast.info("먼저 복구할 문제 유형을 선택해 주세요.");
+      router.replace(ROUTES.RECOVERY_SIMPLE_SETUP);
+    }
+  }, [reason, router]);
 
   const handleCurrentLocationChange = (
     event: ChangeEvent<HTMLInputElement>,
@@ -132,10 +136,72 @@ export function SimpleRecoveryInfoPage() {
     );
   };
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!canSubmit) return;
-    router.push(ROUTES.RECOVERY_SIMPLE_RECOMMEND);
+    if (!canSubmit || submissionLockRef.current) return;
+
+    submissionLockRef.current = true;
+    setIsSubmitting(true);
+    setLocationError(null);
+
+    try {
+      if (!reason || !formData.selectedDestination || !formData.transport) {
+        return;
+      }
+
+      const currentCoordinates =
+        formData.currentLocation?.lat != null &&
+        formData.currentLocation.lng != null
+          ? {
+              lat: formData.currentLocation.lat,
+              lng: formData.currentLocation.lng,
+            }
+          : await geocodeAddress(formData.currentLocationInput.trim());
+
+      if (
+        formData.currentLocation &&
+        (formData.currentLocation.lat == null ||
+          formData.currentLocation.lng == null)
+      ) {
+        setFormData((current) => ({
+          ...current,
+          currentLocation: current.currentLocation
+            ? { ...current.currentLocation, ...currentCoordinates }
+            : null,
+        }));
+      }
+
+      const request = toSimpleRecommendationRequest({
+        currentLocation: currentCoordinates,
+        nextPlace: {
+          lat: formData.selectedDestination.lat,
+          lng: formData.selectedDestination.lng,
+        },
+        excludePlaceName: formData.selectedDestination.name,
+        deadlineTime: formData.arrivalTime,
+        transport: formData.transport,
+        problemReason: reason,
+      });
+
+      setRecommendationResponse(null);
+      const response = await requestSimpleRecommendations(request);
+      if (!response.success) {
+        throw new Error(
+          "추천 요청에 실패했습니다. 잠시 후 다시 시도해 주세요.",
+        );
+      }
+      setRecommendationResponse(response);
+      router.push(ROUTES.RECOVERY_SIMPLE_RECOMMEND);
+    } catch (error) {
+      const message =
+        error instanceof Error && error.message
+          ? error.message
+          : "추천 요청에 실패했습니다. 잠시 후 다시 시도해 주세요.";
+      toast.error(message);
+    } finally {
+      submissionLockRef.current = false;
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -207,6 +273,12 @@ export function SimpleRecoveryInfoPage() {
               onSelect={(selectedDestination) =>
                 setFormData((current) => ({
                   ...current,
+                  currentLocationInput: selectedDestination.address,
+                  currentLocation: {
+                    address: selectedDestination.address,
+                    lat: selectedDestination.lat,
+                    lng: selectedDestination.lng,
+                  },
                   destinationQuery: selectedDestination.name,
                   selectedDestination,
                 }))
@@ -253,8 +325,9 @@ export function SimpleRecoveryInfoPage() {
         </div>
 
         <div className="mx-auto mt-8 flex w-full max-w-2xl justify-end">
-          <Button type="submit" size="md" disabled={!canSubmit}>
-            복구할 일정 추천받기
+          <Button type="submit" size="md" disabled={!canSubmit || isSubmitting}>
+            {isSubmitting && <Spinner size="xs" className="text-current" />}
+            {isSubmitting ? "추천 요청 중" : "복구할 일정 추천받기"}
           </Button>
         </div>
       </form>

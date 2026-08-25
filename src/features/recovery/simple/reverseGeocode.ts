@@ -21,3 +21,22 @@ export async function reverseGeocodeCoordinates(
     });
   });
 }
+
+export async function geocodeAddress(
+  address: string,
+): Promise<{ lat: number; lng: number }> {
+  await loadKakaoMapsSdk();
+
+  return new Promise((resolve, reject) => {
+    const geocoder = new window.kakao.maps.services.Geocoder();
+
+    geocoder.addressSearch(address, (result, status) => {
+      if (status !== window.kakao.maps.services.Status.OK || !result[0]) {
+        reject(new Error("입력한 주소의 좌표를 찾지 못했습니다."));
+        return;
+      }
+
+      resolve({ lat: Number(result[0].y), lng: Number(result[0].x) });
+    });
+  });
+}

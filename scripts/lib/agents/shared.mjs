@@ -118,6 +118,7 @@ export function runCli(
   const result = spawnResolved(command, args, {
     cwd,
     encoding: "utf8",
+    env: { ...process.env, GIT_PAGER: "cat" },
     shell: false,
     input,
     maxBuffer: captureOutput ? AGENT_OUTPUT_MAX_BUFFER : undefined,

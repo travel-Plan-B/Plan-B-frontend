@@ -32,6 +32,7 @@ import {
   truncateCapturedStderr,
 } from "./agents/shared.mjs";
 import {
+  argsWithoutGitPager,
   isQuickIssuePlaceholder,
   issueReferencesFromPr,
   parseArgs,
@@ -1091,6 +1092,27 @@ test("runCli는 stdout을 캡처하고 요청된 경우 정상 stderr를 숨긴�
     { displayName: "fixture", captureOutput: true, captureStderr: true },
   );
   assert.equal(stdout, "stdout-ok");
+});
+
+test("공통 Git helper는 모든 Git 명령에 --no-pager를 적용한다", () => {
+  assert.deepEqual(argsWithoutGitPager("git", ["status", "--short"]), [
+    "--no-pager",
+    "status",
+    "--short",
+  ]);
+  assert.deepEqual(argsWithoutGitPager("gh", ["pr", "view"]), [
+    "pr",
+    "view",
+  ]);
+});
+
+test("Agent CLI 자식 프로세스는 Git pager 비활성화 환경을 상속한다", () => {
+  const pager = runCli(
+    process.execPath,
+    ["-e", "process.stdout.write(process.env.GIT_PAGER || '')"],
+    { displayName: "fixture", captureOutput: true },
+  );
+  assert.equal(pager, "cat");
 });
 
 test("runCli 실패는 대용량 stderr 전체 대신 마지막 8KB만 보고한다", () => {

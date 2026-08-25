@@ -1,6 +1,5 @@
 "use client";
 
-import { X } from "lucide-react";
 import type { ChangeEvent } from "react";
 
 import type { Place } from "@/features/recovery/api/places";
@@ -67,48 +66,25 @@ export function DestinationSearch({
 
   return (
     <div className="flex w-full flex-col">
-      {!isSelected && (
-        <Input
-          id="destination"
-          value={value}
-          onChange={handleChange}
-          placeholder="다음 일정 장소를 검색해주세요"
-          autoComplete="off"
-          clearable
-          role="combobox"
-          aria-autocomplete="list"
-          aria-expanded={showSettledResult && results.length > 0}
-          aria-controls={
-            showSearchPanel ? "destination-search-results" : undefined
-          }
-          className={cn(
-            "py-2.5",
-            showSearchPanel && "relative z-10 rounded-b-none",
-          )}
-        />
-      )}
-
-      {isSelected && selectedDestination && (
-        <div
-          role="status"
-          className="overflow-hidden rounded-lg border border-primary-500 bg-white"
-        >
-          <PlaceSearchResultItem
-            place={selectedDestination}
-            className="px-4 py-3"
-            action={
-              <button
-                type="button"
-                aria-label="선택한 장소 해제"
-                onClick={() => onValueChange("")}
-                className="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-full text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-700 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary-500"
-              >
-                <X className="size-4" aria-hidden="true" />
-              </button>
-            }
-          />
-        </div>
-      )}
+      <Input
+        id="destination"
+        value={value}
+        onChange={handleChange}
+        placeholder="다음 일정 장소를 검색해주세요"
+        autoComplete="off"
+        clearable
+        role="combobox"
+        aria-autocomplete="list"
+        aria-expanded={showSettledResult && results.length > 0}
+        aria-controls={
+          showSearchPanel ? "destination-search-results" : undefined
+        }
+        className={cn(
+          "py-2.5",
+          isSelected && "border-primary-500",
+          showSearchPanel && "relative z-10 rounded-b-none",
+        )}
+      />
 
       {isSearching && (
         <div

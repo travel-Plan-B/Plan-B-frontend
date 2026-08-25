@@ -33,8 +33,12 @@ export function fail(message) {
   process.exit(1);
 }
 
+export function argsWithoutGitPager(command, args) {
+  return command === "git" ? ["--no-pager", ...args] : args;
+}
+
 export function run(command, args, options = {}) {
-  const result = spawnSync(command, args, {
+  const result = spawnSync(command, argsWithoutGitPager(command, args), {
     encoding: "utf8",
     shell: false,
     stdio: options.inherit ? "inherit" : "pipe",

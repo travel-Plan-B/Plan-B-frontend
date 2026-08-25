@@ -1,5 +1,5 @@
-import type { HTMLAttributes, MouseEventHandler } from "react";
 import { Clock, MapPin, ParkingCircle, Star } from "lucide-react";
+import type { HTMLAttributes, MouseEventHandler } from "react";
 
 import { Button } from "@/shared/components/ui/Button";
 import { PlaceImage } from "@/shared/components/ui/PlaceImage";
@@ -24,6 +24,7 @@ export interface PlaceCardProps extends Omit<
   category?: string;
   location?: string;
   rating?: number;
+  reviewCount?: number;
   travelTime?: string;
   stayTime?: string;
   cost?: string;
@@ -72,7 +73,13 @@ function InfoRow({ label, value, icon: Icon, compact = false }: InfoRowProps) {
   );
 }
 
-export function PlaceRating({ value }: { value: number }) {
+export function PlaceRating({
+  value,
+  reviewCount,
+}: {
+  value: number;
+  reviewCount?: number;
+}) {
   return (
     <span
       className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-neutral-900"
@@ -83,6 +90,11 @@ export function PlaceRating({ value }: { value: number }) {
         className="size-4 fill-yellow-500 text-yellow-500"
       />
       {value.toFixed(1)}
+      {reviewCount !== undefined && (
+        <span className="font-normal text-neutral-700">
+          ({reviewCount.toLocaleString()})
+        </span>
+      )}
     </span>
   );
 }
@@ -95,6 +107,7 @@ export function PlaceCard({
   category,
   location,
   rating,
+  reviewCount,
   travelTime,
   stayTime,
   cost,
@@ -126,7 +139,7 @@ export function PlaceCard({
   return (
     <article
       className={cn(
-        "w-full overflow-hidden rounded-2xl border border-neutral-200 bg-white",
+        "flex h-full w-full flex-col overflow-hidden rounded-2xl border border-neutral-200 bg-white",
         variantStyles[variant],
         className,
       )}
@@ -155,7 +168,12 @@ export function PlaceCard({
         )}
       </div>
 
-      <div className={cn("flex flex-col", compact ? "gap-3 p-4" : "gap-4 p-4")}>
+      <div
+        className={cn(
+          "flex flex-1 flex-col",
+          compact ? "gap-3 p-4" : "gap-4 p-4",
+        )}
+      >
         <div className="min-w-0">
           <div className="flex min-w-0 items-start gap-3">
             <h3
@@ -166,7 +184,9 @@ export function PlaceCard({
             >
               {title}
             </h3>
-            {rating !== undefined && <PlaceRating value={rating} />}
+            {rating !== undefined && (
+              <PlaceRating value={rating} reviewCount={reviewCount} />
+            )}
           </div>
           {subtitle && (
             <p className="mt-1 truncate text-sm text-neutral-700">{subtitle}</p>
@@ -182,7 +202,7 @@ export function PlaceCard({
         )}
 
         {(onDetail || (compact && onSelect)) && (
-          <div className={cn("flex gap-2", !compact && "pt-1")}>
+          <div className={cn("mt-auto flex gap-2", !compact && "pt-1")}>
             {onDetail && (
               <Button
                 variant={compact ? "outline" : "default"}

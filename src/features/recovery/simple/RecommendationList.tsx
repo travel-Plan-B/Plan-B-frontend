@@ -8,11 +8,13 @@ import { Tabs } from "@/shared/components/ui/Tabs/Tabs";
 import { TabsList } from "@/shared/components/ui/Tabs/TabsList";
 import { TabsTrigger } from "@/shared/components/ui/Tabs/TabsTrigger";
 import { ROUTES } from "@/shared/config/routes";
+import { INITIAL_RECOMMENDATION_ID } from "./recommendation-data";
+import type { SimpleRecommendationViewModel } from "./recommendationMapper";
 
-import type { Recommendation, RecommendationSort } from "./recommendation-data";
+type RecommendationSort = "recommended" | "rating" | "reviews";
 
 interface RecommendationListProps {
-  places: Recommendation[];
+  places: SimpleRecommendationViewModel[];
   onSelect: (id: string) => void;
 }
 
@@ -26,15 +28,16 @@ export function RecommendationList({
   places,
   onSelect,
 }: RecommendationListProps) {
-  const [sortBy, setSortBy] = useState<RecommendationSort>("recommended");
   const router = useRouter();
+  const [sortBy, setSortBy] = useState<RecommendationSort>("recommended");
 
   const sortedPlaces = useMemo(() => {
     if (sortBy === "recommended") return places;
 
     return [...places].sort((a, b) => {
-      if (sortBy === "reviews") return b.reviewCount - a.reviewCount;
-      return b.rating - a.rating;
+      if (sortBy === "reviews")
+        return (b.reviewCount ?? 0) - (a.reviewCount ?? 0);
+      return (b.rating ?? 0) - (a.rating ?? 0);
     });
   }, [places, sortBy]);
 
@@ -70,7 +73,7 @@ export function RecommendationList({
         </div>
       </div>
 
-      <div className="mt-6 grid grid-cols-1 justify-items-center gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-6 grid grid-cols-1 items-stretch justify-items-center gap-6 md:grid-cols-2 lg:grid-cols-3">
         {sortedPlaces.map((place) => (
           <PlaceCard
             key={place.id}
@@ -81,11 +84,15 @@ export function RecommendationList({
             category={place.category}
             location={place.location}
             rating={place.rating}
-            distance={place.travelTime}
+            reviewCount={place.reviewCount}
+            distance={place.distance}
             hours={place.hours}
             parking={place.parking}
+            recommended={place.isAiRecommended}
             onDetail={() =>
-              router.push(ROUTES.RECOVERY_SIMPLE_PLACE_DETAIL(place.id))
+              router.push(
+                ROUTES.RECOVERY_SIMPLE_PLACE_DETAIL(INITIAL_RECOMMENDATION_ID),
+              )
             }
             onSelect={() => onSelect(place.id)}
             className="h-full"
