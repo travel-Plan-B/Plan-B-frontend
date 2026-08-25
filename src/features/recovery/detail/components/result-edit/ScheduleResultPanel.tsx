@@ -21,7 +21,6 @@ import {
 } from "@/shared/components/ui/EmptyState";
 import { Tabs } from "@/shared/components/ui/Tabs/Tabs";
 import { TabsList } from "@/shared/components/ui/Tabs/TabsList";
-import { computeTravelInfo } from "../../lib/travelInfo";
 import { TravelInfoRow } from "../schedule-panel/TravelInfoRow";
 import { DayTabTrigger } from "../weather/DayTabTrigger";
 import type { TransportMode } from "../../mocks/scheduleMock";
@@ -174,9 +173,6 @@ export function ScheduleResultPanel({
                       // 계산한다 — 이동수단 토글이나 재정렬로 순서가 바뀌어도
                       // 항상 최신 상태로 맞다(1단계 ScheduleItemList와 동일).
                       const nextItem = currentDay.items[index + 1];
-                      const travelInfo = nextItem
-                        ? computeTravelInfo(item, nextItem, item.transport)
-                        : undefined;
 
                       return (
                         <div key={item.id}>
@@ -206,8 +202,12 @@ export function ScheduleResultPanel({
                               onRemoveItem(currentDay.day, item.id)
                             }
                           />
-                          {travelInfo && (
-                            <TravelInfoRow travelInfo={travelInfo} />
+                          {nextItem && (
+                            <TravelInfoRow
+                              from={item}
+                              to={nextItem}
+                              mode={item.transport}
+                            />
                           )}
                         </div>
                       );

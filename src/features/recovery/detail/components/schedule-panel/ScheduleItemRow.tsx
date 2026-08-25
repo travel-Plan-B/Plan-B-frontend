@@ -1,6 +1,6 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Trash2 } from "lucide-react";
+import { GripVertical, TriangleAlert, Trash2 } from "lucide-react";
 
 import carIcon from "@/shared/assets/icons/car.svg";
 import trainIcon from "@/shared/assets/icons/train.svg";
@@ -18,6 +18,7 @@ import {
   VISIT_HOUR_OPTIONS,
   VISIT_MINUTE_OPTIONS,
 } from "../../lib/scheduleTime";
+import type { ScheduleConflict } from "../../lib/scheduleConflicts";
 import type { ScheduleItem, TransportMode } from "../../mocks/scheduleMock";
 
 const TRANSPORT_ORDER: TransportMode[] = ["walk", "car", "transit"];
@@ -42,6 +43,8 @@ export interface ScheduleItemRowProps {
   item: ScheduleItem;
   /** 그 DAY의 마지막 일정이면 다음 장소로 이동할 일이 없어 이동수단 선택이 의미가 없다. */
   isLast?: boolean;
+  /** 다음 일정과 시간이 겹치면(#121, /api/v1/schedule/validate) 빨간 테두리 + 부족 시간을 보여준다. */
+  conflict?: ScheduleConflict | null;
   onVisitTimeChange: (value: string) => void;
   onStayDurationChange: (value: string) => void;
   onTransportChange: (mode: TransportMode) => void;
@@ -51,6 +54,7 @@ export interface ScheduleItemRowProps {
 export function ScheduleItemRow({
   item,
   isLast = false,
+  conflict,
   onVisitTimeChange,
   onStayDurationChange,
   onTransportChange,
@@ -64,107 +68,122 @@ export function ScheduleItemRow({
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform) }}
       className={cn(
-        "grid touch-none grid-cols-[24px_42px_minmax(0,1fr)_85px_117px_112px_32px] items-center gap-3 rounded-xl border border-neutral-200 bg-white px-3 py-2.5 select-none",
+        "flex touch-none flex-col gap-1 rounded-xl border bg-white px-3 py-2.5 select-none",
         "cursor-grab active:cursor-grabbing",
-        isDragging &&
-          "relative z-10 border-dashed border-primary-300 bg-primary-50",
+        isDragging
+          ? "relative z-10 border-dashed border-primary-300 bg-primary-50"
+          : conflict
+            ? "border-rose-500 bg-rose-50/40"
+            : "border-neutral-200",
       )}
       {...listeners}
       {...attributes}
     >
-      <GripVertical className="size-4 text-neutral-400" aria-hidden="true" />
+      <div className="grid grid-cols-[24px_42px_minmax(0,1fr)_85px_117px_112px_32px] items-center gap-3">
+        <GripVertical className="size-4 text-neutral-400" aria-hidden="true" />
 
-      <div className="text-sm text-neutral-900">{item.time}</div>
+        <div className="text-sm text-neutral-900">{item.time}</div>
 
-      <div className="flex min-w-0 items-center gap-1.5">
-        <span className="truncate text-sm font-medium text-neutral-900">
-          {item.placeName}
+        <div className="flex min-w-0 items-center gap-1.5">
+          <span className="truncate text-sm font-medium text-neutral-900">
+            {item.placeName}
+          </span>
+          <Tag
+            variant={getCategoryTagVariant(item.categoryTag)}
+            size="xs"
+            className="shrink-0 border-0"
+          >
+            {item.categoryTag}
+          </Tag>
+        </div>
+
+        <span onPointerDown={(event) => event.stopPropagation()}>
+          <TimePicker
+            title="방문 시간 선택"
+            value={parseVisitTime(item.visitTime)}
+            onChange={(value) =>
+              onVisitTimeChange(
+                `${String(value.hour).padStart(2, "0")}:${String(value.minute).padStart(2, "0")}`,
+              )
+            }
+            hourOptions={VISIT_HOUR_OPTIONS}
+            minuteOptions={VISIT_MINUTE_OPTIONS}
+            columnLabels={{ hour: "시", minute: "분" }}
+            className={FIELD_BUTTON_CLASSNAME}
+          />
         </span>
-        <Tag
-          variant={getCategoryTagVariant(item.categoryTag)}
-          size="xs"
-          className="shrink-0 border-0"
-        >
-          {item.categoryTag}
-        </Tag>
-      </div>
+        <span onPointerDown={(event) => event.stopPropagation()}>
+          <TimePicker
+            title="체류 시간 선택"
+            value={parseStayDuration(item.stayDuration)}
+            onChange={(value) =>
+              onStayDurationChange(formatStayDuration(value))
+            }
+            hourOptions={STAY_HOUR_OPTIONS}
+            minuteOptions={STAY_MINUTE_OPTIONS}
+            columnLabels={{ hour: "시간", minute: "분" }}
+            formatValue={formatStayDuration}
+            isValid={(value) => value.hour > 0 || value.minute > 0}
+            className={FIELD_BUTTON_CLASSNAME}
+          />
+        </span>
 
-      <span onPointerDown={(event) => event.stopPropagation()}>
-        <TimePicker
-          title="방문 시간 선택"
-          value={parseVisitTime(item.visitTime)}
-          onChange={(value) =>
-            onVisitTimeChange(
-              `${String(value.hour).padStart(2, "0")}:${String(value.minute).padStart(2, "0")}`,
-            )
+        <div
+          className="flex items-center justify-start gap-2"
+          title={
+            isLast ? "마지막 일정은 이동수단을 선택할 필요가 없어요" : undefined
           }
-          hourOptions={VISIT_HOUR_OPTIONS}
-          minuteOptions={VISIT_MINUTE_OPTIONS}
-          columnLabels={{ hour: "시", minute: "분" }}
-          className={FIELD_BUTTON_CLASSNAME}
-        />
-      </span>
-      <span onPointerDown={(event) => event.stopPropagation()}>
-        <TimePicker
-          title="체류 시간 선택"
-          value={parseStayDuration(item.stayDuration)}
-          onChange={(value) => onStayDurationChange(formatStayDuration(value))}
-          hourOptions={STAY_HOUR_OPTIONS}
-          minuteOptions={STAY_MINUTE_OPTIONS}
-          columnLabels={{ hour: "시간", minute: "분" }}
-          formatValue={formatStayDuration}
-          isValid={(value) => value.hour > 0 || value.minute > 0}
-          className={FIELD_BUTTON_CLASSNAME}
-        />
-      </span>
+        >
+          {TRANSPORT_ORDER.map((mode) => {
+            const isSelected = item.transport === mode;
 
-      <div
-        className="flex items-center justify-start gap-2"
-        title={
-          isLast ? "마지막 일정은 이동수단을 선택할 필요가 없어요" : undefined
-        }
-      >
-        {TRANSPORT_ORDER.map((mode) => {
-          const isSelected = item.transport === mode;
+            return (
+              <button
+                key={mode}
+                type="button"
+                disabled={isLast}
+                onClick={() => onTransportChange(mode)}
+                onPointerDown={(event) => event.stopPropagation()}
+                aria-pressed={isSelected}
+                className={cn(
+                  "flex size-8 items-center justify-center rounded-lg border transition-colors",
+                  isSelected
+                    ? "border-primary-300 bg-primary-50 text-primary-700"
+                    : "border-neutral-200 text-neutral-800 hover:border-neutral-400",
+                  "disabled:cursor-not-allowed disabled:border-none disabled:bg-neutral-900/10 disabled:text-neutral-900/40 disabled:hover:border-transparent",
+                )}
+              >
+                <span
+                  aria-hidden="true"
+                  className="mask-center mask-no-repeat mask-contain block size-3.5 bg-current"
+                  style={{
+                    maskImage: `url(${TRANSPORT_ICONS[mode].src})`,
+                    WebkitMaskImage: `url(${TRANSPORT_ICONS[mode].src})`,
+                  }}
+                />
+              </button>
+            );
+          })}
+        </div>
 
-          return (
-            <button
-              key={mode}
-              type="button"
-              disabled={isLast}
-              onClick={() => onTransportChange(mode)}
-              onPointerDown={(event) => event.stopPropagation()}
-              aria-pressed={isSelected}
-              className={cn(
-                "flex size-8 items-center justify-center rounded-lg border transition-colors",
-                isSelected
-                  ? "border-primary-300 bg-primary-50 text-primary-700"
-                  : "border-neutral-200 text-neutral-800 hover:border-neutral-400",
-                "disabled:cursor-not-allowed disabled:border-none disabled:bg-neutral-900/10 disabled:text-neutral-900/40 disabled:hover:border-transparent",
-              )}
-            >
-              <span
-                aria-hidden="true"
-                className="mask-center mask-no-repeat mask-contain block size-3.5 bg-current"
-                style={{
-                  maskImage: `url(${TRANSPORT_ICONS[mode].src})`,
-                  WebkitMaskImage: `url(${TRANSPORT_ICONS[mode].src})`,
-                }}
-              />
-            </button>
-          );
-        })}
+        <button
+          type="button"
+          onClick={onRemove}
+          onPointerDown={(event) => event.stopPropagation()}
+          aria-label="일정에서 삭제"
+          className="flex size-6 items-center justify-center justify-self-start rounded-md text-neutral-400 hover:bg-rose-50 hover:text-rose-500"
+        >
+          <Trash2 className="size-4" />
+        </button>
       </div>
 
-      <button
-        type="button"
-        onClick={onRemove}
-        onPointerDown={(event) => event.stopPropagation()}
-        aria-label="일정에서 삭제"
-        className="flex size-6 items-center justify-center justify-self-start rounded-md text-neutral-400 hover:bg-rose-50 hover:text-rose-500"
-      >
-        <Trash2 className="size-4" />
-      </button>
+      {conflict && (
+        <div className="flex items-center gap-1 pl-9 text-xs text-rose-600">
+          <TriangleAlert className="size-3.5 shrink-0" aria-hidden="true" />
+          다음 일정과 {conflict.shortfallMinutes}분 부족해요 · 방문 시간이나
+          체류 시간을 조정해주세요
+        </div>
+      )}
     </div>
   );
 }

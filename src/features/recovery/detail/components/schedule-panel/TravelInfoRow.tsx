@@ -1,3 +1,5 @@
+"use client";
+
 import carIcon from "@/shared/assets/icons/car.svg";
 import trainIcon from "@/shared/assets/icons/train.svg";
 import walkIcon from "@/shared/assets/icons/walk.svg";
@@ -5,11 +7,13 @@ import {
   IconBadge,
   type IconBadgeVariant,
 } from "@/shared/components/ui/IconBadge";
+import { useTravelInfo } from "../../hooks/useTravelInfo";
 import type { ScheduleItem, TransportMode } from "../../mocks/scheduleMock";
 
 /**
  * ScheduleItemRow와 다음 ScheduleItemRow 사이에 끼워 넣는 "이동 정보" 줄.
- * item.travelInfo가 있을 때만 ScheduleInputPanel이 렌더링한다.
+ * 좌표가 있으면 실제 이동시간 API(useTravelInfo, #121)를 조회하고, 조회 전/
+ * 실패 시에는 직선거리 어림값을 그대로 보여준다.
  */
 const TRANSPORT_ICONS: Record<TransportMode, typeof carIcon> = {
   car: carIcon,
@@ -32,10 +36,15 @@ const TRANSPORT_LINE_COLOR: Record<TransportMode, string> = {
 };
 
 export function TravelInfoRow({
-  travelInfo,
+  from,
+  to,
+  mode,
 }: {
-  travelInfo: NonNullable<ScheduleItem["travelInfo"]>;
+  from: ScheduleItem;
+  to: ScheduleItem;
+  mode: TransportMode;
 }) {
+  const travelInfo = useTravelInfo(from, to, mode);
   const lineColor = TRANSPORT_LINE_COLOR[travelInfo.mode];
 
   return (

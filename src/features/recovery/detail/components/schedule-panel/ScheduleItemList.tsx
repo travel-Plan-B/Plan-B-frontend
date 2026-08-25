@@ -20,7 +20,7 @@ import {
   EmptyState,
 } from "@/shared/components/ui/EmptyState";
 import { cn } from "@/shared/lib/cn";
-import { computeTravelInfo } from "../../lib/travelInfo";
+import { useDayConflicts } from "../../hooks/useDayConflicts";
 import { ScheduleItemRow } from "./ScheduleItemRow";
 import { TravelInfoRow } from "./TravelInfoRow";
 import type {
@@ -47,6 +47,9 @@ export function ScheduleItemList({
   const { setNodeRef: setDropRef, isOver } = useDroppable({
     id: currentDay?.day ?? "no-date",
   });
+
+  // 지금 보고 있는 DAY의 일정 충돌을 자동으로 검사해 항목별 인라인 경고에 쓴다(#121).
+  const conflictsByItemId = useDayConflicts(currentDay?.items ?? []);
 
   // 일정 항목을 잡고 위아래로 옮기는 재정렬 전용 센서. 보관함→DAY 드롭용
   // DndContext(상위)와는 별개로, 같은 DAY 안에서의 순서 변경만 담당한다.
@@ -187,15 +190,13 @@ export function ScheduleItemList({
                   // 다음 항목과의 이동 정보는 저장해두지 않고 매번 다시 계산한다 —
                   // 이동수단 토글이나 재정렬로 순서가 바뀌어도 항상 최신 상태로 맞다.
                   const nextItem = currentDay.items[index + 1];
-                  const travelInfo = nextItem
-                    ? computeTravelInfo(item, nextItem, item.transport)
-                    : undefined;
 
                   return (
                     <div key={item.id}>
                       <ScheduleItemRow
                         item={item}
                         isLast={!nextItem}
+                        conflict={conflictsByItemId[item.id]}
                         onVisitTimeChange={(value) =>
                           updateVisitTime(item.id, value)
                         }
@@ -207,7 +208,13 @@ export function ScheduleItemList({
                         }
                         onRemove={() => removeItem(item.id)}
                       />
-                      {travelInfo && <TravelInfoRow travelInfo={travelInfo} />}
+                      {nextItem && (
+                        <TravelInfoRow
+                          from={item}
+                          to={nextItem}
+                          mode={item.transport}
+                        />
+                      )}
                     </div>
                   );
                 })}

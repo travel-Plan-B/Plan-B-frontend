@@ -4,6 +4,12 @@ import { NextRequest, NextResponse } from "next/server";
  * 오디세이(ODsay) 대중교통 길찾기를 서버사이드에서 대신 호출한다. ODSAY_API_KEY는
  * NEXT_PUBLIC_ 접두사가 없어 브라우저에 노출되지 않으니, 클라이언트는 이 라우트만
  * 호출하고 오디세이는 여기서만 부른다.
+ *
+ * TODO: 지금 키는 무료 Basic 티어(하루 30회 제한)이고, lab.odsay.com에서
+ * 로컬 개발 환경의 공인 IP로만 화이트리스트 등록해뒀다. 실제 배포하면
+ * 배포 서버의 공인 IP도 오디세이 콘솔(Application → 설정)에 추가로
+ * 등록해야 프로덕션에서도 대중교통 이동시간이 정상 조회된다. 호출량이
+ * 늘어나면 Standard 티어(사용문의 필요) 전환도 검토해야 한다.
  */
 export async function GET(request: NextRequest) {
   const apiKey = process.env.ODSAY_API_KEY;
