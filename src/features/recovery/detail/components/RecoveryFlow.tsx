@@ -4,6 +4,7 @@ import { useEffect } from "react";
 
 import { useRecommendSelectedItems } from "../hooks/useRecommendSelectedItems";
 import { useRecoveryDraftStore } from "../store/useRecoveryDraftStore";
+import { useStoredPlacesStore } from "../store/useStoredPlacesStore";
 import { ResultConfirmStep } from "./result-confirm/ResultConfirmStep";
 import { ResultEditStep } from "./result-edit/ResultEditStep";
 import { TargetSelectionStep } from "./target-selection/TargetSelectionStep";
@@ -54,6 +55,14 @@ export function RecoveryFlow() {
   const goNext = () =>
     setStep((prev) => Math.min(prev + 1, MAX_IMPLEMENTED_STEP));
   const goPrev = () => setStep((prev) => Math.max(prev - 1, 1));
+
+  // "새 복구 시작"은 복구 플로우 draft뿐 아니라 장소 보관함(별도 store)도
+  // 같이 비워야 한다 — 안 비우면 이전 여행에서 담아둔 장소가 새 복구에도
+  // 그대로 남아있게 된다.
+  const handleRestart = () => {
+    restart();
+    useStoredPlacesStore.getState().clearStored();
+  };
 
   const { recommend } = useRecommendSelectedItems();
   const handleRecommend = async () => {
@@ -128,7 +137,15 @@ export function RecoveryFlow() {
           />
         )}
         {step === 4 && (
-          <ResultConfirmStep onPrev={goPrev} onRestart={restart} />
+          <ResultConfirmStep
+            region={region}
+            dateRange={dateRange}
+            itemsByDay={resultItemsByDay}
+            recommendationsByItemId={recommendationsByItemId}
+            sharedCondition={sharedCondition}
+            onPrev={goPrev}
+            onRestart={handleRestart}
+          />
         )}
       </div>
       <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 py-12 text-center min-[1024px]:hidden">

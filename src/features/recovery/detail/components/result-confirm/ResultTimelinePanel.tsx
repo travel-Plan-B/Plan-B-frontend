@@ -4,11 +4,11 @@ import { useState } from "react";
 
 import { Tabs } from "@/shared/components/ui/Tabs/Tabs";
 import { TabsList } from "@/shared/components/ui/Tabs/TabsList";
-import { TabsTrigger } from "@/shared/components/ui/Tabs/TabsTrigger";
+import { DayTabTrigger } from "../weather/DayTabTrigger";
 import type { ResultConfirmDay } from "../../mocks/resultConfirmMock";
 import { ResultTimelineItem } from "./ResultTimelineItem";
 
-/** DAY 탭(변경 건수 뱃지 포함) + 해당 DAY의 복구 결과 타임라인. */
+/** DAY 탭(1·3단계와 동일한 DayTabTrigger) + 해당 DAY의 복구 결과 타임라인. */
 export interface ResultTimelinePanelProps {
   days: ResultConfirmDay[];
 }
@@ -24,23 +24,20 @@ export function ResultTimelinePanel({ days }: ResultTimelinePanelProps) {
       <Tabs
         value={String(activeDay)}
         onChange={(value) => setActiveDay(Number(value))}
-        variant="underline"
+        variant="date"
       >
         <TabsList className="overflow-x-auto">
           {days.map((day) => (
-            <TabsTrigger key={day.day} value={String(day.day)}>
-              DAY {day.day}
-              {day.changedCount > 0 && (
-                <span className="flex size-4 items-center justify-center rounded-full bg-rose-600 text-[10px] font-semibold text-white">
-                  {day.changedCount}
-                </span>
-              )}
-            </TabsTrigger>
+            <DayTabTrigger
+              key={day.day}
+              day={day.day}
+              dateLabel={day.dateLabel}
+              lat={day.weatherLat}
+              lng={day.weatherLng}
+            />
           ))}
         </TabsList>
       </Tabs>
-
-      <span className="text-sm text-neutral-700">{currentDay.dateLabel}</span>
 
       <div className="flex flex-col">
         {currentDay.items.map((item, index) => (
