@@ -12,8 +12,10 @@ import { SIMPLE_RECOVERY_STEPS } from "@/features/recovery/simple/steps";
 import { Button } from "@/shared/components/ui/Button";
 import { IconBadge } from "@/shared/components/ui/IconBadge";
 import { ROUTES } from "@/shared/config/routes";
-
-type RecoveryReason = "weather" | "closed" | "delay";
+import {
+  type RecoveryReason,
+  useSimpleRecoveryStore,
+} from "@/features/recovery/simple/store/useSimpleRecoveryStore";
 
 const RECOVERY_REASONS = [
   {
@@ -50,8 +52,10 @@ const RECOVERY_REASONS = [
 
 export function SimpleRecoverySetupPage() {
   const router = useRouter();
+  const storedReason = useSimpleRecoveryStore((state) => state.reason);
+  const setReason = useSimpleRecoveryStore((state) => state.setReason);
   const [selectedReason, setSelectedReason] = useState<RecoveryReason | null>(
-    null,
+    storedReason,
   );
 
   return (
@@ -106,7 +110,11 @@ export function SimpleRecoverySetupPage() {
           variant="default"
           size="lg"
           disabled={!selectedReason}
-          onClick={() => router.push(ROUTES.RECOVERY_SIMPLE_INFO)}
+          onClick={() => {
+            if (!selectedReason) return;
+            setReason(selectedReason);
+            router.push(ROUTES.RECOVERY_SIMPLE_INFO);
+          }}
         >
           다음으로 넘어가기
         </Button>

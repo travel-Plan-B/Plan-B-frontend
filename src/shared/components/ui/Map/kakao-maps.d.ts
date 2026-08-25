@@ -106,11 +106,20 @@ declare namespace kakao.maps {
       } | null;
     }
 
+    interface AddressSearchResult {
+      x: string;
+      y: string;
+    }
+
     class Geocoder {
       coord2Address(
         lng: number,
         lat: number,
         callback: (result: AddressResult[], status: Status) => void,
+      ): void;
+      addressSearch(
+        address: string,
+        callback: (result: AddressSearchResult[], status: Status) => void,
       ): void;
     }
   }

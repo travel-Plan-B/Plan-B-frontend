@@ -17,6 +17,19 @@ const nextConfig: NextConfig = {
         port: "",
         pathname: "/**",
       },
+      {
+        // TourAPI 추천 결과 이미지 URL은 이 호스트에서 http로 내려올 수 있다.
+        protocol: "http",
+        hostname: "tong.visitkorea.or.kr",
+        port: "",
+        pathname: "/cms/resource/**",
+      },
+      {
+        protocol: "https",
+        hostname: "tong.visitkorea.or.kr",
+        port: "",
+        pathname: "/cms/resource/**",
+      },
     ],
   },
 };

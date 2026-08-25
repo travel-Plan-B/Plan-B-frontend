@@ -1,31 +1,61 @@
+"use client";
+
 import { ArrowRight } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 
 import { ScheduleCard } from "@/features/recommendation/components/ScheduleCard";
 import { RecoveryPageLayout } from "@/features/recovery/components/RecoveryPageLayout";
 import { IconBadge } from "@/shared/components/ui/IconBadge";
-import { Tag, type TagVariant } from "@/shared/components/ui/Tag";
+import { toast } from "@/shared/components/ui/Toast/toast";
+import { ROUTES } from "@/shared/config/routes";
 
 import { RecommendationExplorer } from "./RecommendationExplorer";
-import type { RecoveryConditionType } from "./recommendation-data";
-import {
-  changedSchedule,
-  INITIAL_RECOMMENDATION_ID,
-  recommendations,
-  recoveryConditions,
-} from "./recommendation-data";
+import { toSimpleRecommendationResultViewModel } from "./recommendationMapper";
 import { SIMPLE_RECOVERY_STEPS } from "./steps";
-
-const recoveryConditionVariant: Record<RecoveryConditionType, TagVariant> = {
-  target: "mint",
-  weather: "purple",
-  travelTime: "orange",
-};
+import { useSimpleRecoveryStore } from "./store/useSimpleRecoveryStore";
 
 export function SimpleRecoveryRecommendPage({
   selectedPlaceId,
 }: {
   selectedPlaceId?: string;
 }) {
+  const router = useRouter();
+  const response = useSimpleRecoveryStore(
+    (state) => state.recommendationResponse,
+  );
+  const info = useSimpleRecoveryStore((state) => state.info);
+  const result = useMemo(
+    () =>
+      response?.success
+        ? toSimpleRecommendationResultViewModel(response.data)
+        : null,
+    [response],
+  );
+  const firstRecommendationId = result?.recommendations[0]?.id ?? "";
+  const initialId =
+    selectedPlaceId &&
+    result?.recommendations.some(({ id }) => id === selectedPlaceId)
+      ? selectedPlaceId
+      : firstRecommendationId;
+  const [selectedRecommendationId, setSelectedRecommendationId] =
+    useState(initialId);
+
+  useEffect(() => {
+    if (!response || !response.success || !firstRecommendationId) {
+      toast.error("추천 결과가 없습니다. 정보를 다시 입력해 주세요.");
+      router.replace(ROUTES.RECOVERY_SIMPLE_INFO);
+    }
+  }, [firstRecommendationId, response, router]);
+
+  if (!result || !selectedRecommendationId) return null;
+
+  const selectedRecommendation =
+    result.recommendations.find(({ id }) => id === selectedRecommendationId) ??
+    result.recommendations[0];
+
+  if (!selectedRecommendation) return null;
+
   return (
     <RecoveryPageLayout
       title="추천 결과"
@@ -33,18 +63,6 @@ export function SimpleRecoveryRecommendPage({
       currentStep={3}
       steps={SIMPLE_RECOVERY_STEPS}
     >
-      <div className="flex flex-wrap items-center gap-2">
-        {recoveryConditions.map((condition) => (
-          <Tag
-            key={condition.type}
-            variant={recoveryConditionVariant[condition.type]}
-            size="md"
-          >
-            {condition.label}
-          </Tag>
-        ))}
-      </div>
-
       <section className="mt-12" aria-labelledby="schedule-change-title">
         <h2
           id="schedule-change-title"
@@ -60,7 +78,8 @@ export function SimpleRecoveryRecommendPage({
           <ScheduleCard
             tone="rose"
             label="기존 일정"
-            {...changedSchedule.previous}
+            title={info.selectedDestination?.name}
+            location={info.selectedDestination?.address}
           />
           <IconBadge
             variant="gray"
@@ -72,14 +91,18 @@ export function SimpleRecoveryRecommendPage({
           <ScheduleCard
             tone="purple"
             label="추천 일정"
-            {...changedSchedule.recommended}
+            title={selectedRecommendation.title}
+            description={selectedRecommendation.description}
+            location={selectedRecommendation.location}
+            duration={selectedRecommendation.stayTime}
           />
         </div>
       </section>
 
       <RecommendationExplorer
-        recommendations={recommendations}
-        initialRecommendationId={selectedPlaceId ?? INITIAL_RECOMMENDATION_ID}
+        recommendations={result.recommendations}
+        selectedRecommendationId={selectedRecommendationId}
+        onSelect={setSelectedRecommendationId}
       />
     </RecoveryPageLayout>
   );

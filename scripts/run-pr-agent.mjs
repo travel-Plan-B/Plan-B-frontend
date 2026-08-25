@@ -233,8 +233,6 @@ if (confirmedIssue) {
   }
 }
 
-validateOpenIssue(confirmedIssue);
-
 const tempDir = ".tmp/planb-pr";
 const absoluteTempDir = resolve(cwd, tempDir);
 const finishedFile = resolve(absoluteTempDir, "finished.json");

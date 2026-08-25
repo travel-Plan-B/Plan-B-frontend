@@ -1,37 +1,29 @@
 "use client";
 
-import {
-  ArrowRight,
-  Clock,
-  Coins,
-  Sparkles,
-  Star,
-  TimerReset,
-} from "lucide-react";
+import { ArrowRight, Check, Clock, Sparkles, Star } from "lucide-react";
 import Link from "next/link";
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 
-import { PlaceRating } from "@/features/recommendation/components/PlaceCard";
 import { IconBadge } from "@/shared/components/ui/IconBadge";
 import { PlaceImage } from "@/shared/components/ui/PlaceImage";
 import { Tag } from "@/shared/components/ui/Tag";
 import { ROUTES } from "@/shared/config/routes";
 
 import { RecommendationList } from "./RecommendationList";
-import type { Recommendation } from "./recommendation-data";
+import { FIXTURE_PLACE_DETAIL_ID } from "./recommendation-data";
+import type { SimpleRecommendationViewModel } from "./recommendationMapper";
 
 interface RecommendationExplorerProps {
-  recommendations: Recommendation[];
-  initialRecommendationId: string;
+  recommendations: SimpleRecommendationViewModel[];
+  selectedRecommendationId: string;
+  onSelect: (id: string) => void;
 }
 
 export function RecommendationExplorer({
   recommendations,
-  initialRecommendationId,
+  selectedRecommendationId,
+  onSelect,
 }: RecommendationExplorerProps) {
-  const [selectedRecommendationId, setSelectedRecommendationId] = useState(
-    initialRecommendationId,
-  );
   const selectedRecommendation =
     recommendations.find(({ id }) => id === selectedRecommendationId) ??
     recommendations[0];
@@ -41,6 +33,18 @@ export function RecommendationExplorer({
   const otherRecommendations = recommendations.filter(
     ({ id }) => id !== selectedRecommendation.id,
   );
+  const hasRecommendationReasons = selectedRecommendation.reasons.length > 0;
+  const recommendationPanelTitle = selectedRecommendation.isAiRecommended
+    ? hasRecommendationReasons
+      ? "AI 추천 이유"
+      : "AI 추천"
+    : "추가 추천 장소";
+  const travelSummary = [
+    selectedRecommendation.travelTime,
+    selectedRecommendation.distance,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <>
@@ -60,66 +64,95 @@ export function RecommendationExplorer({
             />
           </div>
 
-          <div className="flex min-w-0 flex-col p-6 sm:p-8">
-            <Tag variant="mint" size="sm" className="self-start">
-              추천 1
-            </Tag>
+          <div className="flex min-w-0 flex-col p-6 sm:p-8 lg:min-h-112">
+            {selectedRecommendation.isAiRecommended && (
+              <Tag variant="mint" size="sm" className="self-start">
+                AI 추천
+              </Tag>
+            )}
             <h3 className="mt-4 text-h1 font-semibold text-neutral-900">
               {selectedRecommendation.title}
             </h3>
             <p className="mt-1 text-sm text-neutral-700">
-              {selectedRecommendation.category} ·{" "}
-              {selectedRecommendation.location}
+              {[
+                selectedRecommendation.category,
+                selectedRecommendation.location,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
             </p>
 
-            <div className="mt-6 rounded-2xl border border-primary-100 bg-primary-50 p-4">
-              <div className="flex items-center gap-2 font-semibold text-primary-700">
-                <Sparkles className="size-5" aria-hidden="true" /> AI 추천 이유
-              </div>
-              <p className="mt-2 text-sm leading-6 text-neutral-700">
-                {selectedRecommendation.reason}
-              </p>
-            </div>
-
             <dl className="mt-6 grid grid-cols-2 gap-4 text-sm sm:grid-cols-3">
-              <InfoItem
-                icon={<ArrowRight />}
-                label="이동 · 도착"
-                value={`${selectedRecommendation.travelTime} · ${selectedRecommendation.arrivalTime}`}
-              />
+              {travelSummary && (
+                <InfoItem
+                  icon={<ArrowRight />}
+                  label="이동 시간"
+                  value={travelSummary}
+                />
+              )}
               <InfoItem
                 icon={<Clock />}
                 label="예상 체류"
                 value={selectedRecommendation.stayTime}
               />
-              <InfoItem
-                icon={<TimerReset />}
-                label="일정 여유"
-                value={selectedRecommendation.bufferTime}
-              />
-              <InfoItem
-                icon={<Coins />}
-                label="예상 비용"
-                value={selectedRecommendation.cost}
-              />
-              <InfoItem
-                icon={<Star />}
-                label="평점"
-                value={
-                  <span className="inline-flex items-center gap-2">
-                    <PlaceRating value={selectedRecommendation.rating} />
-                    <span className="text-xs font-normal text-neutral-700">
-                      ({selectedRecommendation.reviewCount.toLocaleString()})
+              {selectedRecommendation.rating !== undefined && (
+                <InfoItem
+                  icon={<Star />}
+                  label="평점"
+                  value={
+                    <span className="inline-flex items-center gap-2">
+                      <span className="font-semibold text-neutral-900">
+                        {selectedRecommendation.rating.toFixed(1)}
+                      </span>
+                      {selectedRecommendation.reviewCount !== undefined && (
+                        <span className="text-xs font-normal text-neutral-700">
+                          ({selectedRecommendation.reviewCount.toLocaleString()}
+                          )
+                        </span>
+                      )}
                     </span>
-                  </span>
-                }
-              />
+                  }
+                />
+              )}
             </dl>
+
+            <div className="mt-6 flex flex-1 flex-col rounded-2xl border border-primary-100 bg-primary-50 p-4">
+              <div className="flex items-center gap-2 font-semibold text-primary-700">
+                <Sparkles className="size-5" aria-hidden="true" />
+                {recommendationPanelTitle}
+              </div>
+              {hasRecommendationReasons ? (
+                <ul className="mt-3 space-y-2 text-sm leading-6 text-neutral-700">
+                  {selectedRecommendation.reasons.map((reason, index) => (
+                    <li
+                      key={`${index}-${reason}`}
+                      className="flex items-start gap-2"
+                    >
+                      <Check
+                        aria-hidden="true"
+                        className="mt-1 size-4 shrink-0 text-primary-700"
+                      />
+                      <span>{reason}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : selectedRecommendation.isAiRecommended ? (
+                <p className="mt-3 text-sm leading-6 text-neutral-700">
+                  추천 이유를 준비 중이에요. 장소 정보와 이동 시간을 함께 확인해
+                  보세요.
+                </p>
+              ) : (
+                <p className="mt-3 text-sm leading-6 text-neutral-700">
+                  장소 정보와 이동 조건을 비교해 보고 선택해 보세요.
+                </p>
+              )}
+            </div>
+
             <Link
               href={ROUTES.RECOVERY_SIMPLE_PLACE_DETAIL(
-                selectedRecommendation.id,
+                FIXTURE_PLACE_DETAIL_ID,
               )}
-              className="mt-7 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-neutral-900 px-6 py-3.5 text-base font-medium text-white transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
+              className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-neutral-900 px-6 py-3.5 text-base font-medium text-white transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
             >
               상세보기 <ArrowRight className="size-4" aria-hidden="true" />
             </Link>
@@ -127,12 +160,14 @@ export function RecommendationExplorer({
         </div>
       </section>
 
-      <section className="mt-12" aria-label="다른 추천 장소">
-        <RecommendationList
-          places={otherRecommendations}
-          onSelect={setSelectedRecommendationId}
-        />
-      </section>
+      {otherRecommendations.length > 0 && (
+        <section className="mt-12" aria-label="다른 추천 장소">
+          <RecommendationList
+            places={otherRecommendations}
+            onSelect={onSelect}
+          />
+        </section>
+      )}
     </>
   );
 }
