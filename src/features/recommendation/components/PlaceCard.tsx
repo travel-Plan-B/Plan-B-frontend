@@ -1,8 +1,9 @@
-import { Clock, MapPin, ParkingCircle, Star } from "lucide-react";
 import type { HTMLAttributes, MouseEventHandler } from "react";
+import { Clock, Footprints, MapPin, ParkingCircle } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/Button";
 import { PlaceImage } from "@/shared/components/ui/PlaceImage";
+import { PlaceRating } from "@/shared/components/ui/PlaceRating";
 import { Tag } from "@/shared/components/ui/Tag";
 import { cn } from "@/shared/lib/cn";
 
@@ -26,12 +27,18 @@ export interface PlaceCardProps extends Omit<
   rating?: number;
   reviewCount?: number;
   travelTime?: string;
+  /** compact 전용: "이동 시간" 아이콘 — 실제 선택된 이동수단과 맞춰야 해서
+   * (예: 자동차인데 도보 아이콘이 뜨면 헷갈린다는 피드백) 호출부에서 넘긴다.
+   * 안 넘기면 기존처럼 Footprints를 쓴다. */
+  travelIcon?: typeof Clock;
   stayTime?: string;
   cost?: string;
   distance?: string;
   hours?: string;
   parking?: string;
   recommended?: boolean;
+  /** compact 전용: 이미 적용된 후보면 "선택완료"로 바꾸고 버튼을 비활성화한다. */
+  selected?: boolean;
   onDetail?: MouseEventHandler<HTMLButtonElement>;
   onSelect?: MouseEventHandler<HTMLButtonElement>;
 }
@@ -73,32 +80,6 @@ function InfoRow({ label, value, icon: Icon, compact = false }: InfoRowProps) {
   );
 }
 
-export function PlaceRating({
-  value,
-  reviewCount,
-}: {
-  value: number;
-  reviewCount?: number;
-}) {
-  return (
-    <span
-      className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-neutral-900"
-      aria-label={`평점 ${value.toFixed(1)}`}
-    >
-      <Star
-        aria-hidden="true"
-        className="size-4 fill-yellow-500 text-yellow-500"
-      />
-      {value.toFixed(1)}
-      {reviewCount !== undefined && (
-        <span className="font-normal text-neutral-700">
-          ({reviewCount.toLocaleString()})
-        </span>
-      )}
-    </span>
-  );
-}
-
 export function PlaceCard({
   variant = "default",
   imageUrl,
@@ -109,12 +90,14 @@ export function PlaceCard({
   rating,
   reviewCount,
   travelTime,
+  travelIcon = Footprints,
   stayTime,
   cost,
   distance,
   hours,
   parking,
   recommended = false,
+  selected = false,
   onDetail,
   onSelect,
   className,
@@ -128,6 +111,7 @@ export function PlaceCard({
     cost && { label: "비용", value: cost },
   ].filter((item): item is { label: string; value: string } => Boolean(item));
   const compactInfo = [
+    travelTime && { label: "이동 시간", value: travelTime, icon: travelIcon },
     distance && { label: "거리", value: distance, icon: MapPin },
     hours && { label: "운영 시간", value: hours, icon: Clock },
     parking && { label: "주차", value: parking, icon: ParkingCircle },
@@ -218,9 +202,10 @@ export function PlaceCard({
                 variant="secondary"
                 size="sm"
                 className="min-w-0 flex-1 whitespace-nowrap"
+                disabled={selected}
                 onClick={onSelect}
               >
-                선택하기
+                {selected ? "선택완료" : "선택하기"}
               </Button>
             )}
           </div>

@@ -25,6 +25,9 @@ export interface PlaceSearchResponseDto {
 
 export interface Place {
   id: string;
+  /** REQ-DETAIL-002 호출 시 필요한 원본 식별자. source와 조합해야 유일하다. */
+  placeId: string;
+  source: string;
   name: string;
   categoryTag: string;
   address: string;
@@ -38,6 +41,8 @@ export interface Place {
 function toPlace(dto: PlaceSearchResultDto): Place {
   return {
     id: `${dto.source}:${dto.source_id}`,
+    placeId: dto.source_id,
+    source: dto.source,
     name: dto.name,
     categoryTag: dto.category_tag,
     address: dto.address,

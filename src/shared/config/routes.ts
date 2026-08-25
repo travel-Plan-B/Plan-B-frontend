@@ -7,4 +7,6 @@ export const ROUTES = {
   RECOVERY_SIMPLE_PLACE_DETAIL: (placeId: string) =>
     `/recovery/simple/recommend/place/${encodeURIComponent(placeId)}`,
   RECOVERY_DETAIL: "/recovery/detail",
+  RECOVERY_DETAIL_PLACE_DETAIL: (placeId: string) =>
+    `/recovery/detail/place/${encodeURIComponent(placeId)}`,
 } as const;
