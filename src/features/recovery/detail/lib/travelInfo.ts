@@ -11,8 +11,13 @@ const TRANSIT_WAIT_BUFFER_MINUTES = 8;
 
 const EARTH_RADIUS_KM = 6371;
 
-/** 두 좌표 사이의 직선거리(km). 하버사인 공식으로 지구를 구로 근사한다. */
-function haversineDistanceKm(
+/**
+ * 두 좌표 사이의 직선거리(km). 하버사인 공식으로 지구를 구로 근사한다.
+ * detailRecommend.ts도 이 계산을 그대로 쓴다(대중교통 이동시간을 백엔드
+ * 대신 프론트에서 직접 추정할 때) — 속도 상수가 두 군데서 따로 놀지 않도록
+ * 여기서만 export한다.
+ */
+export function haversineDistanceKm(
   from: { lat: number; lng: number },
   to: { lat: number; lng: number },
 ): number {
@@ -25,6 +30,45 @@ function haversineDistanceKm(
       Math.cos(toRad(to.lat)) *
       Math.sin(dLng / 2) ** 2;
   return EARTH_RADIUS_KM * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+/** 직선거리(km) + 이동수단으로 예상 이동시간(분)을 추정한다. */
+export function estimateTravelMinutes(
+  distanceKm: number,
+  mode: TransportMode,
+): number {
+  const speedKmh =
+    mode === "walk"
+      ? WALK_SPEED_KMH
+      : mode === "transit"
+        ? TRANSIT_SPEED_KMH
+        : CAR_SPEED_KMH;
+  const bufferMinutes = mode === "transit" ? TRANSIT_WAIT_BUFFER_MINUTES : 0;
+  return Math.max(1, Math.round((distanceKm / speedKmh) * 60 + bufferMinutes));
+}
+
+/**
+ * 추천 카드의 "거리" 표시용. 1km 미만이면(반올림하면 "0km"로 보여서 이상함)
+ * m 단위로 바꿔서 보여준다.
+ */
+export function formatDistanceKm(distanceKm: number | null): string {
+  if (distanceKm == null) return "정보 없음";
+  if (distanceKm < 1) return `${Math.max(1, Math.round(distanceKm * 1000))}m`;
+  return `${distanceKm}km`;
+}
+
+/**
+ * 추천 카드의 "이동 시간" 표시용. REQ-DETAIL-002 호출 시점의 이동수단으로
+ * 고정하지 않고, 지금 선택된 이동수단(도보/자동차/대중교통)에 맞춰 매번
+ * 다시 계산한다 — 그래야 3단계에서 이동수단 토글을 바꾸면 카드에 뜨는
+ * 이동 시간도 같이 바뀐다.
+ */
+export function travelMinutesLabelFor(
+  distanceKm: number | null,
+  mode: TransportMode,
+): string {
+  if (distanceKm == null) return "정보 없음";
+  return `${estimateTravelMinutes(distanceKm, mode)}분`;
 }
 
 export type TravelInfo = NonNullable<ScheduleItem["travelInfo"]>;
@@ -57,17 +101,7 @@ export function computeTravelInfo(
     { lat: from.lat, lng: from.lng },
     { lat: to.lat, lng: to.lng },
   );
-  const speedKmh =
-    mode === "walk"
-      ? WALK_SPEED_KMH
-      : mode === "transit"
-        ? TRANSIT_SPEED_KMH
-        : CAR_SPEED_KMH;
-  const bufferMinutes = mode === "transit" ? TRANSIT_WAIT_BUFFER_MINUTES : 0;
-  const estimatedMinutes = Math.max(
-    1,
-    Math.round((distanceKm / speedKmh) * 60 + bufferMinutes),
-  );
+  const estimatedMinutes = estimateTravelMinutes(distanceKm, mode);
 
   return {
     mode,

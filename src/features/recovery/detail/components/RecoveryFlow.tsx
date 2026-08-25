@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 
+import { useRecommendSelectedItems } from "../hooks/useRecommendSelectedItems";
 import { useRecoveryDraftStore } from "../store/useRecoveryDraftStore";
 import { ResultConfirmStep } from "./result-confirm/ResultConfirmStep";
 import { ResultEditStep } from "./result-edit/ResultEditStep";
@@ -34,7 +35,8 @@ export function RecoveryFlow() {
     sharedCondition,
     overrideConditionByItemId,
     resultItemsByDay,
-    selectedRecommendationId,
+    recommendationsByItemId,
+    activeRecommendItemId,
     setStep,
     setRegion,
     setDateRange,
@@ -43,7 +45,8 @@ export function RecoveryFlow() {
     setSharedCondition,
     setOverrideConditionByItemId,
     setResultItemsByDay,
-    setSelectedRecommendationId,
+    setRecommendationsByItemId,
+    setActiveRecommendItemId,
     restart,
     hasHydrated,
   } = useRecoveryDraftStore();
@@ -51,6 +54,24 @@ export function RecoveryFlow() {
   const goNext = () =>
     setStep((prev) => Math.min(prev + 1, MAX_IMPLEMENTED_STEP));
   const goPrev = () => setStep((prev) => Math.max(prev - 1, 1));
+
+  const { recommend } = useRecommendSelectedItems();
+  const handleRecommend = async () => {
+    const result = await recommend({
+      dateRange,
+      itemsByDay,
+      selectedIds,
+      sharedCondition,
+      overrideConditionByItemId,
+    });
+    // 실패 토스트는 useRecommendSelectedItems가 이미 띄웠다 — 여기서는 그냥
+    // 3단계로 넘어가지 않고 2단계에 머무른다.
+    if (!result) return;
+    setResultItemsByDay(result.resultItemsByDay);
+    setRecommendationsByItemId(result.recommendationsByItemId);
+    setActiveRecommendItemId(result.firstItemId);
+    goNext();
+  };
 
   // 스토어가 skipHydration으로 생성되므로(useRecoveryDraftStore.ts 참고),
   // 마운트 후 여기서 직접 rehydrate를 트리거한다 — 그래야 서버 렌더와
@@ -89,15 +110,19 @@ export function RecoveryFlow() {
             overrideConditionByItemId={overrideConditionByItemId}
             onOverrideConditionByItemIdChange={setOverrideConditionByItemId}
             onPrev={goPrev}
-            onNext={goNext}
+            onNext={handleRecommend}
           />
         )}
         {step === 3 && (
           <ResultEditStep
+            dateRange={dateRange}
             itemsByDay={resultItemsByDay}
             onItemsByDayChange={setResultItemsByDay}
-            selectedId={selectedRecommendationId}
-            onSelectedIdChange={setSelectedRecommendationId}
+            sharedCondition={sharedCondition}
+            overrideConditionByItemId={overrideConditionByItemId}
+            recommendationsByItemId={recommendationsByItemId}
+            activeItemId={activeRecommendItemId}
+            onActiveItemIdChange={setActiveRecommendItemId}
             onPrev={goPrev}
             onNext={goNext}
           />
