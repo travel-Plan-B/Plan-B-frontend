@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import test from "node:test";
@@ -1187,8 +1193,60 @@ test("repository fingerprint는 binary patch 없이 name-status metadata를 사�
       return "";
     },
   });
-  assert.deepEqual(calls[0], ["diff", "HEAD", "--name-status", "-z", "--no-ext-diff"]);
+  assert.deepEqual(calls[0], [
+    "diff",
+    "HEAD",
+    "--no-renames",
+    "--name-status",
+    "-z",
+    "--no-ext-diff",
+  ]);
   assert.equal(calls.flat().includes("--binary"), false);
+});
+
+test("rename staging 전후 working tree fingerprint는 같고 내용 변경은 감지한다", () => {
+  const fixtureRoot = mkdtempSync(join(tmpdir(), "planb-rename-fingerprint-"));
+  const git = (args) =>
+    execFileSync("git", args, { cwd: fixtureRoot, encoding: "utf8" });
+
+  try {
+    execFileSync("git", ["init"], { cwd: fixtureRoot, stdio: "ignore" });
+    execFileSync("git", ["config", "user.email", "fixture@example.com"], {
+      cwd: fixtureRoot,
+    });
+    execFileSync("git", ["config", "user.name", "Fixture"], {
+      cwd: fixtureRoot,
+    });
+    writeFileSync(join(fixtureRoot, "before.ts"), "export const value = 1;\n");
+    execFileSync("git", ["add", "-A"], { cwd: fixtureRoot });
+    execFileSync("git", ["commit", "-m", "fixture"], {
+      cwd: fixtureRoot,
+      stdio: "ignore",
+    });
+
+    renameSync(join(fixtureRoot, "before.ts"), join(fixtureRoot, "after.ts"));
+    const beforeStaging = fingerprintRepositoryWorkingTree({
+      cwd: fixtureRoot,
+      gitOutput: git,
+    });
+
+    execFileSync("git", ["add", "-A"], { cwd: fixtureRoot });
+    const afterStaging = fingerprintRepositoryWorkingTree({
+      cwd: fixtureRoot,
+      gitOutput: git,
+    });
+
+    assert.equal(afterStaging, beforeStaging);
+    assert.match(git(["diff", "--cached", "--name-status", "-M"]), /^R/u);
+
+    writeFileSync(join(fixtureRoot, "after.ts"), "export const value = 2;\n");
+    assert.notEqual(
+      fingerprintRepositoryWorkingTree({ cwd: fixtureRoot, gitOutput: git }),
+      afterStaging,
+    );
+  } finally {
+    rmSync(fixtureRoot, { recursive: true, force: true });
+  }
 });
 
 test("index fingerprint는 특수문자 경로를 literal pathspec으로 조회한다", () => {
@@ -1426,4 +1484,18 @@ test("staging 결과가 분석 snapshot과 다르면 commit 전에 차단한다"
     }),
     /commit하지 않습니다/u,
   );
+});
+
+test("staging 이후 snapshot 불일치는 commit 단계에 맞는 오류를 표시한다", () => {
+  const error = getStagingSnapshotError({
+    baseline: "before",
+    current: "after",
+    unstaged: "",
+    untracked: "",
+    afterStaging: true,
+  });
+
+  assert.match(error, /staging 이후/u);
+  assert.match(error, /commit하지 않습니다/u);
+  assert.doesNotMatch(error, /staging하지 않습니다/u);
 });

@@ -13,8 +13,8 @@ interface LocationDto {
 
 export interface SimpleRecommendationRequest {
   current_location: LocationDto;
-  next_place: LocationDto;
-  exclude_place_name: string;
+  next_place?: LocationDto;
+  exclude_place_name?: string;
   deadline_time: string;
   current_time: string;
   transport: SimpleRecommendationTransport;
@@ -46,6 +46,7 @@ export interface SimpleRecommendationDataResponse {
   available_minutes?: number | null;
   ai_recommended: SimpleRecommendationPlaceResponse[];
   more_places: SimpleRecommendationPlaceResponse[];
+  no_candidates_reason?: "NOT_ENOUGH_TIME" | "NO_SUITABLE_PLACE" | null;
 }
 
 export interface SimpleRecommendationResponse {
@@ -55,8 +56,7 @@ export interface SimpleRecommendationResponse {
 
 export interface SimpleRecommendationDraft {
   currentLocation: LocationDto;
-  nextPlace: LocationDto;
-  excludePlaceName: string;
+  excludePlaceName?: string;
   deadlineTime: string;
   transport: TransportType;
   problemReason: RecoveryReason;
@@ -100,8 +100,9 @@ export function toSimpleRecommendationRequest(
 ): SimpleRecommendationRequest {
   return {
     current_location: draft.currentLocation,
-    next_place: draft.nextPlace,
-    exclude_place_name: draft.excludePlaceName,
+    ...(draft.excludePlaceName
+      ? { exclude_place_name: draft.excludePlaceName }
+      : {}),
     deadline_time: draft.deadlineTime,
     current_time: formatCurrentTime(requestedAt),
     transport: toApiTransport(draft.transport),

@@ -12,42 +12,47 @@ import { cn } from "@/shared/lib/cn";
 
 const SEARCH_DEBOUNCE_MS = 400;
 
-export type SelectedDestination = Pick<
+export type SelectedPlace = Pick<
   Place,
   "id" | "name" | "address" | "lat" | "lng"
 >;
 
-interface DestinationSearchProps {
+interface ReferenceLocationSearchProps {
+  id?: string;
   value: string;
-  selectedDestination: SelectedDestination | null;
+  isValueConfirmed: boolean;
   onValueChange: (value: string) => void;
-  onSelect: (destination: SelectedDestination) => void;
+  onSelect: (place: SelectedPlace) => void;
+  placeholder?: string;
+  inputClassName?: string;
 }
 
-export function DestinationSearch({
+export function ReferenceLocationSearch({
+  id = "destination",
   value,
-  selectedDestination,
+  isValueConfirmed,
   onValueChange,
   onSelect,
-}: DestinationSearchProps) {
+  placeholder = "장소를 검색하거나 현재 위치를 사용해주세요",
+  inputClassName,
+}: ReferenceLocationSearchProps) {
   const debouncedQuery = useDebouncedValue(value, SEARCH_DEBOUNCE_MS);
-  const isSelected =
-    selectedDestination !== null && value === selectedDestination.name;
-  const query = isSelected ? "" : debouncedQuery;
+  const query = isValueConfirmed ? "" : debouncedQuery;
   const { data, isLoading, isFetching, isError } = usePlaceSearchQuery(query);
 
   const hasInput = value.trim().length > 0;
   const isWaitingForDebounce =
     hasInput && value.trim() !== debouncedQuery.trim();
   const isSearching =
-    !isSelected &&
+    !isValueConfirmed &&
     hasInput &&
     (isWaitingForDebounce || isLoading || isFetching);
   const results = data ?? [];
-  const showSettledResult = !isSelected && hasInput && !isSearching && !isError;
+  const showSettledResult =
+    !isValueConfirmed && hasInput && !isSearching && !isError;
   const showSearchPanel =
     isSearching ||
-    (!isSelected && hasInput && !isSearching && isError) ||
+    (!isValueConfirmed && hasInput && !isSearching && isError) ||
     showSettledResult;
 
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -67,10 +72,10 @@ export function DestinationSearch({
   return (
     <div className="flex w-full flex-col">
       <Input
-        id="destination"
+        id={id}
         value={value}
         onChange={handleChange}
-        placeholder="다음 일정 장소를 검색해주세요"
+        placeholder={placeholder}
         autoComplete="off"
         clearable
         role="combobox"
@@ -81,8 +86,9 @@ export function DestinationSearch({
         }
         className={cn(
           "py-2.5",
-          isSelected && "border-primary-500",
+          isValueConfirmed && "border-primary-500",
           showSearchPanel && "relative z-10 rounded-b-none",
+          inputClassName,
         )}
       />
 
@@ -97,7 +103,7 @@ export function DestinationSearch({
         </div>
       )}
 
-      {!isSelected && hasInput && !isSearching && isError && (
+      {!isValueConfirmed && hasInput && !isSearching && isError && (
         <p
           id="destination-search-results"
           className="-mt-px rounded-b-lg border border-rose-100 bg-rose-25 px-4 py-3 text-sm text-rose-700"

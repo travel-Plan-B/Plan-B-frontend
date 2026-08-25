@@ -1,0 +1,94 @@
+import type { TransportType } from "./TransportSelector";
+import type { SelectedPlace } from "./ReferenceLocationSearch";
+import type { ReferenceLocation } from "./store/useSimpleRecoveryStore";
+
+export interface Coordinates {
+  lat: number;
+  lng: number;
+}
+
+interface SimpleRecoveryLocationDraft {
+  currentLocation: Coordinates;
+  excludePlaceName?: string;
+}
+
+const TIME_PATTERN = /^(?:[01]?\d|2[0-3]):[0-5]\d$/;
+
+export function isLatestLocationSelection(
+  requestVersion: number,
+  currentVersion: number,
+): boolean {
+  return requestVersion === currentVersion;
+}
+
+export function toGpsReferenceLocation(
+  address: string,
+  coordinates: Coordinates,
+): ReferenceLocation {
+  return { source: "gps", address, ...coordinates };
+}
+
+export function toSearchReferenceLocation(
+  place: SelectedPlace,
+): ReferenceLocation {
+  return {
+    source: "search",
+    name: place.name,
+    address: place.address,
+    lat: place.lat,
+    lng: place.lng,
+  };
+}
+
+export function toMinutes(time: string): number | null {
+  if (!TIME_PATTERN.test(time)) return null;
+
+  const [hour, minute] = time.split(":").map(Number);
+  return hour * 60 + minute;
+}
+
+export function isFutureArrivalTime(
+  arrivalTime: string,
+  currentTime: Date,
+): boolean {
+  const arrivalMinutes = toMinutes(arrivalTime);
+  if (arrivalMinutes === null) return false;
+
+  const currentMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
+  return arrivalMinutes > currentMinutes;
+}
+
+export function toSimpleRecoveryLocationDraft(
+  referenceLocation: ReferenceLocation | null,
+): SimpleRecoveryLocationDraft | null {
+  if (!referenceLocation) return null;
+
+  return {
+    currentLocation: {
+      lat: referenceLocation.lat,
+      lng: referenceLocation.lng,
+    },
+    ...(referenceLocation.source === "search"
+      ? { excludePlaceName: referenceLocation.name }
+      : {}),
+  };
+}
+
+export function isSimpleRecoveryInfoSubmittable({
+  referenceLocation,
+  arrivalTime,
+  transport,
+  currentTime,
+}: {
+  referenceLocation: ReferenceLocation | null;
+  arrivalTime: string;
+  transport: TransportType | null;
+  currentTime: Date;
+}): boolean {
+  return Boolean(
+    referenceLocation &&
+    isFutureArrivalTime(arrivalTime, currentTime) &&
+    transport &&
+    transport !== "transit",
+  );
+}

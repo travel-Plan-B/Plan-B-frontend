@@ -498,6 +498,7 @@ if (!hasGitCheckpoint) {
     current: changesFingerprint(),
     unstaged: outputOf("git", ["diff", "--name-only"]),
     untracked: outputOf("git", ["ls-files", "--others", "--exclude-standard"]),
+    afterStaging: true,
   });
   if (stagedSnapshotError) fail(stagedSnapshotError);
 
