@@ -71,7 +71,8 @@ export function SimpleRecoveryInfoPage() {
     formData.currentLocation?.address.trim() &&
     formData.selectedDestination &&
     formData.arrivalTime &&
-    formData.transport,
+    formData.transport &&
+    formData.transport !== "transit",
   );
 
   useEffect(() => {

@@ -10,7 +10,7 @@ import { Tag } from "@/shared/components/ui/Tag";
 import { ROUTES } from "@/shared/config/routes";
 
 import { RecommendationList } from "./RecommendationList";
-import { INITIAL_RECOMMENDATION_ID } from "./recommendation-data";
+import { FIXTURE_PLACE_DETAIL_ID } from "./recommendation-data";
 import type { SimpleRecommendationViewModel } from "./recommendationMapper";
 
 interface RecommendationExplorerProps {
@@ -150,7 +150,7 @@ export function RecommendationExplorer({
 
             <Link
               href={ROUTES.RECOVERY_SIMPLE_PLACE_DETAIL(
-                INITIAL_RECOMMENDATION_ID,
+                FIXTURE_PLACE_DETAIL_ID,
               )}
               className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-neutral-900 px-6 py-3.5 text-base font-medium text-white transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
             >

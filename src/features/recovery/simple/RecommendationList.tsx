@@ -8,7 +8,7 @@ import { Tabs } from "@/shared/components/ui/Tabs/Tabs";
 import { TabsList } from "@/shared/components/ui/Tabs/TabsList";
 import { TabsTrigger } from "@/shared/components/ui/Tabs/TabsTrigger";
 import { ROUTES } from "@/shared/config/routes";
-import { INITIAL_RECOMMENDATION_ID } from "./recommendation-data";
+import { FIXTURE_PLACE_DETAIL_ID } from "./recommendation-data";
 import type { SimpleRecommendationViewModel } from "./recommendationMapper";
 
 type RecommendationSort = "recommended" | "rating" | "reviews";
@@ -91,7 +91,7 @@ export function RecommendationList({
             recommended={place.isAiRecommended}
             onDetail={() =>
               router.push(
-                ROUTES.RECOVERY_SIMPLE_PLACE_DETAIL(INITIAL_RECOMMENDATION_ID),
+                ROUTES.RECOVERY_SIMPLE_PLACE_DETAIL(FIXTURE_PLACE_DETAIL_ID),
               )
             }
             onSelect={() => onSelect(place.id)}

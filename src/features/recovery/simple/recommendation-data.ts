@@ -18,11 +18,11 @@ export interface Recommendation {
   distanceMinutes: number;
 }
 
-export const INITIAL_RECOMMENDATION_ID = "arte-museum";
+export const FIXTURE_PLACE_DETAIL_ID = "arte-museum";
 
 export const recommendations: Recommendation[] = [
   {
-    id: INITIAL_RECOMMENDATION_ID,
+    id: FIXTURE_PLACE_DETAIL_ID,
     imageUrl:
       "https://images.unsplash.com/photo-1549490349-8643362247b5?auto=format&fit=crop&w=1400&q=85",
     imageAlt: "빛으로 채워진 미디어아트 전시 공간",
