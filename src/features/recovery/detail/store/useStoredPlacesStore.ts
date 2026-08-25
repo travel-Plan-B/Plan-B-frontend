@@ -1,6 +1,10 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import type { Place } from "@/features/recovery/api/places";
+import { toast } from "@/shared/components/ui/Toast/toast";
+
+/** PlaceFinderPanel 안내 문구("보관함은 최대 N개까지")도 이 값을 그대로 쓴다. */
+export const MAX_STORED_PLACES = 50;
 
 interface StoredPlacesStore {
   storedPlaces: Place[];
@@ -20,11 +24,18 @@ export const useStoredPlacesStore = create<StoredPlacesStore>()(
       hasHydrated: false,
       setHasHydrated: (value) => set({ hasHydrated: value }),
       toggleStored: (place) => {
-        const isStored = get().storedPlaces.some((p) => p.id === place.id);
+        const current = get().storedPlaces;
+        const isStored = current.some((p) => p.id === place.id);
+        if (!isStored && current.length >= MAX_STORED_PLACES) {
+          toast.error(
+            `보관함은 최대 ${MAX_STORED_PLACES}개까지 담을 수 있어요.`,
+          );
+          return;
+        }
         set({
           storedPlaces: isStored
-            ? get().storedPlaces.filter((p) => p.id !== place.id)
-            : [...get().storedPlaces, place],
+            ? current.filter((p) => p.id !== place.id)
+            : [...current, place],
         });
       },
       removeStored: (id) =>

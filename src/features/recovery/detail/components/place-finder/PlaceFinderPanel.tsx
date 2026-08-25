@@ -18,6 +18,7 @@ import { TabsTrigger } from "@/shared/components/ui/Tabs/TabsTrigger";
 import { toast } from "@/shared/components/ui/Toast/toast";
 import { cn } from "@/shared/lib/cn";
 import { useStoredPlaces } from "../../hooks/useStoredPlaces";
+import { MAX_STORED_PLACES } from "../../store/useStoredPlacesStore";
 import { PlaceResultItem } from "./PlaceResultItem";
 import { StoredPlaceItem } from "./StoredPlaceItem";
 
@@ -217,8 +218,10 @@ export function PlaceFinderPanel() {
       <p className="text-fluid-xs mt-auto flex items-center justify-center gap-1.5 border-t border-neutral-200 py-2 text-neutral-700">
         <FolderOpen className="size-4 text-primary-500" aria-hidden="true" />
         보관함은 최대{" "}
-        <span className="font-semibold text-primary-600">50개까지</span> 저장
-        가능합니다.
+        <span className="font-semibold text-primary-600">
+          {MAX_STORED_PLACES}개까지
+        </span>{" "}
+        저장 가능합니다.
       </p>
 
       <ConfirmModal
