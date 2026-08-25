@@ -9,4 +9,5 @@ export const ROUTES = {
   RECOVERY_DETAIL: "/recovery/detail",
   RECOVERY_DETAIL_PLACE_DETAIL: (placeId: string) =>
     `/recovery/detail/place/${encodeURIComponent(placeId)}`,
+  RECOVERY_SHARE: "/recovery/share",
 } as const;
