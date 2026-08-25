@@ -12,7 +12,7 @@ import Link from "next/link";
 import { useEffect, useMemo } from "react";
 
 import { PlaceImage } from "@/shared/components/ui/PlaceImage";
-import { PlaceRating } from "@/features/recommendation/components/PlaceCard";
+import { PlaceRating } from "@/shared/components/ui/PlaceRating";
 import { ROUTES } from "@/shared/config/routes";
 import { formatDistanceKm } from "../../lib/travelInfo";
 import type { ResultRecommendation } from "../../mocks/resultEditMock";

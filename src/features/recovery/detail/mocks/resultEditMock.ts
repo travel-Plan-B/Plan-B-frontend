@@ -42,7 +42,9 @@ export interface ResultRecommendation {
   rating: number;
   reviewCount?: number;
   travelMinutesLabel: string;
-  /** REQ-DETAIL-002의 distance_from_prev_km. 현재는 백엔드가 항상 null로 준다. */
+  /** 교체 대상(원래 장소, originLocation) 기준 직선거리. 백엔드
+   * distance_from_prev_km은 "바로 앞 일정" 기준이라 쓰지 않고,
+   * detailRecommend.ts에서 항상 originLocation 좌표로 직접 계산한다. */
   distanceKm: number | null;
   /** 오디세이 대중교통 실시간 조회에 쓰는 후보 좌표. */
   lat: number;

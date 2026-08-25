@@ -1,8 +1,9 @@
 import type { HTMLAttributes, MouseEventHandler } from "react";
-import { Clock, Footprints, MapPin, ParkingCircle, Star } from "lucide-react";
+import { Clock, Footprints, MapPin, ParkingCircle } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/Button";
 import { PlaceImage } from "@/shared/components/ui/PlaceImage";
+import { PlaceRating } from "@/shared/components/ui/PlaceRating";
 import { Tag } from "@/shared/components/ui/Tag";
 import { cn } from "@/shared/lib/cn";
 
@@ -76,32 +77,6 @@ function InfoRow({ label, value, icon: Icon, compact = false }: InfoRowProps) {
         {value}
       </span>
     </div>
-  );
-}
-
-export function PlaceRating({
-  value,
-  reviewCount,
-}: {
-  value: number;
-  reviewCount?: number;
-}) {
-  return (
-    <span
-      className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-neutral-900"
-      aria-label={`평점 ${value.toFixed(1)}`}
-    >
-      <Star
-        aria-hidden="true"
-        className="size-4 fill-yellow-500 text-yellow-500"
-      />
-      {value.toFixed(1)}
-      {reviewCount !== undefined && (
-        <span className="font-normal text-neutral-700">
-          ({reviewCount.toLocaleString()})
-        </span>
-      )}
-    </span>
   );
 }
 
