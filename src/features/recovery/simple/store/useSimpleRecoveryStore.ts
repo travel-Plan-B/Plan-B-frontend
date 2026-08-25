@@ -1,31 +1,30 @@
 import { create } from "zustand";
 
-import type { SelectedDestination } from "../DestinationSearch";
 import type { TransportType } from "../TransportSelector";
 import type { SimpleRecommendationResponse } from "../api/simpleRecommendations";
 
 export type RecoveryReason = "weather" | "closed" | "delay";
 
-export interface CurrentLocation {
+interface ReferenceLocationBase {
   address: string;
-  lat: number | null;
-  lng: number | null;
+  lat: number;
+  lng: number;
 }
 
+export type ReferenceLocation =
+  | (ReferenceLocationBase & { source: "gps" })
+  | (ReferenceLocationBase & { source: "search"; name: string });
+
 export interface SimpleRecoveryInfo {
-  currentLocationInput: string;
-  currentLocation: CurrentLocation | null;
-  destinationQuery: string;
-  selectedDestination: SelectedDestination | null;
+  referenceLocationInput: string;
+  referenceLocation: ReferenceLocation | null;
   arrivalTime: string;
   transport: TransportType | null;
 }
 
 export const INITIAL_SIMPLE_RECOVERY_INFO: SimpleRecoveryInfo = {
-  currentLocationInput: "",
-  currentLocation: null,
-  destinationQuery: "",
-  selectedDestination: null,
+  referenceLocationInput: "",
+  referenceLocation: null,
   arrivalTime: "",
   transport: null,
 };

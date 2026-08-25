@@ -25,6 +25,7 @@ export function SimpleRecoveryRecommendPage({
     (state) => state.recommendationResponse,
   );
   const info = useSimpleRecoveryStore((state) => state.info);
+  const referenceLocation = info.referenceLocation;
   const result = useMemo(
     () =>
       response?.success
@@ -33,6 +34,9 @@ export function SimpleRecoveryRecommendPage({
     [response],
   );
   const firstRecommendationId = result?.recommendations[0]?.id ?? "";
+  const noCandidatesReason = response?.success
+    ? response.data.no_candidates_reason
+    : null;
   const initialId =
     selectedPlaceId &&
     result?.recommendations.some(({ id }) => id === selectedPlaceId)
@@ -42,19 +46,56 @@ export function SimpleRecoveryRecommendPage({
     useState(initialId);
 
   useEffect(() => {
-    if (!response || !response.success || !firstRecommendationId) {
-      toast.error("추천 결과가 없습니다. 정보를 다시 입력해 주세요.");
+    if (!response || !response.success) {
+      toast.error("추천 요청에 실패했습니다. 정보를 다시 입력해 주세요.");
+      router.replace(ROUTES.RECOVERY_SIMPLE_INFO);
+      return;
+    }
+
+    if (!firstRecommendationId) {
+      if (noCandidatesReason === "NOT_ENOUGH_TIME") {
+        toast.info(
+          "추천할 수 있는 시간이 부족해요. 도착 시간을 조금 더 여유 있게 설정해 주세요.",
+        );
+      } else if (noCandidatesReason === "NO_SUITABLE_PLACE") {
+        toast.info(
+          "조건에 맞는 추천 장소를 찾지 못했어요. 기준 위치나 조건을 바꿔 다시 시도해 주세요.",
+        );
+      } else {
+        toast.info("추천 결과가 없습니다. 정보를 다시 입력해 주세요.");
+      }
+      router.replace(ROUTES.RECOVERY_SIMPLE_INFO);
+      return;
+    }
+
+    if (!referenceLocation) {
+      toast.error("기준 위치 정보가 없습니다. 정보를 다시 입력해 주세요.");
       router.replace(ROUTES.RECOVERY_SIMPLE_INFO);
     }
-  }, [firstRecommendationId, response, router]);
+  }, [
+    firstRecommendationId,
+    noCandidatesReason,
+    referenceLocation,
+    response,
+    router,
+  ]);
 
-  if (!result || !selectedRecommendationId) return null;
+  if (!result || !selectedRecommendationId || !referenceLocation) return null;
 
   const selectedRecommendation =
     result.recommendations.find(({ id }) => id === selectedRecommendationId) ??
     result.recommendations[0];
 
   if (!selectedRecommendation) return null;
+
+  const isSearchLocation = referenceLocation.source === "search";
+  const sourceSchedule = {
+    label: isSearchLocation ? "기준 위치" : "현재 위치",
+    title: isSearchLocation
+      ? referenceLocation.name
+      : referenceLocation.address,
+    location: isSearchLocation ? referenceLocation.address : undefined,
+  };
 
   return (
     <RecoveryPageLayout
@@ -68,28 +109,24 @@ export function SimpleRecoveryRecommendPage({
           id="schedule-change-title"
           className="text-2xl font-semibold text-neutral-900"
         >
-          일정 변경 내역
+          추천 일정
         </h2>
         <p className="mt-1 text-sm text-neutral-700">
-          문제가 생긴 일정을 새로운 장소로 교체했어요.
+          기준 위치를 바탕으로 새로운 일정을 추천했어요.
         </p>
 
-        <div className="mt-6 grid grid-cols-1 items-center gap-4 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
-          <ScheduleCard
-            tone="rose"
-            label="기존 일정"
-            title={info.selectedDestination?.name}
-            location={info.selectedDestination?.address}
-          />
+        <div className="mt-6 grid grid-cols-1 items-stretch gap-4 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
+          <ScheduleCard tone="rose" className="h-full" {...sourceSchedule} />
           <IconBadge
             variant="gray"
             size="md"
-            className="mx-auto rotate-90 md:rotate-0"
+            className="mx-auto self-center rotate-90 md:rotate-0"
           >
             <ArrowRight className="size-5" />
           </IconBadge>
           <ScheduleCard
             tone="purple"
+            className="h-full"
             label="추천 일정"
             title={selectedRecommendation.title}
             description={selectedRecommendation.description}

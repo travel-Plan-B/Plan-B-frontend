@@ -2,13 +2,7 @@
 
 import { LocateFixed, MapPin } from "lucide-react";
 import { useRouter } from "next/navigation";
-import {
-  useEffect,
-  useRef,
-  useState,
-  type ChangeEvent,
-  type FormEvent,
-} from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import {
   requestSimpleRecommendations,
@@ -16,16 +10,23 @@ import {
 } from "@/features/recovery/simple/api/simpleRecommendations";
 
 import { RecoveryPageLayout } from "@/features/recovery/components/RecoveryPageLayout";
-import { DestinationSearch } from "@/features/recovery/simple/DestinationSearch";
+import {
+  ReferenceLocationSearch,
+  type SelectedPlace,
+} from "@/features/recovery/simple/ReferenceLocationSearch";
 import { TransportSelector } from "@/features/recovery/simple/TransportSelector";
 import { SIMPLE_RECOVERY_STEPS } from "@/features/recovery/simple/steps";
+import { reverseGeocodeCoordinates } from "@/features/recovery/simple/reverseGeocode";
 import {
-  geocodeAddress,
-  reverseGeocodeCoordinates,
-} from "@/features/recovery/simple/reverseGeocode";
+  isFutureArrivalTime,
+  isSimpleRecoveryInfoSubmittable,
+  isLatestLocationSelection,
+  toGpsReferenceLocation,
+  toSearchReferenceLocation,
+  toSimpleRecoveryLocationDraft,
+} from "@/features/recovery/simple/simpleRecoveryForm";
 import { useSimpleRecoveryStore } from "@/features/recovery/simple/store/useSimpleRecoveryStore";
 import { Button } from "@/shared/components/ui/Button";
-import { Input } from "@/shared/components/ui/Input";
 import {
   TimePicker,
   type TimePickerValue,
@@ -33,6 +34,7 @@ import {
 import { ROUTES } from "@/shared/config/routes";
 import { Spinner } from "@/shared/components/ui/Spinner";
 import { toast } from "@/shared/components/ui/Toast/toast";
+import { cn } from "@/shared/lib/cn";
 
 const ARRIVAL_HOUR_OPTIONS = Array.from({ length: 24 }, (_, hour) => ({
   value: hour,
@@ -65,15 +67,40 @@ export function SimpleRecoveryInfoPage() {
   const [isLocating, setIsLocating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const submissionLockRef = useRef(false);
+  const locationSelectionVersionRef = useRef(0);
   const [locationError, setLocationError] = useState<string | null>(null);
-  const canSubmit = Boolean(
-    reason &&
-    formData.currentLocation?.address.trim() &&
-    formData.selectedDestination &&
-    formData.arrivalTime &&
-    formData.transport &&
-    formData.transport !== "transit",
-  );
+  const [validationTime, setValidationTime] = useState<Date | null>(null);
+  const canSubmit =
+    validationTime !== null &&
+    isSimpleRecoveryInfoSubmittable({
+      referenceLocation: formData.referenceLocation,
+      arrivalTime: formData.arrivalTime,
+      transport: formData.transport,
+      currentTime: validationTime,
+    });
+  const hasPastArrivalTime =
+    validationTime !== null &&
+    formData.arrivalTime !== "" &&
+    !isFutureArrivalTime(formData.arrivalTime, validationTime);
+
+  useEffect(() => {
+    const updateValidationTime = () => setValidationTime(new Date());
+    updateValidationTime();
+
+    let intervalId: number | undefined;
+    const timeoutId = window.setTimeout(
+      () => {
+        updateValidationTime();
+        intervalId = window.setInterval(updateValidationTime, 60_000);
+      },
+      60_000 - (Date.now() % 60_000),
+    );
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      if (intervalId !== undefined) window.clearInterval(intervalId);
+    };
+  }, []);
 
   useEffect(() => {
     if (!reason) {
@@ -82,15 +109,16 @@ export function SimpleRecoveryInfoPage() {
     }
   }, [reason, router]);
 
-  const handleCurrentLocationChange = (
-    event: ChangeEvent<HTMLInputElement>,
+  const handleReferenceLocationInputChange = (
+    referenceLocationInput: string,
   ) => {
-    const address = event.target.value;
+    locationSelectionVersionRef.current += 1;
+    setIsLocating(false);
     setLocationError(null);
     setFormData((current) => ({
       ...current,
-      currentLocationInput: address,
-      currentLocation: address ? { address, lat: null, lng: null } : null,
+      referenceLocationInput,
+      referenceLocation: null,
     }));
   };
 
@@ -100,36 +128,72 @@ export function SimpleRecoveryInfoPage() {
       return;
     }
 
+    const requestVersion = locationSelectionVersionRef.current + 1;
+    locationSelectionVersionRef.current = requestVersion;
     setIsLocating(true);
     setLocationError(null);
 
     navigator.geolocation.getCurrentPosition(
       async ({ coords }) => {
+        const coordinates = {
+          lat: coords.latitude,
+          lng: coords.longitude,
+        };
+
         try {
-          const address = await reverseGeocodeCoordinates(
-            coords.latitude,
-            coords.longitude,
-          );
+          const address = (
+            await reverseGeocodeCoordinates(coordinates.lat, coordinates.lng)
+          ).trim();
+          if (!address) {
+            throw new Error("현재 위치 주소가 비어 있습니다.");
+          }
+          if (
+            !isLatestLocationSelection(
+              requestVersion,
+              locationSelectionVersionRef.current,
+            )
+          ) {
+            return;
+          }
           setFormData((current) => ({
             ...current,
-            currentLocationInput: address,
-            currentLocation: {
-              address,
-              lat: coords.latitude,
-              lng: coords.longitude,
-            },
+            referenceLocationInput: address,
+            referenceLocation: toGpsReferenceLocation(address, coordinates),
           }));
         } catch {
+          if (
+            !isLatestLocationSelection(
+              requestVersion,
+              locationSelectionVersionRef.current,
+            )
+          ) {
+            return;
+          }
           setLocationError("현재 위치의 주소를 확인하지 못했습니다.");
         } finally {
-          setIsLocating(false);
+          if (
+            isLatestLocationSelection(
+              requestVersion,
+              locationSelectionVersionRef.current,
+            )
+          ) {
+            setIsLocating(false);
+          }
         }
       },
       (error) => {
+        if (
+          !isLatestLocationSelection(
+            requestVersion,
+            locationSelectionVersionRef.current,
+          )
+        ) {
+          return;
+        }
         setLocationError(
           error.code === error.PERMISSION_DENIED
-            ? "위치 권한이 거부되었습니다. 직접 입력해주세요."
-            : "현재 위치를 확인하지 못했습니다. 직접 입력해주세요.",
+            ? "위치 권한이 거부되었습니다. 장소를 검색해 주세요."
+            : "현재 위치를 확인하지 못했습니다. 장소를 검색해 주세요.",
         );
         setIsLocating(false);
       },
@@ -139,50 +203,50 @@ export function SimpleRecoveryInfoPage() {
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!canSubmit || submissionLockRef.current) return;
+    if (submissionLockRef.current) return;
+
+    const submittedAt = new Date();
+    const canSubmitAtSubmission = isSimpleRecoveryInfoSubmittable({
+      referenceLocation: formData.referenceLocation,
+      arrivalTime: formData.arrivalTime,
+      transport: formData.transport,
+      currentTime: submittedAt,
+    });
+    if (!canSubmitAtSubmission) {
+      if (
+        formData.arrivalTime &&
+        !isFutureArrivalTime(formData.arrivalTime, submittedAt)
+      ) {
+        toast.info("현재 시간 이후의 도착 시간을 선택해 주세요.");
+      }
+      return;
+    }
 
     submissionLockRef.current = true;
     setIsSubmitting(true);
     setLocationError(null);
 
     try {
-      if (!reason || !formData.selectedDestination || !formData.transport) {
+      if (!reason || !formData.transport) {
         return;
       }
 
-      const currentCoordinates =
-        formData.currentLocation?.lat != null &&
-        formData.currentLocation.lng != null
-          ? {
-              lat: formData.currentLocation.lat,
-              lng: formData.currentLocation.lng,
-            }
-          : await geocodeAddress(formData.currentLocationInput.trim());
-
-      if (
-        formData.currentLocation &&
-        (formData.currentLocation.lat == null ||
-          formData.currentLocation.lng == null)
-      ) {
-        setFormData((current) => ({
-          ...current,
-          currentLocation: current.currentLocation
-            ? { ...current.currentLocation, ...currentCoordinates }
-            : null,
-        }));
+      const locationDraft = toSimpleRecoveryLocationDraft(
+        formData.referenceLocation,
+      );
+      if (!locationDraft) {
+        throw new Error("추천 기준 위치를 확인해 주세요.");
       }
 
-      const request = toSimpleRecommendationRequest({
-        currentLocation: currentCoordinates,
-        nextPlace: {
-          lat: formData.selectedDestination.lat,
-          lng: formData.selectedDestination.lng,
+      const request = toSimpleRecommendationRequest(
+        {
+          ...locationDraft,
+          deadlineTime: formData.arrivalTime,
+          transport: formData.transport,
+          problemReason: reason,
         },
-        excludePlaceName: formData.selectedDestination.name,
-        deadlineTime: formData.arrivalTime,
-        transport: formData.transport,
-        problemReason: reason,
-      });
+        submittedAt,
+      );
 
       setRecommendationResponse(null);
       const response = await requestSimpleRecommendations(request);
@@ -216,23 +280,37 @@ export function SimpleRecoveryInfoPage() {
         <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
           <div className="flex flex-col gap-2">
             <label
-              htmlFor="current-location"
+              htmlFor="reference-location"
               className="text-base font-semibold text-neutral-900"
             >
-              현재 위치
+              기준 위치
             </label>
             <div className="relative">
-              <Input
-                id="current-location"
-                value={formData.currentLocationInput}
-                onChange={handleCurrentLocationChange}
-                placeholder="현재 위치를 입력해주세요"
-                className="py-2.5 pr-36"
+              <ReferenceLocationSearch
+                id="reference-location"
+                value={formData.referenceLocationInput}
+                isValueConfirmed={formData.referenceLocation !== null}
+                placeholder="장소를 검색하거나 현재 위치를 사용해주세요"
+                inputClassName="pr-44"
+                onValueChange={handleReferenceLocationInputChange}
+                onSelect={(place: SelectedPlace) => {
+                  locationSelectionVersionRef.current += 1;
+                  setIsLocating(false);
+                  setLocationError(null);
+                  setFormData((current) => ({
+                    ...current,
+                    referenceLocationInput: place.name,
+                    referenceLocation: toSearchReferenceLocation(place),
+                  }));
+                }}
               />
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 shadow-sm absolute top-1/2 right-2 -translate-y-1/2 rounded-lg border border-neutral-200 bg-white text-sm text-neutral-700  hover:border-neutral-400"
+                className={cn(
+                  "absolute top-1.5 z-20 h-8 rounded-lg border border-neutral-200 bg-white text-sm text-neutral-700 shadow-sm hover:border-neutral-400",
+                  formData.referenceLocationInput ? "right-10" : "right-2",
+                )}
                 onClick={handleUseCurrentLocation}
                 disabled={isLocating}
               >
@@ -252,39 +330,11 @@ export function SimpleRecoveryInfoPage() {
                 {locationError}
               </p>
             )}
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <label
-              htmlFor="destination"
-              className="text-base font-semibold text-neutral-900"
-            >
-              다음 일정 장소
-            </label>
-            <DestinationSearch
-              value={formData.destinationQuery}
-              selectedDestination={formData.selectedDestination}
-              onValueChange={(destinationQuery) =>
-                setFormData((current) => ({
-                  ...current,
-                  destinationQuery,
-                  selectedDestination: null,
-                }))
-              }
-              onSelect={(selectedDestination) =>
-                setFormData((current) => ({
-                  ...current,
-                  currentLocationInput: selectedDestination.address,
-                  currentLocation: {
-                    address: selectedDestination.address,
-                    lat: selectedDestination.lat,
-                    lng: selectedDestination.lng,
-                  },
-                  destinationQuery: selectedDestination.name,
-                  selectedDestination,
-                }))
-              }
-            />
+            {formData.referenceLocation?.source === "search" && (
+              <p className="text-sm text-neutral-700">
+                {formData.referenceLocation.address}
+              </p>
+            )}
           </div>
 
           <div className="flex flex-col gap-2">
@@ -310,6 +360,11 @@ export function SimpleRecoveryInfoPage() {
               placeholder="도착 시간을 선택해주세요"
               className="w-full justify-between"
             />
+            {hasPastArrivalTime && (
+              <p className="text-sm text-rose-600" role="alert">
+                현재 시간 이후의 도착 시간을 선택해 주세요.
+              </p>
+            )}
           </div>
 
           <fieldset className="flex flex-col gap-2">

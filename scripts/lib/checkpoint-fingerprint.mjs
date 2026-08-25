@@ -88,7 +88,14 @@ function snapshotChange(change, cwd) {
 
 export function fingerprintRepositoryWorkingTree({ cwd, gitOutput }) {
   const tracked = parseNameStatusZ(
-    gitOutput(["diff", "HEAD", "--name-status", "-z", "--no-ext-diff"]),
+    gitOutput([
+      "diff",
+      "HEAD",
+      "--no-renames",
+      "--name-status",
+      "-z",
+      "--no-ext-diff",
+    ]),
   );
   const untracked = gitOutput([
     "ls-files", "--others", "--exclude-standard", "-z",
@@ -130,8 +137,18 @@ export function fingerprintRepositoryIndex({ gitOutput }) {
   return fingerprintRecords(records);
 }
 
-export function getStagingSnapshotError({ baseline, current, unstaged, untracked }) {
-  if (baseline !== current) return "분석 이후 작업 트리가 변경되어 staging하지 않습니다.";
+export function getStagingSnapshotError({
+  baseline,
+  current,
+  unstaged,
+  untracked,
+  afterStaging = false,
+}) {
+  if (baseline !== current) {
+    return afterStaging
+      ? "staging 이후 작업 snapshot이 분석 시점과 달라 commit하지 않습니다."
+      : "분석 이후 작업 트리가 변경되어 staging하지 않습니다.";
+  }
   if (unstaged || untracked) {
     return "staged 결과가 분석 시점의 작업 snapshot과 일치하지 않아 commit하지 않습니다.";
   }
