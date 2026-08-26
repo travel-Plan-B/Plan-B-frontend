@@ -8,13 +8,17 @@ import { Tabs } from "@/shared/components/ui/Tabs/Tabs";
 import { TabsList } from "@/shared/components/ui/Tabs/TabsList";
 import { TabsTrigger } from "@/shared/components/ui/Tabs/TabsTrigger";
 import { ROUTES } from "@/shared/config/routes";
-import { FIXTURE_PLACE_DETAIL_ID } from "./recommendation-data";
-import type { SimpleRecommendationViewModel } from "./recommendationMapper";
+import {
+  toSimpleRecommendationContext,
+  type SimpleRecommendationViewModel,
+} from "./recommendationMapper";
+import { saveRecommendationContext } from "../place-detail/recommendationContext";
 
 type RecommendationSort = "recommended" | "rating" | "reviews";
 
 interface RecommendationListProps {
   places: SimpleRecommendationViewModel[];
+  previousPlaceName: string;
   onSelect: (id: string) => void;
 }
 
@@ -26,6 +30,7 @@ const sortOptions: Array<{ value: RecommendationSort; label: string }> = [
 
 export function RecommendationList({
   places,
+  previousPlaceName,
   onSelect,
 }: RecommendationListProps) {
   const router = useRouter();
@@ -89,11 +94,14 @@ export function RecommendationList({
             hours={place.hours}
             parking={place.parking}
             recommended={place.isAiRecommended}
-            onDetail={() =>
+            onDetail={() => {
+              saveRecommendationContext(
+                toSimpleRecommendationContext(place, previousPlaceName),
+              );
               router.push(
-                ROUTES.RECOVERY_SIMPLE_PLACE_DETAIL(FIXTURE_PLACE_DETAIL_ID),
-              )
-            }
+                ROUTES.RECOVERY_SIMPLE_PLACE_DETAIL(place.id, place.source),
+              );
+            }}
             onSelect={() => onSelect(place.id)}
             className="h-full"
           />

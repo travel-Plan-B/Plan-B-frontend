@@ -16,6 +16,7 @@ import {
 import { IconBadge } from "@/shared/components/ui/IconBadge";
 import { Tag } from "@/shared/components/ui/Tag";
 import { ROUTES } from "@/shared/config/routes";
+import { saveRecommendationContext } from "../../../place-detail/recommendationContext";
 import { DETAIL_RECOVERY_STEPS } from "../../steps";
 import type { DetailRecommendResult } from "../../api/detailRecommend";
 import {
@@ -118,6 +119,46 @@ export function ResultEditStep({
   const activeRecommendations = activeId
     ? recommendationsByItemId[activeId]
     : undefined;
+
+  const openPlaceDetail = (recommendation: ResultRecommendation) => {
+    if (!activeId) return;
+
+    const activeDay = days.find((day) =>
+      day.items.some((item) => item.id === activeId),
+    );
+    const activeIndex =
+      activeDay?.items.findIndex((item) => item.id === activeId) ?? -1;
+
+    saveRecommendationContext({
+      placeId: recommendation.id,
+      source: recommendation.source,
+      itemId: activeId,
+      previousPlaceName:
+        activeIndex > 0
+          ? activeDay?.items[activeIndex - 1]?.placeName
+          : undefined,
+      nextPlaceName:
+        activeIndex >= 0
+          ? activeDay?.items[activeIndex + 1]?.placeName
+          : undefined,
+      travelTimeFromPrevMinutes: recommendation.travelTimeFromPrevMinutes,
+      estimatedDurationMinutes: recommendation.estimatedDurationMinutes,
+      travelTimeToNextMinutes: recommendation.travelTimeToNextMinutes,
+      scheduleBufferMinutes: recommendation.scheduleBufferMinutes,
+      recommendReasons:
+        recommendation.reasons && recommendation.reasons.length > 0
+          ? recommendation.reasons
+          : undefined,
+    });
+
+    router.push(
+      ROUTES.RECOVERY_DETAIL_PLACE_DETAIL(
+        recommendation.id,
+        recommendation.source,
+        activeId,
+      ),
+    );
+  };
   // 교체 대상(원래 장소)의 좌표 — "이동 시간"의 기준점이자 대중교통 실시간
   // 조회(오디세이)의 출발지로 쓴다.
   const activeOrigin =
@@ -355,11 +396,7 @@ export function ResultEditStep({
                   activeItem?.appliedRecommendationId === bestRecommendation.id
                 }
                 onSelect={() => applyRecommendation(bestRecommendation)}
-                onDetail={() =>
-                  router.push(
-                    ROUTES.RECOVERY_SIMPLE_PLACE_DETAIL(bestRecommendation.id),
-                  )
-                }
+                onDetail={() => openPlaceDetail(bestRecommendation)}
               />
             ) : (
               <EmptyState
@@ -389,9 +426,12 @@ export function ResultEditStep({
               );
               if (recommendation) applyRecommendation(recommendation);
             }}
-            onDetail={(id) =>
-              router.push(ROUTES.RECOVERY_SIMPLE_PLACE_DETAIL(id))
-            }
+            onDetail={(id) => {
+              const place = otherRecommendations.find((item) => item.id === id);
+              if (place) {
+                openPlaceDetail(place);
+              }
+            }}
           />
         )}
 

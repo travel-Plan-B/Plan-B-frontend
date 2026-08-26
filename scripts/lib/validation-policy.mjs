@@ -1,7 +1,7 @@
 import { extname, resolve } from "node:path";
 
-import { run } from "./git-github.mjs";
 import { runCli } from "./agents/shared.mjs";
+import { run } from "./git-github.mjs";
 
 const CODE_EXTENSIONS = new Set([".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs"]);
 const HIGH_IMPACT_FILES = [
@@ -24,16 +24,12 @@ export function parseStagedNameStatus(output) {
       const [rawStatus, ...paths] = line.split("\t");
       const status = rawStatus[0];
       const path = status === "R" || status === "C" ? paths.at(-1) : paths[0];
-      if (!path)
-        throw new TypeError(`staged status를 해석할 수 없습니다: ${line}`);
+      if (!path) throw new TypeError(`staged status를 해석할 수 없습니다: ${line}`);
       return { status, path: normalizeGitPath(path) };
     });
 }
 
-export function determineRequiredChecks(
-  changedFiles,
-  { mode = "create" } = {},
-) {
+export function determineRequiredChecks(changedFiles, { mode = "create" } = {}) {
   if (!new Set(["create", "update"]).has(mode)) {
     throw new TypeError(`지원하지 않는 PR mode입니다: ${mode}`);
   }
@@ -47,12 +43,8 @@ export function determineRequiredChecks(
     .filter(({ status }) => status !== "D")
     .map(({ path }) => path)
     .filter((file) => CODE_EXTENSIONS.has(extname(file)));
-  const hasCodeChanges = files.some((file) =>
-    CODE_EXTENSIONS.has(extname(file)),
-  );
-  const needsBuild = files.some((file) =>
-    HIGH_IMPACT_FILES.some((pattern) => pattern.test(file)),
-  );
+  const hasCodeChanges = files.some((file) => CODE_EXTENSIONS.has(extname(file)));
+  const needsBuild = files.some((file) => HIGH_IMPACT_FILES.some((pattern) => pattern.test(file)));
   const needsTypecheck = hasCodeChanges || needsBuild;
 
   return {
@@ -74,28 +66,16 @@ export function determineRequiredChecks(
 function timed(label, action) {
   const startedAt = performance.now();
   action();
-  console.log(
-    `✓ ${label} (${((performance.now() - startedAt) / 1000).toFixed(1)}s)`,
-  );
+  console.log(`✓ ${label} (${((performance.now() - startedAt) / 1000).toFixed(1)}s)`);
 }
 
-export function runRequiredChecks(
-  changedFiles,
-  { cwd = process.cwd(), mode = "create" } = {},
-) {
+export function runRequiredChecks(changedFiles, { cwd = process.cwd(), mode = "create" } = {}) {
   const policy = determineRequiredChecks(changedFiles, { mode });
   const executable = (name) =>
-    resolve(
-      cwd,
-      "node_modules",
-      ".bin",
-      `${name}${process.platform === "win32" ? ".cmd" : ""}`,
-    );
+    resolve(cwd, "node_modules", ".bin", `${name}${process.platform === "win32" ? ".cmd" : ""}`);
 
   console.log(`ℹ 필수 검증: ${policy.checks.join(" → ")}`);
-  timed("staged diff 검사", () =>
-    run("git", ["diff", "--cached", "--check"], { inherit: true }),
-  );
+  timed("staged diff 검사", () => run("git", ["diff", "--cached", "--check"], { inherit: true }));
   if (policy.codeFiles.length > 0) {
     timed("변경 코드 lint", () =>
       runCli(executable("eslint"), policy.codeFiles, {
@@ -120,7 +100,7 @@ export function runRequiredChecks(
   }
   if (policy.needsBuild) {
     timed("build", () =>
-      runCli(executable("next"), ["build"], {
+      runCli(executable("next"), ["build", "--webpack"], {
         cwd,
         displayName: "Next.js build",
       }),

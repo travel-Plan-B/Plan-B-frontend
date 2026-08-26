@@ -1,6 +1,7 @@
 import type { RecoveryReason } from "../store/useSimpleRecoveryStore";
 import type { TransportType } from "../TransportSelector";
 import { fetchClient } from "@/shared/lib/api/fetchClient";
+import type { PlaceSource } from "../../place-detail/placeDetail";
 
 export type SimpleRecommendationTransport = "CAR" | "WALK";
 export type SimpleRecommendationProblemReason =
@@ -25,6 +26,7 @@ export interface SimpleRecommendationRequest {
 
 export interface SimpleRecommendationPlaceResponse {
   place_id: string;
+  source: PlaceSource;
   name: string;
   category_tag: string;
   is_indoor: boolean | null;

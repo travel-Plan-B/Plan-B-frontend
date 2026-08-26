@@ -1,11 +1,6 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
-
-import { PlaceDetailPage } from "@/features/recovery/simple/place-detail/PlaceDetailPage";
-import {
-  getPlaceDetailFixture,
-  PLACE_DETAIL_IDS,
-} from "@/features/recovery/simple/place-detail/placeDetailFixtures";
+import { PlaceDetailPage } from "@/features/recovery/place-detail/PlaceDetailPage";
+import { ROUTES } from "@/shared/config/routes";
 
 export const metadata: Metadata = {
   title: "추천 장소 상세 | PlanB",
@@ -13,17 +8,17 @@ export const metadata: Metadata = {
     "현재 일정에 맞는 대체 장소의 상세 정보와 AI 추천 이유를 확인하세요.",
 };
 
-export function generateStaticParams() {
-  return PLACE_DETAIL_IDS.map((placeId) => ({ placeId }));
-}
-
 export default async function SimpleRecoveryPlaceDetailRoute({
   params,
+  searchParams,
 }: PageProps<"/recovery/simple/recommend/place/[placeId]">) {
   const { placeId } = await params;
-  const place = getPlaceDetailFixture(placeId);
-
-  if (!place) notFound();
-
-  return <PlaceDetailPage place={place} />;
+  const { source } = await searchParams;
+  return (
+    <PlaceDetailPage
+      placeId={placeId}
+      source={source}
+      backHref={ROUTES.RECOVERY_SIMPLE_RECOMMEND}
+    />
+  );
 }
