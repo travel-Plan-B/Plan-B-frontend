@@ -5,6 +5,7 @@
  */
 import type { TagVariant } from "@/shared/components/ui/Tag";
 import type { ScheduleItem } from "./scheduleMock";
+import type { PlaceSource } from "../../place-detail/placeDetail";
 
 export interface ResultConditionChip {
   label: string;
@@ -35,6 +36,7 @@ export type ResultScheduleItem = ScheduleItem & {
 
 export interface ResultRecommendation {
   id: string;
+  source: PlaceSource;
   imageUrl: string;
   imageAlt: string;
   title: string;
@@ -42,6 +44,10 @@ export interface ResultRecommendation {
   rating: number;
   reviewCount?: number;
   travelMinutesLabel: string;
+  travelTimeFromPrevMinutes?: number;
+  estimatedDurationMinutes?: number;
+  travelTimeToNextMinutes?: number;
+  scheduleBufferMinutes?: number;
   /** 교체 대상(원래 장소, originLocation) 기준 직선거리. 백엔드
    * distance_from_prev_km은 "바로 앞 일정" 기준이라 쓰지 않고,
    * detailRecommend.ts에서 항상 originLocation 좌표로 직접 계산한다. */

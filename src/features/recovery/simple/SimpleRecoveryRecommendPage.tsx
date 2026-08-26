@@ -139,6 +139,7 @@ export function SimpleRecoveryRecommendPage({
       <RecommendationExplorer
         recommendations={result.recommendations}
         selectedRecommendationId={selectedRecommendationId}
+        previousPlaceName={sourceSchedule.title}
         onSelect={setSelectedRecommendationId}
       />
     </RecoveryPageLayout>

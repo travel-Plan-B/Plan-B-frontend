@@ -2,15 +2,20 @@ import type {
   SimpleRecommendationDataResponse,
   SimpleRecommendationPlaceResponse,
 } from "./api/simpleRecommendations";
+import type { PlaceSource } from "../place-detail/placeDetail";
+import type { RecommendationContext } from "../place-detail/recommendationContext";
 
 export interface SimpleRecommendationViewModel {
   id: string;
+  source: PlaceSource;
   imageUrl?: string;
   imageAlt: string;
   title: string;
   category: string;
   location: string;
   reasons: string[];
+  estimatedDurationMinutes: number;
+  travelTimeMinutes?: number;
   stayTime: string;
   travelTime?: string;
   distance?: string;
@@ -24,6 +29,21 @@ export interface SimpleRecommendationViewModel {
 
 export interface SimpleRecommendationResultViewModel {
   recommendations: SimpleRecommendationViewModel[];
+}
+
+export function toSimpleRecommendationContext(
+  recommendation: SimpleRecommendationViewModel,
+  previousPlaceName: string,
+): RecommendationContext {
+  return {
+    placeId: recommendation.id,
+    source: recommendation.source,
+    previousPlaceName,
+    travelTimeFromPrevMinutes: recommendation.travelTimeMinutes,
+    estimatedDurationMinutes: recommendation.estimatedDurationMinutes,
+    recommendReasons:
+      recommendation.reasons.length > 0 ? recommendation.reasons : undefined,
+  };
 }
 
 function toParkingLabel(
@@ -51,12 +71,15 @@ function toRecommendation(
 ): SimpleRecommendationViewModel {
   return {
     id: place.place_id,
+    source: place.source,
     imageUrl: place.image_url ?? undefined,
     imageAlt: place.name,
     title: place.name,
     category: place.category_tag,
     location: place.address,
     reasons: place.recommend_reason ?? [],
+    estimatedDurationMinutes: place.estimated_duration_minutes,
+    travelTimeMinutes: place.travel_time_minutes ?? undefined,
     stayTime: `${place.estimated_duration_minutes}분`,
     travelTime: toTravelTimeLabel(place.travel_time_minutes),
     distance: place.distance ?? undefined,

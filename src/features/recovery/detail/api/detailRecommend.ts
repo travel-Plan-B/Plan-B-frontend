@@ -101,6 +101,7 @@ function toResultRecommendation(
   const distanceKm = resolveDistanceKm(dto, originLocation);
   return {
     id: dto.place_id,
+    source: dto.source,
     imageUrl: dto.image_url ?? "",
     imageAlt: dto.name,
     title: dto.name,
@@ -111,6 +112,10 @@ function toResultRecommendation(
       distanceKm,
       requestedTransport,
     ),
+    travelTimeFromPrevMinutes: dto.travel_time_from_prev_minutes ?? undefined,
+    estimatedDurationMinutes: dto.estimated_duration_minutes ?? undefined,
+    travelTimeToNextMinutes: dto.travel_time_to_next_minutes ?? undefined,
+    scheduleBufferMinutes: dto.schedule_buffer_minutes ?? undefined,
     distanceKm,
     lat: dto.lat,
     lng: dto.lng,

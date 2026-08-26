@@ -8,20 +8,25 @@ import { IconBadge } from "@/shared/components/ui/IconBadge";
 import { PlaceImage } from "@/shared/components/ui/PlaceImage";
 import { Tag } from "@/shared/components/ui/Tag";
 import { ROUTES } from "@/shared/config/routes";
+import { saveRecommendationContext } from "../place-detail/recommendationContext";
 
 import { RecommendationList } from "./RecommendationList";
-import { FIXTURE_PLACE_DETAIL_ID } from "./recommendation-data";
-import type { SimpleRecommendationViewModel } from "./recommendationMapper";
+import {
+  toSimpleRecommendationContext,
+  type SimpleRecommendationViewModel,
+} from "./recommendationMapper";
 
 interface RecommendationExplorerProps {
   recommendations: SimpleRecommendationViewModel[];
   selectedRecommendationId: string;
+  previousPlaceName: string;
   onSelect: (id: string) => void;
 }
 
 export function RecommendationExplorer({
   recommendations,
   selectedRecommendationId,
+  previousPlaceName,
   onSelect,
 }: RecommendationExplorerProps) {
   const selectedRecommendation =
@@ -150,8 +155,17 @@ export function RecommendationExplorer({
 
             <Link
               href={ROUTES.RECOVERY_SIMPLE_PLACE_DETAIL(
-                FIXTURE_PLACE_DETAIL_ID,
+                selectedRecommendation.id,
+                selectedRecommendation.source,
               )}
+              onClick={() =>
+                saveRecommendationContext(
+                  toSimpleRecommendationContext(
+                    selectedRecommendation,
+                    previousPlaceName,
+                  ),
+                )
+              }
               className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-neutral-900 px-6 py-3.5 text-base font-medium text-white transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
             >
               상세보기 <ArrowRight className="size-4" aria-hidden="true" />
@@ -164,6 +178,7 @@ export function RecommendationExplorer({
         <section className="mt-12" aria-label="다른 추천 장소">
           <RecommendationList
             places={otherRecommendations}
+            previousPlaceName={previousPlaceName}
             onSelect={onSelect}
           />
         </section>

@@ -1,6 +1,7 @@
 import type { SituationType, StyleType } from "../mocks/conditionMock";
 import type { ResultRecommendation } from "../mocks/resultEditMock";
 import type { TransportMode } from "../mocks/scheduleMock";
+import type { PlaceSource } from "../../place-detail/placeDetail";
 
 /**
  * REQ-DETAIL-002 (POST /api/v1/detail/recommendations) 타입.
@@ -56,6 +57,7 @@ export interface DetailRecommendParams {
 
 export interface DetailRecommendCandidateDto {
   place_id: string;
+  source: PlaceSource;
   name: string;
   address: string;
   category_tag: string;

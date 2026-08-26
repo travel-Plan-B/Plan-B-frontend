@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
-import { PlaceDetailPage } from "@/features/recovery/detail/components/place-detail/PlaceDetailPage";
+import { PlaceDetailPage } from "@/features/recovery/place-detail/PlaceDetailPage";
+import { ROUTES } from "@/shared/config/routes";
 
 export const metadata: Metadata = {
   title: "추천 장소 상세 | PlanB",
@@ -10,7 +11,16 @@ export const metadata: Metadata = {
 
 export default async function DetailRecoveryPlaceDetailRoute({
   params,
+  searchParams,
 }: PageProps<"/recovery/detail/place/[placeId]">) {
   const { placeId } = await params;
-  return <PlaceDetailPage placeId={placeId} />;
+  const { source, itemId } = await searchParams;
+  return (
+    <PlaceDetailPage
+      placeId={placeId}
+      source={source}
+      itemId={itemId}
+      backHref={ROUTES.RECOVERY_DETAIL}
+    />
+  );
 }
