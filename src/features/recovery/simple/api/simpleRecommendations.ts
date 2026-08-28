@@ -13,6 +13,8 @@ interface LocationDto {
 }
 
 export interface SimpleRecommendationRequest {
+  place_id?: string;
+  source?: string;
   current_location: LocationDto;
   next_place?: LocationDto;
   exclude_place_name?: string;
@@ -97,7 +99,14 @@ export function toSimpleRecommendationRequest(
   draft: SimpleRecommendationDraft,
   requestedAt = new Date(),
 ): SimpleRecommendationRequest {
+  const hasPlaceIdentity = Boolean(
+    draft.placeId?.trim() && draft.providerSource,
+  );
+
   return {
+    ...(hasPlaceIdentity
+      ? { place_id: draft.placeId, source: draft.providerSource }
+      : {}),
     current_location: draft.currentLocation,
     ...(draft.excludePlaceName
       ? { exclude_place_name: draft.excludePlaceName }

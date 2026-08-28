@@ -1,8 +1,9 @@
 "use client";
 
 import { RotateCw } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useQueries } from "@tanstack/react-query";
 
 import { PlaceCard } from "@/features/recommendation/components/PlaceCard";
 import { useTravelMinutesLabel } from "@/features/recovery/detail/hooks/useTravelMinutesLabel";
@@ -15,7 +16,8 @@ import {
   TRANSPORT_ORDER,
   TRAVEL_ICON_BY_MODE,
 } from "@/features/recovery/detail/lib/transportOptions";
-import { usePlaceDetailQuery } from "@/features/recovery/place-detail/placeDetailQuery";
+import { getPlaceDetail } from "@/features/recovery/place-detail/placeDetail";
+import { placeDetailKeys } from "@/features/recovery/place-detail/placeDetailQuery";
 import { Button } from "@/shared/components/ui/Button";
 import { Tabs } from "@/shared/components/ui/Tabs/Tabs";
 import { TabsList } from "@/shared/components/ui/Tabs/TabsList";
@@ -27,6 +29,7 @@ import {
 } from "./recommendationMapper";
 import { saveRecommendationContext } from "../place-detail/recommendationContext";
 import type { TransportType } from "./TransportSelector";
+import { compareRecommendationDistance } from "./recommendationDistance";
 
 type RecommendationSort = "recommended" | "rating" | "distance" | "reviews";
 
@@ -47,35 +50,24 @@ const sortOptions: Array<{ value: RecommendationSort; label: string }> = [
 
 const INITIAL_VISIBLE_COUNT = 3;
 
-function distanceValue(value?: string): number {
-  if (!value) return Number.POSITIVE_INFINITY;
-  const numeric = Number.parseFloat(value.replace(/,/g, ""));
-  if (!Number.isFinite(numeric)) return Number.POSITIVE_INFINITY;
-  return value.toLowerCase().includes("km") ? numeric * 1000 : numeric;
-}
-
 function SimpleRecommendationCard({
   place,
   origin,
+  destination,
+  distanceKm,
   transport,
   previousPlaceName,
   onSelect,
 }: {
   place: SimpleRecommendationViewModel;
   origin: { lat: number; lng: number };
+  destination: { lat: number; lng: number } | null;
+  distanceKm: number | null;
   transport: TransportType;
   previousPlaceName: string;
   onSelect: () => void;
 }) {
   const router = useRouter();
-  const detailQuery = usePlaceDetailQuery(place.id, place.source);
-  const destination =
-    detailQuery.data?.lat !== undefined && detailQuery.data.lng !== undefined
-      ? { lat: detailQuery.data.lat, lng: detailQuery.data.lng }
-      : null;
-  const distanceKm = destination
-    ? haversineDistanceKm(origin, destination)
-    : null;
   const travelMinutesLabel = useTravelMinutesLabel(
     origin,
     destination,
@@ -99,7 +91,7 @@ function SimpleRecommendationCard({
       reviewCount={place.reviewCount}
       travelTime={travelTime}
       travelIcon={TRAVEL_ICON_BY_MODE[transport]}
-      distance={place.distance ?? formatDistanceKm(distanceKm)}
+      distance={formatDistanceKm(distanceKm)}
       hours={place.hours ?? "제공없음"}
       parking={place.parking ?? "제공없음"}
       recommended={place.isAiRecommended}
@@ -127,18 +119,39 @@ export function RecommendationList({
   const [sortBy, setSortBy] = useState<RecommendationSort>("recommended");
   const [expanded, setExpanded] = useState(false);
   const [transport, setTransport] = useState<TransportType>(initialTransport);
+  const detailQueries = useQueries({
+    queries: places.map((place, index) => ({
+      queryKey: placeDetailKeys.detail(place.id, place.source),
+      queryFn: () => getPlaceDetail(place.id, place.source),
+      enabled:
+        expanded || sortBy === "distance" || index < INITIAL_VISIBLE_COUNT,
+      retry: 1,
+    })),
+  });
 
-  const sortedPlaces = useMemo(() => {
-    if (sortBy === "recommended") return places;
+  const placesWithDistance = places.map((place, index) => {
+    const detail = detailQueries[index]?.data;
+    const destination =
+      detail?.lat !== undefined && detail.lng !== undefined
+        ? { lat: detail.lat, lng: detail.lng }
+        : null;
 
-    return [...places].sort((a, b) => {
-      if (sortBy === "reviews")
-        return (b.reviewCount ?? 0) - (a.reviewCount ?? 0);
-      if (sortBy === "distance")
-        return distanceValue(a.distance) - distanceValue(b.distance);
-      return (b.rating ?? 0) - (a.rating ?? 0);
-    });
-  }, [places, sortBy]);
+    return {
+      place,
+      destination,
+      distanceKm: destination ? haversineDistanceKm(origin, destination) : null,
+    };
+  });
+
+  const sortedPlaces =
+    sortBy === "recommended"
+      ? placesWithDistance
+      : [...placesWithDistance].sort((a, b) => {
+          if (sortBy === "reviews")
+            return (b.place.reviewCount ?? 0) - (a.place.reviewCount ?? 0);
+          if (sortBy === "distance") return compareRecommendationDistance(a, b);
+          return (b.place.rating ?? 0) - (a.place.rating ?? 0);
+        });
 
   return (
     <div className="flex flex-col gap-4">
@@ -187,11 +200,13 @@ export function RecommendationList({
         {(expanded
           ? sortedPlaces
           : sortedPlaces.slice(0, INITIAL_VISIBLE_COUNT)
-        ).map((place) => (
+        ).map(({ place, destination, distanceKm }) => (
           <SimpleRecommendationCard
             key={place.id}
             place={place}
             origin={origin}
+            destination={destination}
+            distanceKm={distanceKm}
             transport={transport}
             previousPlaceName={previousPlaceName}
             onSelect={() => onSelect(place.id)}
