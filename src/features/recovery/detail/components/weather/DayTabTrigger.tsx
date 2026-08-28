@@ -22,8 +22,11 @@ export function DayTabTrigger({
   lng,
 }: DayTabTriggerProps) {
   return (
-    <TabsTrigger value={String(day)} className="flex-col items-start gap-0.5">
-      <span className="flex items-center gap-1">
+    <TabsTrigger
+      value={String(day)}
+      className="flex-col items-start gap-0.5 px-3 py-1.5"
+    >
+      <span className="flex items-center gap-1 text-xs">
         DAY {day}
         <DayWeatherBadge lat={lat} lng={lng} />
       </span>

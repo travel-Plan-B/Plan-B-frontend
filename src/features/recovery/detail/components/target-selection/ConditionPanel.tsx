@@ -31,6 +31,11 @@ function IconComponent({ icon: Icon }: { icon: LucideIcon }) {
 
 export type ConditionTab = "shared" | "individual";
 
+// IconBadge의 size="sm"(32px 고정)을 뷰포트 폭에 비례해 28~32px로 살짝
+// 줄인다 — 아이콘 원과 안쪽 아이콘 glyph를 각각 clamp로 덮어쓴다.
+const ACTIVITY_ICON_SIZE_CLASSNAME =
+  "size-[clamp(1.75rem,0.75rem+1.5625vw,2rem)] [&>span]:size-[clamp(0.875rem,0.375rem+0.78vw,1rem)]";
+
 /**
  * 오른쪽 영역: "2. 어떤 문제가 생겼나요?" 상황 선택 + 하위 질문 + "3. 어떤
  * 스타일로 장소를 추천받고 싶나요?" 스타일 선택. "공통 조건"/"개별 조건"
@@ -71,29 +76,44 @@ function ActivityOptionCard({
       onClick={onClick}
       aria-pressed={selected}
       className={cn(
-        "relative flex flex-1 items-center gap-2 rounded-xl border bg-white p-3 text-left transition-colors",
+        "relative flex min-w-0 flex-1 flex-col items-start gap-2 rounded-xl border bg-white p-2.5 text-left transition-colors",
         selected
-          ? "border-[1.5px] border-primary-500"
+          ? "border-2 border-primary-500"
           : "border-neutral-200 hover:border-neutral-400",
       )}
     >
-      {icon &&
-        (isImageIcon(icon) ? (
-          <IconBadge icon={icon} variant={badgeVariant} size="sm" />
-        ) : (
-          <IconBadge variant={badgeVariant} size="sm">
-            <IconComponent icon={icon} />
+      <div className="flex min-w-0 items-center gap-2">
+        {icon &&
+          (isImageIcon(icon) ? (
+            <IconBadge
+              icon={icon}
+              variant={badgeVariant}
+              size="sm"
+              className={ACTIVITY_ICON_SIZE_CLASSNAME}
+            />
+          ) : (
+            <IconBadge
+              variant={badgeVariant}
+              size="sm"
+              className={ACTIVITY_ICON_SIZE_CLASSNAME}
+            >
+              <IconComponent icon={icon} />
+            </IconBadge>
+          ))}
+        {!icon && (
+          <IconBadge
+            variant={badgeVariant}
+            size="sm"
+            className={ACTIVITY_ICON_SIZE_CLASSNAME}
+          >
+            <></>
           </IconBadge>
-        ))}
-      {!icon && (
-        <IconBadge variant={badgeVariant} size="sm">
-          <></>
-        </IconBadge>
-      )}
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium text-neutral-900">{title}</p>
-        <p className="text-xs text-neutral-600">{description}</p>
+        )}
+        <p className="text-fluid-sm min-w-0 font-medium text-neutral-900">
+          {title}
+        </p>
       </div>
+      <p className="text-fluid-xs text-neutral-600">{description}</p>
     </button>
   );
 }
@@ -112,7 +132,7 @@ export function ConditionPanel({
   const showEditor = tab === "shared" || activeItemName != null;
 
   return (
-    <div className="min-w-70 flex flex-3 flex-col gap-4 overflow-y-auto rounded-2xl border border-neutral-200 bg-white p-4 shadow-lg">
+    <div className="min-w-70 flex flex-3 flex-col gap-3 overflow-y-auto rounded-2xl border border-neutral-200 bg-white p-3 shadow-lg">
       {tab === "individual" && !activeItemName && (
         <EmptyState
           {...EMPTY_STATE_IMAGES.scheduleMascot}
@@ -125,7 +145,7 @@ export function ConditionPanel({
 
       {showEditor && (
         <>
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-3">
             <div className="flex items-center gap-2">
               <p className="text-fluid-lg font-semibold text-neutral-900">
                 2. 어떤 문제가 생겼나요?
@@ -136,7 +156,7 @@ export function ConditionPanel({
                   : "공통조건 적용중"}
               </span>
             </div>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-3 gap-3">
               {SITUATION_OPTIONS.map((option) => (
                 <RecoveryTypeOption
                   key={option.value}
@@ -145,12 +165,12 @@ export function ConditionPanel({
                       <IconBadge
                         icon={option.icon}
                         variant={situation === option.value ? "mint" : "gray"}
-                        size="lg"
+                        size="md"
                       />
                     ) : (
                       <IconBadge
                         variant={situation === option.value ? "mint" : "gray"}
-                        size="lg"
+                        size="md"
                       >
                         <IconComponent icon={option.icon} />
                       </IconBadge>
@@ -161,54 +181,56 @@ export function ConditionPanel({
                   selected={situation === option.value}
                   onClick={() => onSituationChange(option.value)}
                   size="sm"
+                  titleClassName="text-fluid-sm"
+                  descriptionClassName="text-fluid-xs"
                 />
               ))}
             </div>
 
-            <div className="flex items-center gap-3 rounded-xl bg-neutral-50 p-4">
-              <Image
-                src="/images/recovery_mascot.png"
-                alt=""
-                width={70}
-                height={87}
-                className="h-24 w-auto shrink-0"
-              />
-              <div className="flex flex-1 flex-col gap-3">
-                <div>
+            <div className="flex flex-col gap-3 rounded-xl bg-neutral-50 p-3">
+              <div className="flex items-center gap-3">
+                <Image
+                  src="/images/recovery_mascot.png"
+                  alt=""
+                  width={70}
+                  height={87}
+                  className="h-[clamp(3.5rem,2rem+4vw,6rem)] w-auto shrink-0"
+                />
+                <div className="min-w-0">
                   <p className="text-sm font-semibold text-neutral-900">
                     Q. {subQuestion.question}
                   </p>
                   <p className="text-xs text-neutral-600">{subQuestion.hint}</p>
                 </div>
-                <div className="flex gap-3">
-                  {subQuestion.options.map((option) => (
-                    <ActivityOptionCard
-                      key={option.value}
-                      icon={option.icon}
-                      badgeVariant={option.badgeVariant}
-                      title={option.title}
-                      description={option.description}
-                      selected={subAnswer === option.value}
-                      onClick={() => onSubAnswerChange(option.value)}
-                    />
-                  ))}
-                </div>
+              </div>
+              <div className="flex gap-2">
+                {subQuestion.options.map((option) => (
+                  <ActivityOptionCard
+                    key={option.value}
+                    icon={option.icon}
+                    badgeVariant={option.badgeVariant}
+                    title={option.title}
+                    description={option.description}
+                    selected={subAnswer === option.value}
+                    onClick={() => onSubAnswerChange(option.value)}
+                  />
+                ))}
               </div>
             </div>
           </div>
 
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-3">
             <p className="text-fluid-lg font-semibold text-neutral-900">
               3. 어떤 스타일로 장소를 추천받고 싶나요?
             </p>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-3 gap-3">
               {STYLE_OPTIONS.map((option) => (
                 <RecoveryTypeOption
                   key={option.value}
                   icon={
                     <IconBadge
                       variant={style === option.value ? "mint" : "gray"}
-                      size="lg"
+                      size="md"
                     >
                       <option.icon />
                     </IconBadge>
@@ -218,6 +240,8 @@ export function ConditionPanel({
                   selected={style === option.value}
                   onClick={() => onStyleChange(option.value)}
                   size="sm"
+                  titleClassName="text-fluid-sm"
+                  descriptionClassName="text-fluid-xs"
                 />
               ))}
             </div>

@@ -36,22 +36,23 @@ export function ScheduleInputPanel({
   };
 
   return (
-    <div className="flex min-h-0 flex-col gap-3 overflow-hidden rounded-2xl border border-neutral-200 bg-white p-4 shadow-lg">
-      <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <p className="text-fluid-lg font-semibold text-neutral-900">
-            여행 일정 입력
-          </p>
-          <p className="text-fluid-sm text-neutral-700">
-            {currentDay
-              ? "날씨 아이콘을 클릭하면 상세정보를 볼 수 있어요 · 드래그로 일정 순서를 바꿀 수 있어요"
-              : "여행기간을 선택하면 자동으로 추가 돼요!"}
-          </p>
-        </div>
+    <div className="flex min-h-0 flex-col gap-2 overflow-hidden rounded-2xl border border-neutral-200 bg-white p-4 shadow-lg">
+      <div className="min-w-0">
+        <p className="text-fluid-lg font-semibold text-neutral-900">
+          여행 일정 입력
+        </p>
+        <p className="text-fluid-sm text-neutral-700">
+          {currentDay
+            ? "날씨 아이콘을 클릭하면 상세정보를 볼 수 있어요 · 드래그로 일정 순서를 바꿀 수 있어요"
+            : "여행기간을 선택하면 자동으로 추가 돼요!"}
+        </p>
+      </div>
+
+      <div className="flex justify-end">
         <Button
           variant="ghost-danger"
           size="sm"
-          className="shrink-0 gap-1 text-xs"
+          className="shrink-0 gap-1 px-2 py-1 text-xs"
           disabled={!currentDay || currentDay.items.length === 0}
           onClick={() => setConfirmClearOpen(true)}
         >

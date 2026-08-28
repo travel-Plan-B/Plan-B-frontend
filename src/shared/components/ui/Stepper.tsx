@@ -30,23 +30,28 @@ function getStepStatus(stepNumber: number, currentStep: number): StepStatus {
   return "upcoming";
 }
 
+// md 텍스트는 text-fluid-sm(12~14px, globals.css)을 써서 뷰포트 폭에 따라
+// 부드럽게 늘고 준다 — 헤더(RecoveryPageLayout)가 제목과 한 줄을 나눠 쓰는
+// 1024~1280px 구간에서 특정 픽셀 기준으로 한 번에 뚝 커지지 않게 하기 위함.
+// 원, 체크 아이콘, 연결선처럼 폰트가 아닌 크기는 fluid 토큰이 없어 그대로
+// 1100px 기준 브레이크포인트로 압축한다.
 const circleSizeStyles: Record<StepperSize, string> = {
-  md: "size-8 text-sm",
+  md: "size-6 text-fluid-sm min-[1100px]:size-8",
   sm: "size-6 text-xs",
 };
 
 const checkSizeStyles: Record<StepperSize, string> = {
-  md: "size-4",
+  md: "size-3 min-[1100px]:size-4",
   sm: "size-3",
 };
 
 const connectorSizeStyles: Record<StepperSize, string> = {
-  md: "mx-2 w-8",
+  md: "mx-1.5 w-6 min-[1100px]:mx-2 min-[1100px]:w-8",
   sm: "mx-1.5 w-6",
 };
 
 const labelSizeStyles: Record<StepperSize, string> = {
-  md: "text-sm",
+  md: "text-fluid-sm",
   sm: "text-xs",
 };
 

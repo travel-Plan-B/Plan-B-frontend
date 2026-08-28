@@ -37,7 +37,10 @@ const FIELD_BUTTON_CLASSNAME =
  * 내부 인터랙티브 요소(TimePicker/이동수단/삭제)는 onPointerDown에서 stopPropagation해
  * 클릭이 드래그로 오인식되지 않게 한다.
  *
- * grid-cols는 ScheduleInputPanel 헤더 행과 같은 값으로 유지.
+ * 이름/시간/이동수단을 한 줄 grid로 두면 좁은 화면(1024~1280px)에서 고정폭
+ * 컬럼들이 공간을 다 차지해 장소 이름이 0폭으로 눌려 안 보이는 문제가 있었다
+ * — 3단계 ScheduleResultItemRow와 같은 2줄 flex 구조로 바꿔 이름 줄을
+ * 독립시켰다.
  */
 export interface ScheduleItemRowProps {
   item: ScheduleItem;
@@ -68,10 +71,10 @@ export function ScheduleItemRow({
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform) }}
       className={cn(
-        "flex touch-none flex-col gap-1 rounded-xl border bg-white px-3 py-2.5 select-none",
+        "flex touch-none flex-col gap-2 rounded-xl border bg-white px-3 py-2.5 select-none",
         "cursor-grab active:cursor-grabbing",
         isDragging
-          ? "relative z-10 border-dashed border-primary-300 bg-primary-50"
+          ? "relative z-10 border-dashed border-primary-300 bg-primary-50/40"
           : conflict
             ? "border-rose-500 bg-rose-50/40"
             : "border-neutral-200",
@@ -79,12 +82,14 @@ export function ScheduleItemRow({
       {...listeners}
       {...attributes}
     >
-      <div className="grid grid-cols-[24px_42px_minmax(0,1fr)_85px_117px_112px_32px] items-center gap-3">
-        <GripVertical className="size-4 text-neutral-400" aria-hidden="true" />
+      <div className="flex items-start gap-2">
+        <GripVertical
+          className="mt-0.5 size-4 shrink-0 text-neutral-400"
+          aria-hidden="true"
+        />
 
-        <div className="text-sm text-neutral-900">{item.time}</div>
-
-        <div className="flex min-w-0 items-center gap-1.5">
+        <div className="flex min-w-0 flex-1 items-center gap-1.5">
+          <span className="shrink-0 text-sm text-neutral-900">{item.time}</span>
           <span className="truncate text-sm font-medium text-neutral-900">
             {item.placeName}
           </span>
@@ -97,7 +102,23 @@ export function ScheduleItemRow({
           </Tag>
         </div>
 
-        <span onPointerDown={(event) => event.stopPropagation()}>
+        <button
+          type="button"
+          onClick={onRemove}
+          onPointerDown={(event) => event.stopPropagation()}
+          aria-label="일정에서 삭제"
+          className="flex size-6 shrink-0 items-center justify-center rounded-md text-neutral-400 hover:bg-rose-50 hover:text-rose-500"
+        >
+          <Trash2 className="size-4" />
+        </button>
+      </div>
+
+      <div className="flex items-end gap-2 pl-6">
+        <div
+          className="flex flex-1 flex-col gap-0.5"
+          onPointerDown={(event) => event.stopPropagation()}
+        >
+          <span className="text-xs text-neutral-600">방문 시간</span>
           <TimePicker
             title="방문 시간 선택"
             value={parseVisitTime(item.visitTime)}
@@ -111,8 +132,12 @@ export function ScheduleItemRow({
             columnLabels={{ hour: "시", minute: "분" }}
             className={FIELD_BUTTON_CLASSNAME}
           />
-        </span>
-        <span onPointerDown={(event) => event.stopPropagation()}>
+        </div>
+        <div
+          className="flex flex-1 flex-col gap-0.5"
+          onPointerDown={(event) => event.stopPropagation()}
+        >
+          <span className="text-xs text-neutral-600">체류 시간</span>
           <TimePicker
             title="체류 시간 선택"
             value={parseStayDuration(item.stayDuration)}
@@ -126,59 +151,52 @@ export function ScheduleItemRow({
             isValid={(value) => value.hour > 0 || value.minute > 0}
             className={FIELD_BUTTON_CLASSNAME}
           />
-        </span>
+        </div>
 
         <div
-          className="flex items-center justify-start gap-2"
+          className="flex shrink-0 flex-col gap-0.5"
           title={
             isLast ? "마지막 일정은 이동수단을 선택할 필요가 없어요" : undefined
           }
         >
-          {TRANSPORT_ORDER.map((mode) => {
-            const isSelected = item.transport === mode;
+          <span className="text-xs text-neutral-600">이동수단</span>
+          <div className="flex items-center gap-1">
+            {TRANSPORT_ORDER.map((mode) => {
+              const isSelected = item.transport === mode;
 
-            return (
-              <button
-                key={mode}
-                type="button"
-                disabled={isLast}
-                onClick={() => onTransportChange(mode)}
-                onPointerDown={(event) => event.stopPropagation()}
-                aria-pressed={isSelected}
-                className={cn(
-                  "flex size-8 items-center justify-center rounded-lg border transition-colors",
-                  isSelected
-                    ? "border-primary-300 bg-primary-50 text-primary-700"
-                    : "border-neutral-200 text-neutral-800 hover:border-neutral-400",
-                  "disabled:cursor-not-allowed disabled:border-none disabled:bg-neutral-900/10 disabled:text-neutral-900/40 disabled:hover:border-transparent",
-                )}
-              >
-                <span
-                  aria-hidden="true"
-                  className="mask-center mask-no-repeat mask-contain block size-3.5 bg-current"
-                  style={{
-                    maskImage: `url(${TRANSPORT_ICONS[mode].src})`,
-                    WebkitMaskImage: `url(${TRANSPORT_ICONS[mode].src})`,
-                  }}
-                />
-              </button>
-            );
-          })}
+              return (
+                <button
+                  key={mode}
+                  type="button"
+                  disabled={isLast}
+                  onClick={() => onTransportChange(mode)}
+                  onPointerDown={(event) => event.stopPropagation()}
+                  aria-pressed={isSelected}
+                  className={cn(
+                    "flex size-7 items-center justify-center rounded-lg border transition-colors",
+                    isSelected
+                      ? "border-primary-300 bg-primary-50 text-primary-700"
+                      : "border-neutral-200 text-neutral-800 hover:border-neutral-400",
+                    "disabled:cursor-not-allowed disabled:border-none disabled:bg-neutral-900/10 disabled:text-neutral-900/40 disabled:hover:border-transparent",
+                  )}
+                >
+                  <span
+                    aria-hidden="true"
+                    className="mask-center mask-no-repeat mask-contain block size-3 bg-current"
+                    style={{
+                      maskImage: `url(${TRANSPORT_ICONS[mode].src})`,
+                      WebkitMaskImage: `url(${TRANSPORT_ICONS[mode].src})`,
+                    }}
+                  />
+                </button>
+              );
+            })}
+          </div>
         </div>
-
-        <button
-          type="button"
-          onClick={onRemove}
-          onPointerDown={(event) => event.stopPropagation()}
-          aria-label="일정에서 삭제"
-          className="flex size-6 items-center justify-center justify-self-start rounded-md text-neutral-400 hover:bg-rose-50 hover:text-rose-500"
-        >
-          <Trash2 className="size-4" />
-        </button>
       </div>
 
       {conflict && (
-        <div className="flex items-center gap-1 pl-9 text-xs text-rose-600">
+        <div className="flex items-center gap-1 pl-6 text-xs text-rose-600">
           <TriangleAlert className="size-3.5 shrink-0" aria-hidden="true" />
           다음 일정과 {conflict.shortfallMinutes}분 부족해요 · 방문 시간이나
           체류 시간을 조정해주세요

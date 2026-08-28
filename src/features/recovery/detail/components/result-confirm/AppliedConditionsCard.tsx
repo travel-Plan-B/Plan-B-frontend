@@ -1,6 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import { SlidersHorizontal } from "lucide-react";
-import Image, { type StaticImageData } from "next/image";
+import type { StaticImageData } from "next/image";
 
 import { Tag } from "@/shared/components/ui/Tag";
 import type { AppliedCondition } from "../../mocks/resultConfirmMock";
@@ -38,7 +38,17 @@ export function AppliedConditionsCard({
           >
             {condition.icon &&
               (isImageIcon(condition.icon) ? (
-                <Image src={condition.icon} alt="" className="size-3.5" />
+                // 이미지 아이콘(rain.svg, walk.svg 등)은 색이 파일에 고정돼
+                // 있어서 그냥 <img>로 그리면 Tag variant 색을 못 따라간다 —
+                // mask-image로 그려서 currentColor(Tag 텍스트 색)를 입힌다.
+                <span
+                  aria-hidden="true"
+                  className="mask-center mask-no-repeat mask-contain block size-3.5 bg-current"
+                  style={{
+                    maskImage: `url(${condition.icon.src})`,
+                    WebkitMaskImage: `url(${condition.icon.src})`,
+                  }}
+                />
               ) : (
                 <condition.icon className="size-3.5" aria-hidden="true" />
               ))}

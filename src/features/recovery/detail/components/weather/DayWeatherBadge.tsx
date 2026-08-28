@@ -75,7 +75,7 @@ export function DayWeatherBadge({ lat, lng }: DayWeatherBadgeProps) {
         className="inline-flex cursor-help"
       >
         <span
-          className="block size-6 rounded-full bg-neutral-100"
+          className="block size-5 rounded-full bg-neutral-100"
           aria-hidden="true"
         />
       </span>
@@ -111,13 +111,13 @@ export function DayWeatherBadge({ lat, lng }: DayWeatherBadgeProps) {
           <img
             src={SKY_ICONS[weather.skyCondition].src}
             alt={SKY_LABELS[weather.skyCondition]}
-            className="size-6 drop-shadow-md"
+            className="size-5 drop-shadow-md"
           />
         ) : (
           // 로딩 중에는 (이전처럼) 다른 날씨 아이콘을 먼저 보여줬다가 실제 아이콘으로
           // 바뀌면 "아이콘이 갑자기 바뀐다"는 인상을 주므로, 아이콘 대신 스켈레톤을 보여준다.
           <span
-            className="block size-6 animate-pulse rounded-full bg-neutral-200"
+            className="block size-5 animate-pulse rounded-full bg-neutral-200"
             aria-hidden="true"
           />
         )}

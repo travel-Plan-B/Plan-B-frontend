@@ -59,7 +59,7 @@ export function PlaceFinderPanel() {
   const [confirmClearOpen, setConfirmClearOpen] = useState(false);
 
   return (
-    <div className="flex flex-col gap-3 overflow-hidden rounded-2xl border border-neutral-200 bg-white px-4 pt-4 pb-0 shadow-lg">
+    <div className="flex flex-col gap-3 overflow-hidden rounded-2xl border border-neutral-200 bg-white p-4 shadow-lg">
       <Tabs
         value={tab}
         onChange={(value) => setTab(value as typeof tab)}
@@ -163,8 +163,8 @@ export function PlaceFinderPanel() {
             </p>
           </div>
 
-          <div className="flex items-center justify-between">
-            <div className="flex gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-y-2">
+            <div className="flex flex-wrap gap-2">
               {categories.map((category) => (
                 <button
                   key={category}

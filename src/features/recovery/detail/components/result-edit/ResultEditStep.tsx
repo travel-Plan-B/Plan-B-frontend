@@ -371,8 +371,13 @@ export function ResultEditStep({
           />
         </div>
 
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch">
-          <div className="flex min-h-0 min-w-0 flex-2 flex-col gap-4 lg:max-h-[640px]">
+        {/*
+          이 스텝은 RecoveryFlow에서 min-[1024px]:flex로 게이팅돼 있어
+          1024px 미만에서는 애초에 렌더되지 않는다 — flex-col lg:flex-row처럼
+          브레이크포인트로 나눌 이유가 없어서, 항상 좌우 2단으로 고정한다.
+        */}
+        <div className="flex items-stretch gap-4">
+          <div className="flex min-h-0 min-w-0 flex-2 flex-col gap-4 lg:max-h-160">
             <ScheduleResultPanel
               days={days}
               activeItemId={activeId}
@@ -440,7 +445,7 @@ export function ResultEditStep({
             이전 단계
           </Button>
           <Button variant="default" onClick={onNext}>
-            최종선택
+            일정확인하기
           </Button>
         </div>
       </div>

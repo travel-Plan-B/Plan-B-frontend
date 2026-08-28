@@ -220,12 +220,12 @@ export function TravelScheduleStep({
     >
       <div className="flex flex-1 flex-col gap-6">
         <div className="flex items-center justify-between gap-6">
-          <div className="flex gap-6">
-            <label className="flex w-96 items-center gap-2">
+          <div className="flex min-w-0 flex-1 gap-6">
+            <label className="flex min-w-0 flex-1 items-center gap-2 sm:max-w-96">
               <span className="text-fluid-sm shrink-0 font-semibold text-neutral-900">
                 여행 지역
               </span>
-              <div className="relative flex-1">
+              <div className="relative min-w-0 flex-1">
                 <MapPin className="pointer-events-none absolute top-1/2 left-4 z-10 size-4 -translate-y-1/2 text-neutral-600" />
                 <Input
                   value={region}
@@ -236,7 +236,7 @@ export function TravelScheduleStep({
                 />
               </div>
             </label>
-            <label className="flex w-96 items-center gap-2">
+            <label className="flex min-w-0 flex-1 items-center gap-2 sm:max-w-96">
               <span className="text-fluid-sm shrink-0 font-semibold text-neutral-900">
                 여행 기간
               </span>
@@ -244,7 +244,7 @@ export function TravelScheduleStep({
                 value={dateRange}
                 onChange={setDateRange}
                 maxDays={5}
-                className="py-1.5 text-sm"
+                className="min-w-0 py-1.5 text-sm"
               />
             </label>
           </div>
@@ -253,6 +253,7 @@ export function TravelScheduleStep({
             value={effectiveView}
             onChange={(value) => setView(value as typeof view)}
             variant="segmented"
+            className="shrink-0"
           >
             <TabsList className="bg-white py-1 shadow-md">
               <TabsTrigger value="schedule" className="gap-1 py-1 text-xs">
