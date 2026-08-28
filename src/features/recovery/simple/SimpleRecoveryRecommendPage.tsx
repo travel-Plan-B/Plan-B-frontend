@@ -59,7 +59,7 @@ export function SimpleRecoveryRecommendPage({
         );
       } else if (noCandidatesReason === "NO_SUITABLE_PLACE") {
         toast.info(
-          "조건에 맞는 추천 장소를 찾지 못했어요. 기준 위치나 조건을 바꿔 다시 시도해 주세요.",
+          "조건에 맞는 추천 장소를 찾지 못했어요. 복구 대상 장소나 조건을 바꿔 다시 시도해 주세요.",
         );
       } else {
         toast.info("추천 결과가 없습니다. 정보를 다시 입력해 주세요.");
@@ -69,7 +69,7 @@ export function SimpleRecoveryRecommendPage({
     }
 
     if (!referenceLocation) {
-      toast.error("기준 위치 정보가 없습니다. 정보를 다시 입력해 주세요.");
+      toast.error("복구 대상 장소 정보가 없습니다. 정보를 다시 입력해 주세요.");
       router.replace(ROUTES.RECOVERY_SIMPLE_INFO);
     }
   }, [
@@ -88,13 +88,10 @@ export function SimpleRecoveryRecommendPage({
 
   if (!selectedRecommendation) return null;
 
-  const isSearchLocation = referenceLocation.source === "search";
   const sourceSchedule = {
-    label: isSearchLocation ? "기준 위치" : "현재 위치",
-    title: isSearchLocation
-      ? referenceLocation.name
-      : referenceLocation.address,
-    location: isSearchLocation ? referenceLocation.address : undefined,
+    label: "복구 대상 장소",
+    title: referenceLocation.name,
+    location: referenceLocation.address,
   };
 
   return (
@@ -112,7 +109,7 @@ export function SimpleRecoveryRecommendPage({
           추천 일정
         </h2>
         <p className="mt-1 text-sm text-neutral-700">
-          기준 위치를 바탕으로 새로운 일정을 추천했어요.
+          문제가 생긴 기존 장소를 대체할 새로운 일정을 추천했어요.
         </p>
 
         <div className="mt-6 grid grid-cols-1 items-stretch gap-4 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
@@ -140,6 +137,8 @@ export function SimpleRecoveryRecommendPage({
         recommendations={result.recommendations}
         selectedRecommendationId={selectedRecommendationId}
         previousPlaceName={sourceSchedule.title}
+        origin={{ lat: referenceLocation.lat, lng: referenceLocation.lng }}
+        initialTransport={info.transport ?? "car"}
         onSelect={setSelectedRecommendationId}
       />
     </RecoveryPageLayout>

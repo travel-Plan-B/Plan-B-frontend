@@ -11,9 +11,12 @@ interface ReferenceLocationBase {
   lng: number;
 }
 
-export type ReferenceLocation =
-  | (ReferenceLocationBase & { source: "gps" })
-  | (ReferenceLocationBase & { source: "search"; name: string });
+export type ReferenceLocation = ReferenceLocationBase & {
+  kind: "search";
+  placeId: string;
+  providerSource: string;
+  name: string;
+};
 
 export interface SimpleRecoveryInfo {
   referenceLocationInput: string;

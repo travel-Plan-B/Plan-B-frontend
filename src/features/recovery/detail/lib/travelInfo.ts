@@ -54,7 +54,7 @@ export function estimateTravelMinutes(
 export function formatDistanceKm(distanceKm: number | null): string {
   if (distanceKm == null) return "정보 없음";
   if (distanceKm < 1) return `${Math.max(1, Math.round(distanceKm * 1000))}m`;
-  return `${distanceKm}km`;
+  return `${Math.round(distanceKm * 10) / 10}km`;
 }
 
 /**

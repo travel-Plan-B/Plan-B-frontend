@@ -3,30 +3,24 @@ import test from "node:test";
 
 import {
   isFutureArrivalTime,
-  isLatestLocationSelection,
   isSimpleRecoveryInfoSubmittable,
-  toGpsReferenceLocation,
   toMinutes,
   toSearchReferenceLocation,
   toSimpleRecoveryLocationDraft,
 } from "./simpleRecoveryForm.ts";
 
 const CURRENT_TIME = new Date(2026, 0, 1, 10, 0);
-const GPS_LOCATION = {
-  source: "gps",
-  address: "인천광역시 연수구 선학로 101",
-  lat: 37.4094,
-  lng: 126.6782,
-};
 const SEARCH_LOCATION = {
-  source: "search",
+  kind: "search",
+  placeId: "8199114",
+  providerSource: "kakao",
   name: "인천차이나타운",
   address: "인천광역시 중구 차이나타운로",
   lat: 37.4756,
   lng: 126.6179,
 };
 const COMPLETE_FORM = {
-  referenceLocation: GPS_LOCATION,
+  referenceLocation: SEARCH_LOCATION,
   arrivalTime: "15:00",
   transport: "car",
   currentTime: CURRENT_TIME,
@@ -50,7 +44,7 @@ test("오늘 기준 현재 시간 이후의 도착 시간만 유효하다", () =
   );
 });
 
-test("기준 위치가 없으면 제출할 수 없다", () => {
+test("복구 대상 장소가 없으면 제출할 수 없다", () => {
   assert.equal(
     isSimpleRecoveryInfoSubmittable({
       ...COMPLETE_FORM,
@@ -60,23 +54,15 @@ test("기준 위치가 없으면 제출할 수 없다", () => {
   );
 });
 
-test("GPS 기준 위치와 필수값이 있으면 제출할 수 있다", () => {
+test("검색한 복구 대상 장소와 필수값이 있으면 제출할 수 있다", () => {
   assert.equal(isSimpleRecoveryInfoSubmittable(COMPLETE_FORM), true);
 });
 
-test("검색 기준 위치와 필수값이 있으면 제출할 수 있다", () => {
-  assert.equal(
-    isSimpleRecoveryInfoSubmittable({
-      ...COMPLETE_FORM,
-      referenceLocation: SEARCH_LOCATION,
-    }),
-    true,
-  );
-});
-
-test("GPS 위치를 검색 위치로 변경하면 검색 위치가 최종 기준 위치가 된다", () => {
+test("검색 결과 식별 정보를 복구 대상 장소에 보존한다", () => {
   const selectedPlace = {
-    id: "place-id",
+    id: `${SEARCH_LOCATION.providerSource}:${SEARCH_LOCATION.placeId}`,
+    placeId: SEARCH_LOCATION.placeId,
+    source: SEARCH_LOCATION.providerSource,
     name: SEARCH_LOCATION.name,
     address: SEARCH_LOCATION.address,
     lat: SEARCH_LOCATION.lat,
@@ -86,41 +72,11 @@ test("GPS 위치를 검색 위치로 변경하면 검색 위치가 최종 기준
   assert.deepEqual(toSearchReferenceLocation(selectedPlace), SEARCH_LOCATION);
 });
 
-test("검색 위치를 GPS 위치로 변경하면 검색 제외 이름이 남지 않는다", () => {
-  const gpsLocation = toGpsReferenceLocation(GPS_LOCATION.address, {
-    lat: GPS_LOCATION.lat,
-    lng: GPS_LOCATION.lng,
-  });
-
-  assert.deepEqual(gpsLocation, GPS_LOCATION);
-  assert.deepEqual(toSimpleRecoveryLocationDraft(gpsLocation), {
-    currentLocation: { lat: GPS_LOCATION.lat, lng: GPS_LOCATION.lng },
-  });
-});
-
-test("검색 선택 이후 도착한 이전 GPS 응답은 최신 선택으로 인정하지 않는다", () => {
-  const gpsRequestVersion = 1;
-  const searchSelectionVersion = 2;
-
-  assert.equal(
-    isLatestLocationSelection(gpsRequestVersion, searchSelectionVersion),
-    false,
-  );
-  assert.equal(
-    isLatestLocationSelection(
-      searchSelectionVersion,
-      searchSelectionVersion,
-    ),
-    true,
-  );
-});
-
-test("시간 또는 지원 이동수단이 없으면 제출할 수 없다", () => {
+test("시간 또는 이동수단이 없으면 제출할 수 없다", () => {
   for (const incomplete of [
     { arrivalTime: "" },
     { arrivalTime: "09:59" },
     { transport: null },
-    { transport: "transit" },
   ]) {
     assert.equal(
       isSimpleRecoveryInfoSubmittable({ ...COMPLETE_FORM, ...incomplete }),
@@ -129,18 +85,24 @@ test("시간 또는 지원 이동수단이 없으면 제출할 수 없다", () =
   }
 });
 
-test("GPS 위치는 currentLocation만 포함하는 API draft를 만든다", () => {
-  assert.deepEqual(toSimpleRecoveryLocationDraft(GPS_LOCATION), {
-    currentLocation: { lat: GPS_LOCATION.lat, lng: GPS_LOCATION.lng },
-  });
+test("대중교통을 선택해도 제출할 수 있다", () => {
+  assert.equal(
+    isSimpleRecoveryInfoSubmittable({
+      ...COMPLETE_FORM,
+      transport: "transit",
+    }),
+    true,
+  );
 });
 
-test("검색 위치는 currentLocation과 제외 이름을 포함하고 nextPlace는 만들지 않는다", () => {
+test("복구 대상 장소는 식별 정보와 좌표를 draft에 보존한다", () => {
   const draft = toSimpleRecoveryLocationDraft(SEARCH_LOCATION);
 
   assert.deepEqual(draft, {
     currentLocation: { lat: SEARCH_LOCATION.lat, lng: SEARCH_LOCATION.lng },
     excludePlaceName: SEARCH_LOCATION.name,
+    placeId: SEARCH_LOCATION.placeId,
+    providerSource: SEARCH_LOCATION.providerSource,
   });
   assert.equal(draft !== null && "nextPlace" in draft, false);
 });

@@ -3,7 +3,7 @@ import type { TransportType } from "../TransportSelector";
 import { fetchClient } from "@/shared/lib/api/fetchClient";
 import type { PlaceSource } from "../../place-detail/placeDetail";
 
-export type SimpleRecommendationTransport = "CAR" | "WALK";
+export type SimpleRecommendationTransport = "CAR" | "WALK" | "TRANSIT";
 export type SimpleRecommendationProblemReason =
   "WEATHER" | "PLACE_UNAVAILABLE" | "TIME_CHANGED";
 
@@ -13,6 +13,8 @@ interface LocationDto {
 }
 
 export interface SimpleRecommendationRequest {
+  place_id?: string;
+  source?: string;
   current_location: LocationDto;
   next_place?: LocationDto;
   exclude_place_name?: string;
@@ -59,16 +61,17 @@ export interface SimpleRecommendationResponse {
 export interface SimpleRecommendationDraft {
   currentLocation: LocationDto;
   excludePlaceName?: string;
+  placeId?: string;
+  providerSource?: string;
   deadlineTime: string;
   transport: TransportType;
   problemReason: RecoveryReason;
 }
 
-const TRANSPORT_MAP: Partial<
-  Record<TransportType, SimpleRecommendationTransport>
-> = {
+const TRANSPORT_MAP: Record<TransportType, SimpleRecommendationTransport> = {
   car: "CAR",
   walk: "WALK",
+  transit: "TRANSIT",
 };
 
 const PROBLEM_REASON_MAP: Record<
@@ -89,18 +92,21 @@ function formatCurrentTime(date: Date): string {
 function toApiTransport(
   transport: TransportType,
 ): SimpleRecommendationTransport {
-  const apiTransport = TRANSPORT_MAP[transport];
-  if (!apiTransport) {
-    throw new Error("대중교통 추천은 현재 API에서 지원하지 않습니다.");
-  }
-  return apiTransport;
+  return TRANSPORT_MAP[transport];
 }
 
 export function toSimpleRecommendationRequest(
   draft: SimpleRecommendationDraft,
   requestedAt = new Date(),
 ): SimpleRecommendationRequest {
+  const hasPlaceIdentity = Boolean(
+    draft.placeId?.trim() && draft.providerSource,
+  );
+
   return {
+    ...(hasPlaceIdentity
+      ? { place_id: draft.placeId, source: draft.providerSource }
+      : {}),
     current_location: draft.currentLocation,
     ...(draft.excludePlaceName
       ? { exclude_place_name: draft.excludePlaceName }

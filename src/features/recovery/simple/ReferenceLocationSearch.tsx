@@ -14,7 +14,7 @@ const SEARCH_DEBOUNCE_MS = 400;
 
 export type SelectedPlace = Pick<
   Place,
-  "id" | "name" | "address" | "lat" | "lng"
+  "id" | "placeId" | "source" | "name" | "address" | "lat" | "lng"
 >;
 
 interface ReferenceLocationSearchProps {
@@ -33,7 +33,7 @@ export function ReferenceLocationSearch({
   isValueConfirmed,
   onValueChange,
   onSelect,
-  placeholder = "장소를 검색하거나 현재 위치를 사용해주세요",
+  placeholder = "대체할 기존 일정 장소를 검색해주세요",
   inputClassName,
 }: ReferenceLocationSearchProps) {
   const debouncedQuery = useDebouncedValue(value, SEARCH_DEBOUNCE_MS);
@@ -62,6 +62,8 @@ export function ReferenceLocationSearch({
   const handleSelect = (place: Place) => {
     onSelect({
       id: place.id,
+      placeId: place.placeId,
+      source: place.source,
       name: place.name,
       address: place.address,
       lat: place.lat,

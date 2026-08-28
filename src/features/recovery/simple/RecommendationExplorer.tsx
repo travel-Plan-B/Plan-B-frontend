@@ -3,6 +3,7 @@
 import { ArrowRight, Check, Clock, Sparkles, Star } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import type { TransportType } from "./TransportSelector";
 
 import { IconBadge } from "@/shared/components/ui/IconBadge";
 import { PlaceImage } from "@/shared/components/ui/PlaceImage";
@@ -20,6 +21,8 @@ interface RecommendationExplorerProps {
   recommendations: SimpleRecommendationViewModel[];
   selectedRecommendationId: string;
   previousPlaceName: string;
+  origin: { lat: number; lng: number };
+  initialTransport: TransportType;
   onSelect: (id: string) => void;
 }
 
@@ -27,6 +30,8 @@ export function RecommendationExplorer({
   recommendations,
   selectedRecommendationId,
   previousPlaceName,
+  origin,
+  initialTransport,
   onSelect,
 }: RecommendationExplorerProps) {
   const selectedRecommendation =
@@ -179,6 +184,8 @@ export function RecommendationExplorer({
           <RecommendationList
             places={otherRecommendations}
             previousPlaceName={previousPlaceName}
+            origin={origin}
+            initialTransport={initialTransport}
             onSelect={onSelect}
           />
         </section>
