@@ -14,7 +14,7 @@ export interface HeaderProps extends HTMLAttributes<HTMLElement> {
 export function Header({ children, className, ...props }: HeaderProps) {
   return (
     <header className={cn("w-full shadow-2xs", className)} {...props}>
-      <PageContainer className="flex h-16 max-w-320 items-center justify-between px-6 sm:px-12 xl:px-16">
+      <PageContainer className="flex h-16 items-center justify-between">
         <Link
           href={ROUTES.HOME}
           className="rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
