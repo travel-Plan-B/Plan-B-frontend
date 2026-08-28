@@ -46,3 +46,6 @@ storybook-static
 # local PR agent artifacts
 /.tmp/planb-pr/
 /.tmp/planb/
+
+# 오디세이(ODsay) 일일 호출 카운터 (src/app/api/transit-time/route.ts)
+/.tmp/odsay-call-count.json
