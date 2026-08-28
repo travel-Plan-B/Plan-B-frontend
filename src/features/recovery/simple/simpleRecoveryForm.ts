@@ -10,29 +10,19 @@ export interface Coordinates {
 interface SimpleRecoveryLocationDraft {
   currentLocation: Coordinates;
   excludePlaceName?: string;
+  placeId?: string;
+  providerSource?: string;
 }
 
 const TIME_PATTERN = /^(?:[01]?\d|2[0-3]):[0-5]\d$/;
-
-export function isLatestLocationSelection(
-  requestVersion: number,
-  currentVersion: number,
-): boolean {
-  return requestVersion === currentVersion;
-}
-
-export function toGpsReferenceLocation(
-  address: string,
-  coordinates: Coordinates,
-): ReferenceLocation {
-  return { source: "gps", address, ...coordinates };
-}
 
 export function toSearchReferenceLocation(
   place: SelectedPlace,
 ): ReferenceLocation {
   return {
-    source: "search",
+    kind: "search",
+    placeId: place.placeId,
+    providerSource: place.source,
     name: place.name,
     address: place.address,
     lat: place.lat,
@@ -68,9 +58,9 @@ export function toSimpleRecoveryLocationDraft(
       lat: referenceLocation.lat,
       lng: referenceLocation.lng,
     },
-    ...(referenceLocation.source === "search"
-      ? { excludePlaceName: referenceLocation.name }
-      : {}),
+    excludePlaceName: referenceLocation.name,
+    placeId: referenceLocation.placeId,
+    providerSource: referenceLocation.providerSource,
   };
 }
 
@@ -88,7 +78,6 @@ export function isSimpleRecoveryInfoSubmittable({
   return Boolean(
     referenceLocation &&
     isFutureArrivalTime(arrivalTime, currentTime) &&
-    transport &&
-    transport !== "transit",
+    transport,
   );
 }

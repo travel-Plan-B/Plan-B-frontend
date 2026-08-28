@@ -19,7 +19,7 @@ const recoveryTypes = [
     features: [
       "단일 일정 항목을 신속하게 대체",
       "복잡한 설정 없이 최소한의 입력",
-      "현재 위치 기반 최적의 장소 추천",
+      "문제가 생긴 기존 장소의 대체 일정 추천",
     ],
     href: ROUTES.RECOVERY_SIMPLE,
     buttonText: "심플 리커버리 시작",

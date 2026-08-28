@@ -1,6 +1,5 @@
 "use client";
 
-import { LocateFixed, MapPin } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
@@ -16,12 +15,9 @@ import {
 } from "@/features/recovery/simple/ReferenceLocationSearch";
 import { TransportSelector } from "@/features/recovery/simple/TransportSelector";
 import { SIMPLE_RECOVERY_STEPS } from "@/features/recovery/simple/steps";
-import { reverseGeocodeCoordinates } from "@/features/recovery/simple/reverseGeocode";
 import {
   isFutureArrivalTime,
   isSimpleRecoveryInfoSubmittable,
-  isLatestLocationSelection,
-  toGpsReferenceLocation,
   toSearchReferenceLocation,
   toSimpleRecoveryLocationDraft,
 } from "@/features/recovery/simple/simpleRecoveryForm";
@@ -34,7 +30,6 @@ import {
 import { ROUTES } from "@/shared/config/routes";
 import { Spinner } from "@/shared/components/ui/Spinner";
 import { toast } from "@/shared/components/ui/Toast/toast";
-import { cn } from "@/shared/lib/cn";
 
 const ARRIVAL_HOUR_OPTIONS = Array.from({ length: 24 }, (_, hour) => ({
   value: hour,
@@ -64,11 +59,8 @@ export function SimpleRecoveryInfoPage() {
   const setRecommendationResponse = useSimpleRecoveryStore(
     (state) => state.setRecommendationResponse,
   );
-  const [isLocating, setIsLocating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const submissionLockRef = useRef(false);
-  const locationSelectionVersionRef = useRef(0);
-  const [locationError, setLocationError] = useState<string | null>(null);
   const [validationTime, setValidationTime] = useState<Date | null>(null);
   const canSubmit =
     validationTime !== null &&
@@ -112,93 +104,11 @@ export function SimpleRecoveryInfoPage() {
   const handleReferenceLocationInputChange = (
     referenceLocationInput: string,
   ) => {
-    locationSelectionVersionRef.current += 1;
-    setIsLocating(false);
-    setLocationError(null);
     setFormData((current) => ({
       ...current,
       referenceLocationInput,
       referenceLocation: null,
     }));
-  };
-
-  const handleUseCurrentLocation = () => {
-    if (!("geolocation" in navigator)) {
-      setLocationError("이 브라우저에서는 현재 위치를 사용할 수 없습니다.");
-      return;
-    }
-
-    const requestVersion = locationSelectionVersionRef.current + 1;
-    locationSelectionVersionRef.current = requestVersion;
-    setIsLocating(true);
-    setLocationError(null);
-
-    navigator.geolocation.getCurrentPosition(
-      async ({ coords }) => {
-        const coordinates = {
-          lat: coords.latitude,
-          lng: coords.longitude,
-        };
-
-        try {
-          const address = (
-            await reverseGeocodeCoordinates(coordinates.lat, coordinates.lng)
-          ).trim();
-          if (!address) {
-            throw new Error("현재 위치 주소가 비어 있습니다.");
-          }
-          if (
-            !isLatestLocationSelection(
-              requestVersion,
-              locationSelectionVersionRef.current,
-            )
-          ) {
-            return;
-          }
-          setFormData((current) => ({
-            ...current,
-            referenceLocationInput: address,
-            referenceLocation: toGpsReferenceLocation(address, coordinates),
-          }));
-        } catch {
-          if (
-            !isLatestLocationSelection(
-              requestVersion,
-              locationSelectionVersionRef.current,
-            )
-          ) {
-            return;
-          }
-          setLocationError("현재 위치의 주소를 확인하지 못했습니다.");
-        } finally {
-          if (
-            isLatestLocationSelection(
-              requestVersion,
-              locationSelectionVersionRef.current,
-            )
-          ) {
-            setIsLocating(false);
-          }
-        }
-      },
-      (error) => {
-        if (
-          !isLatestLocationSelection(
-            requestVersion,
-            locationSelectionVersionRef.current,
-          )
-        ) {
-          return;
-        }
-        setLocationError(
-          error.code === error.PERMISSION_DENIED
-            ? "위치 권한이 거부되었습니다. 장소를 검색해 주세요."
-            : "현재 위치를 확인하지 못했습니다. 장소를 검색해 주세요.",
-        );
-        setIsLocating(false);
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
-    );
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -224,7 +134,6 @@ export function SimpleRecoveryInfoPage() {
 
     submissionLockRef.current = true;
     setIsSubmitting(true);
-    setLocationError(null);
 
     try {
       if (!reason || !formData.transport) {
@@ -235,7 +144,7 @@ export function SimpleRecoveryInfoPage() {
         formData.referenceLocation,
       );
       if (!locationDraft) {
-        throw new Error("추천 기준 위치를 확인해 주세요.");
+        throw new Error("복구 대상 장소를 확인해 주세요.");
       }
 
       const request = toSimpleRecommendationRequest(
@@ -271,8 +180,8 @@ export function SimpleRecoveryInfoPage() {
 
   return (
     <RecoveryPageLayout
-      title="기존 정보를 입력해주세요"
-      description="최소한의 정보만으로 최적의 일정을 추천해드려요"
+      title="복구할 일정 정보를 입력해주세요"
+      description="문제가 생긴 장소와 도착 시간을 바탕으로 대체 일정을 추천해드려요"
       currentStep={2}
       steps={SIMPLE_RECOVERY_STEPS}
     >
@@ -283,54 +192,23 @@ export function SimpleRecoveryInfoPage() {
               htmlFor="reference-location"
               className="text-base font-semibold text-neutral-900"
             >
-              기준 위치
+              복구 대상 장소
             </label>
-            <div className="relative">
-              <ReferenceLocationSearch
-                id="reference-location"
-                value={formData.referenceLocationInput}
-                isValueConfirmed={formData.referenceLocation !== null}
-                placeholder="장소를 검색하거나 현재 위치를 사용해주세요"
-                inputClassName="pr-44"
-                onValueChange={handleReferenceLocationInputChange}
-                onSelect={(place: SelectedPlace) => {
-                  locationSelectionVersionRef.current += 1;
-                  setIsLocating(false);
-                  setLocationError(null);
-                  setFormData((current) => ({
-                    ...current,
-                    referenceLocationInput: place.name,
-                    referenceLocation: toSearchReferenceLocation(place),
-                  }));
-                }}
-              />
-              <Button
-                variant="ghost"
-                size="sm"
-                className={cn(
-                  "absolute top-1.5 z-20 h-8 rounded-lg border border-neutral-200 bg-white text-sm text-neutral-700 shadow-sm hover:border-neutral-400",
-                  formData.referenceLocationInput ? "right-10" : "right-2",
-                )}
-                onClick={handleUseCurrentLocation}
-                disabled={isLocating}
-              >
-                {isLocating ? (
-                  <LocateFixed
-                    aria-hidden="true"
-                    className="size-4 animate-pulse"
-                  />
-                ) : (
-                  <MapPin aria-hidden="true" className="size-4" />
-                )}
-                {isLocating ? "위치 확인 중" : "현재 위치 사용"}
-              </Button>
-            </div>
-            {locationError && (
-              <p className="text-sm text-rose-600" role="alert">
-                {locationError}
-              </p>
-            )}
-            {formData.referenceLocation?.source === "search" && (
+            <ReferenceLocationSearch
+              id="reference-location"
+              value={formData.referenceLocationInput}
+              isValueConfirmed={formData.referenceLocation !== null}
+              placeholder="대체할 기존 일정 장소를 검색해주세요"
+              onValueChange={handleReferenceLocationInputChange}
+              onSelect={(place: SelectedPlace) => {
+                setFormData((current) => ({
+                  ...current,
+                  referenceLocationInput: place.name,
+                  referenceLocation: toSearchReferenceLocation(place),
+                }));
+              }}
+            />
+            {formData.referenceLocation && (
               <p className="text-sm text-neutral-700">
                 {formData.referenceLocation.address}
               </p>
