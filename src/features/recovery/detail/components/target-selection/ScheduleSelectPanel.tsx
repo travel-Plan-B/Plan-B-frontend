@@ -72,24 +72,26 @@ export function ScheduleSelectPanel({
 
   return (
     <div className="min-w-70 flex flex-2 flex-col gap-3 rounded-2xl border border-neutral-200 bg-white p-4 shadow-lg">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-col gap-2">
         <p className="text-fluid-lg font-semibold text-neutral-900">
           1. 복구할 일정을 선택해주세요.
         </p>
-        <Tabs
-          value={tab}
-          onChange={(value) => onTabChange(value as ConditionTab)}
-          variant="segmented"
-        >
-          <TabsList className="shrink-0">
-            <TabsTrigger value="shared" className="px-2.5 py-1 text-xs">
-              공통 조건
-            </TabsTrigger>
-            <TabsTrigger value="individual" className="px-2.5 py-1 text-xs">
-              개별 조건
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <div className="flex justify-end">
+          <Tabs
+            value={tab}
+            onChange={(value) => onTabChange(value as ConditionTab)}
+            variant="segmented"
+          >
+            <TabsList className="shrink-0">
+              <TabsTrigger value="shared" className="px-2.5 py-1 text-xs">
+                공통 조건
+              </TabsTrigger>
+              <TabsTrigger value="individual" className="px-2.5 py-1 text-xs">
+                개별 조건
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
       </div>
 
       {visibleDays.length === 0 || !currentDay ? (
@@ -107,7 +109,7 @@ export function ScheduleSelectPanel({
             onChange={(value) => setActiveDay(Number(value))}
             variant="date"
           >
-            <TabsList className="overflow-x-auto">
+            <TabsList className="flex-wrap">
               {days.map((day) => {
                 // 그 DAY 날씨의 기준 좌표: 첫 일정 항목(좌표를 가진 항목) 위치.
                 // 탭 필터로 좌표 가진 항목이 빠질 수 있어 필터 전(days) 목록에서 찾는다.

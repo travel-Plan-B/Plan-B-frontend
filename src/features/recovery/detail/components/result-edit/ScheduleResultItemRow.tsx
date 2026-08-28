@@ -84,12 +84,12 @@ export function ScheduleResultItemRow({
         "cursor-grab active:cursor-grabbing",
         onSelect && "cursor-pointer",
         isDragging &&
-          "relative z-10 border-dashed border-primary-300 bg-primary-50",
+          "relative z-10 border-dashed border-primary-300 bg-primary-50/60",
         !isDragging &&
           (active
-            ? "border-2 border-primary-500 bg-primary-50"
+            ? "border-2 border-primary-500 bg-primary-50/60"
             : item.changed
-              ? "border-2 border-dashed border-primary-400 bg-primary-50/40"
+              ? "border-2 border-dashed border-primary-400 bg-primary-50/60"
               : item.isRecommendTarget
                 ? "border-dashed border-neutral-300 bg-white"
                 : "border-neutral-200 bg-white"),

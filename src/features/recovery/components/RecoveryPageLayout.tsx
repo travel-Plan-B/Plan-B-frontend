@@ -19,15 +19,13 @@ export function RecoveryPageLayout({
 }: RecoveryPageLayoutProps) {
   return (
     <section className="flex flex-1 flex-col py-8">
-      <header className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-        <div className="flex max-w-xl flex-col gap-2">
+      <header className="flex flex-wrap items-start justify-between gap-x-6 gap-y-4">
+        <div className="flex min-w-0 max-w-xl flex-1 flex-col gap-2">
           <h1 className="text-2xl font-bold text-neutral-900">{title}</h1>
           <p className="text-sm text-neutral-700">{description}</p>
         </div>
 
-        <div className="max-w-full overflow-x-auto pb-1">
-          <Stepper steps={steps} currentStep={currentStep} />
-        </div>
+        <Stepper steps={steps} currentStep={currentStep} />
       </header>
 
       <div className="mt-8 flex flex-1 flex-col">{children}</div>

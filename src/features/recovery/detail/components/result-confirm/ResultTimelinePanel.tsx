@@ -26,7 +26,7 @@ export function ResultTimelinePanel({ days }: ResultTimelinePanelProps) {
         onChange={(value) => setActiveDay(Number(value))}
         variant="date"
       >
-        <TabsList className="overflow-x-auto">
+        <TabsList className="flex-wrap">
           {days.map((day) => (
             <DayTabTrigger
               key={day.day}

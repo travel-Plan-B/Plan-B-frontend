@@ -25,7 +25,7 @@ export function ScheduleDayTabs({
       onChange={(value) => onActiveDayChange(Number(value))}
       variant="date"
     >
-      <TabsList className="overflow-x-auto">
+      <TabsList className="flex-wrap">
         {days.map((day) => {
           // 그 DAY 날씨의 기준 좌표: 첫 일정 항목(보관함에서 실제로 담은 장소) 위치.
           const weatherPoint = day.items.find(

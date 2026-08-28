@@ -93,7 +93,10 @@ function OtherRecommendationCard({
       parking={place.parkingLabel ?? "제공없음"}
       onDetail={onDetail}
       onSelect={onSelect}
-      className="h-full"
+      // PlaceCard(compact) 기본 min/max-width(320~360px)를 없애서, 카드가
+      // 아래 grid 트랙 폭에 맞춰 꽉 차게(justify-items-stretch) 늘어나거나
+      // 줄어들 수 있게 한다.
+      className="h-full min-w-0 max-w-none sm:min-w-0 sm:max-w-none"
     />
   );
 }
@@ -177,7 +180,14 @@ export function OtherRecommendationsPanel({
         })}
       </div>
 
-      <div className="grid grid-cols-1 justify-items-center gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {/* sm/lg 뷰포트 브레이크포인트 대신 컨테이너 실제 폭으로 열 개수를
+          정한다 — 카드 하나가 240px보다 좁아지면 자동으로 다음 줄로
+          내려가고, 넓으면(justify-items-stretch) 화면 폭에 꽉 차게 늘어난다.
+          auto-fill이 아니라 auto-fit을 쓴다 — 처음엔 카드가 3개뿐이라
+          (INITIAL_VISIBLE_COUNT), 폭이 4열 들어갈 만큼 넓으면 auto-fill은
+          안 채워진 4번째 트랙을 빈 채로 남겨 오른쪽이 비어 보인다. auto-fit은
+          빈 트랙을 접어서 있는 카드들이 그 자리까지 나눠 채운다. */}
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] justify-items-stretch gap-4">
         {visiblePlaces.map((place) => (
           <OtherRecommendationCard
             key={place.id}

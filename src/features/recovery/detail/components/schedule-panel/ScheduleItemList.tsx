@@ -167,15 +167,6 @@ export function ScheduleItemList({
         />
       ) : (
         <div className="flex-1 overflow-y-auto pr-1 [scrollbar-gutter:stable]">
-          <div className="grid grid-cols-[24px_42px_minmax(0,1fr)_85px_117px_112px_32px] items-center gap-3 border-b border-neutral-100 px-3 pb-1.5 text-xs font-medium text-neutral-700">
-            <span />
-            <span className="col-span-2 whitespace-nowrap">시간 / 장소</span>
-            <span>방문 시간</span>
-            <span>체류 시간</span>
-            <span>이동수단</span>
-            <span>관리</span>
-          </div>
-
           <DndContext
             sensors={reorderSensors}
             modifiers={[restrictToVerticalAxis]}

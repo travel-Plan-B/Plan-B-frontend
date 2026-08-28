@@ -112,7 +112,7 @@ export function ResultConfirmStep({
       <Stepper
         steps={DETAIL_RECOVERY_STEPS}
         currentStep={4}
-        className="mx-auto"
+        className="mx-auto max-w-full flex-wrap justify-center"
       />
 
       <div className="flex flex-col items-center gap-2 text-center">
@@ -129,12 +129,17 @@ export function ResultConfirmStep({
 
       <TripSummaryPill tripSummary={tripSummary} />
 
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+      {/*
+        이 스텝은 RecoveryFlow에서 min-[1024px]:flex로 게이팅돼 있어
+        1024px 미만에서는 애초에 렌더되지 않는다 — flex-col lg:flex-row처럼
+        브레이크포인트로 나눌 이유가 없어서, 항상 좌우 2단으로 고정한다.
+      */}
+      <div className="flex items-start gap-4">
         <div ref={timelineRef} className="flex flex-1">
           <ResultTimelinePanel days={days} />
         </div>
 
-        <div className="flex flex-col gap-4 lg:w-80 lg:shrink-0">
+        <div className="flex w-80 shrink-0 flex-col gap-4">
           <RecoverySummaryCard counts={summary} />
           <ShareSaveCard shareUrl={shareUrl} onSaveImage={handleSaveImage} />
           <AppliedConditionsCard conditions={appliedConditions} />

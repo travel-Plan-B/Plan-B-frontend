@@ -200,17 +200,17 @@ export function TargetSelectionStep({
       steps={DETAIL_RECOVERY_STEPS}
     >
       <div className="flex flex-1 flex-col gap-6">
-        <div className="flex gap-6">
-          <label className="flex w-96 items-center gap-2">
+        <div className="flex min-w-0 gap-6">
+          <label className="flex min-w-0 flex-1 items-center gap-2 sm:max-w-96">
             <span className="text-fluid-sm shrink-0 font-semibold text-neutral-900">
               여행 지역
             </span>
-            <div className="relative flex-1">
+            <div className="relative min-w-0 flex-1">
               <MapPin className="pointer-events-none absolute top-1/2 left-4 z-10 size-4 -translate-y-1/2 text-neutral-600" />
               <Input value={region} readOnly className="pl-10 py-1.5 text-sm" />
             </div>
           </label>
-          <label className="flex w-96 items-center gap-2">
+          <label className="flex min-w-0 flex-1 items-center gap-2 sm:max-w-96">
             <span className="text-fluid-sm shrink-0 font-semibold text-neutral-900">
               여행 기간
             </span>
@@ -221,7 +221,7 @@ export function TargetSelectionStep({
                   : ""
               }
               readOnly
-              className="py-1.5 text-sm"
+              className="min-w-0 py-1.5 text-sm"
             />
           </label>
         </div>

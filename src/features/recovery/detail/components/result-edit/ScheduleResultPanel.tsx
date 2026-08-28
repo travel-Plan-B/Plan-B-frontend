@@ -107,7 +107,7 @@ export function ScheduleResultPanel({
   };
 
   return (
-    <div className="flex min-h-[420px] flex-1 flex-col gap-3 rounded-2xl border border-neutral-200 bg-white p-4 shadow-lg">
+    <div className="flex min-h-105 flex-1 flex-col gap-3 rounded-2xl border border-neutral-200 bg-white p-4 shadow-lg">
       {days.length === 0 || !currentDay ? (
         <EmptyState
           {...EMPTY_STATE_IMAGES.scheduleMascot}
@@ -123,7 +123,7 @@ export function ScheduleResultPanel({
             onChange={(value) => setActiveDay(Number(value))}
             variant="date"
           >
-            <TabsList className="overflow-x-auto">
+            <TabsList className="flex-wrap">
               {days.map((day) => {
                 // 그 DAY 날씨의 기준 좌표: 첫 일정 항목(좌표를 가진 항목) 위치.
                 const weatherPoint = day.items.find(
