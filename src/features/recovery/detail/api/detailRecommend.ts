@@ -106,7 +106,7 @@ function toResultRecommendation(
     imageAlt: dto.name,
     title: dto.name,
     category: dto.category_tag,
-    rating: dto.rating ?? 0,
+    rating: dto.rating ?? undefined,
     reviewCount: dto.user_rating_count ?? undefined,
     travelMinutesLabel: resolveTravelMinutesLabel(
       distanceKm,

@@ -168,8 +168,12 @@ export function PlaceCard({
             >
               {title}
             </h3>
-            {rating !== undefined && (
+            {rating !== undefined ? (
               <PlaceRating value={rating} reviewCount={reviewCount} />
+            ) : (
+              <span className="shrink-0 text-sm text-neutral-500">
+                리뷰없음
+              </span>
             )}
           </div>
           {subtitle && (
