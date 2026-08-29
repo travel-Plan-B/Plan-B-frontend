@@ -41,7 +41,8 @@ export interface ResultRecommendation {
   imageAlt: string;
   title: string;
   category: string;
-  rating: number;
+  /** 평점 데이터가 없는 장소도 있어서 optional — 0으로 채우면 "★0.0"처럼 실제 평점인 것마냥 보인다. */
+  rating?: number;
   reviewCount?: number;
   travelMinutesLabel: string;
   travelTimeFromPrevMinutes?: number;

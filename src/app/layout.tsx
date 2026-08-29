@@ -5,6 +5,7 @@ import "./globals.css";
 import { Footer } from "@/shared/components/layout/Footer";
 import { Header } from "@/shared/components/layout/Header";
 import { PageContainer } from "@/shared/components/layout/PageContainer";
+import { NetworkStatusToast } from "@/shared/components/ui/Toast/NetworkStatusToast";
 import { ToastProvider } from "@/shared/components/ui/Toast/ToastProvider";
 import { Providers } from "./providers";
 
@@ -30,6 +31,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         </PageContainer>
         <Footer />
         <ToastProvider />
+        <NetworkStatusToast />
       </body>
     </html>
   );

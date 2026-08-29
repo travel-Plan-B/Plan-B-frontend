@@ -106,7 +106,13 @@ export function RecommendationDetailPanel({
               {recommendation.title}
             </h3>
             <div className="flex shrink-0 items-center gap-1">
-              <PlaceRating value={recommendation.rating} />
+              {recommendation.rating !== undefined ? (
+                <PlaceRating value={recommendation.rating} />
+              ) : (
+                <span className="shrink-0 text-sm text-neutral-500">
+                  리뷰없음
+                </span>
+              )}
               {recommendation.reviewCount !== undefined && (
                 <span className="text-xs text-neutral-600">
                   ({recommendation.reviewCount.toLocaleString()})

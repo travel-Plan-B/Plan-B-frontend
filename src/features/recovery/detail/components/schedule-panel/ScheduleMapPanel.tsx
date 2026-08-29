@@ -3,6 +3,7 @@
 import { ChevronDown } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { fetchTravelTime } from "@/features/recovery/api/travelTime";
 import {
   Map,
   type MapMarkerData,
@@ -18,6 +19,13 @@ import type {
 } from "../../mocks/scheduleMock";
 
 type ScheduleItemWithCoords = ScheduleItem & { lat: number; lng: number };
+
+interface MapSegmentSpec {
+  id: string;
+  from: ScheduleItemWithCoords;
+  to: ScheduleItemWithCoords;
+  mode: TransportMode;
+}
 
 /** design-system.md Tag 색상 팔레트와 맞춘 카테고리별 마커 색상. */
 const CATEGORY_PIN_COLOR: Record<
@@ -100,14 +108,14 @@ export function ScheduleMapPanel({ days }: ScheduleMapPanelProps) {
     [itemsWithCoords],
   );
 
-  // 경로는 itemsWithCoords(좌표 있는 것만 압축한 목록)가 아니라 원래 방문
+  // 구간은 itemsWithCoords(좌표 있는 것만 압축한 목록)가 아니라 원래 방문
   // 순서(currentDay.items)를 그대로 훑는다 — 압축된 목록을 쓰면 좌표 없는
   // 항목을 건너뛰고 그 앞뒤를 직접 연결하게 되어, 실제로는 없는 구간을
   // 그 사이 항목의 이동수단/예상시간으로 잘못 그리게 된다. 인접한 두 항목이
   // "둘 다" 좌표를 가질 때만 그 구간을 그린다.
-  const routes = useMemo<MapRouteData[]>(() => {
+  const segmentSpecs = useMemo<MapSegmentSpec[]>(() => {
     if (!currentDay) return [];
-    const segments: MapRouteData[] = [];
+    const specs: MapSegmentSpec[] = [];
     const { items } = currentDay;
     for (let i = 0; i < items.length - 1; i += 1) {
       const from = items[i];
@@ -115,21 +123,67 @@ export function ScheduleMapPanel({ days }: ScheduleMapPanelProps) {
       if (!from || !to) continue;
       if (from.lat == null || from.lng == null) continue;
       if (to.lat == null || to.lng == null) continue;
-
-      const travelInfo = computeTravelInfo(from, to, from.transport);
-      segments.push({
+      specs.push({
         id: `${from.id}-${to.id}`,
-        path: [
-          { lat: from.lat, lng: from.lng },
-          { lat: to.lat, lng: to.lng },
-        ],
-        color: TRANSPORT_ROUTE_COLOR[from.transport],
-        dashed: from.transport !== "car",
-        label: `${travelInfo.estimatedMinutes}분`,
+        from: from as ScheduleItemWithCoords,
+        to: to as ScheduleItemWithCoords,
+        mode: from.transport,
       });
     }
-    return segments;
+    return specs;
   }, [currentDay]);
+
+  // 리스트 패널(useTravelInfo)과 같은 원리로 실제 이동시간을 보여준다. 근데
+  // 여기는 구간이 배열이라 컴포넌트당 하나씩만 호출 가능한 훅(useTravelInfo)을
+  // 반복 호출할 수 없어서(hooks 규칙 위반), fetchTravelTime을 직접 호출해서
+  // 구간 id별로 결과를 저장하는 방식으로 같은 효과를 낸다. 응답 오기 전/
+  // 실패 시엔 기존처럼 추정치(computeTravelInfo)로 폴백해서, 값이 갑자기
+  // 사라지는 인상을 주지 않는다.
+  const [realMinutesBySegment, setRealMinutesBySegment] = useState<
+    Record<string, number>
+  >({});
+
+  useEffect(() => {
+    let active = true;
+    segmentSpecs.forEach(({ id, from, to, mode }) => {
+      fetchTravelTime(
+        { lat: from.lat, lng: from.lng },
+        { lat: to.lat, lng: to.lng },
+        mode,
+      )
+        .then((result) => {
+          if (!active || !result) return;
+          setRealMinutesBySegment((prev) => ({
+            ...prev,
+            [id]: result.minutes,
+          }));
+        })
+        .catch(() => {});
+    });
+    return () => {
+      active = false;
+    };
+  }, [segmentSpecs]);
+
+  const routes = useMemo<MapRouteData[]>(
+    () =>
+      segmentSpecs.map(({ id, from, to, mode }) => {
+        const minutes =
+          realMinutesBySegment[id] ??
+          computeTravelInfo(from, to, mode).estimatedMinutes;
+        return {
+          id,
+          path: [
+            { lat: from.lat, lng: from.lng },
+            { lat: to.lat, lng: to.lng },
+          ],
+          color: TRANSPORT_ROUTE_COLOR[mode],
+          dashed: mode !== "car",
+          label: `${minutes}분`,
+        };
+      }),
+    [segmentSpecs, realMinutesBySegment],
+  );
 
   if (days.length === 0) {
     return (

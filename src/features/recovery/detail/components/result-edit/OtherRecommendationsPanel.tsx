@@ -27,8 +27,8 @@ const SORT_OPTIONS: Array<{ value: SortOption; label: string }> = [
   { value: "reviews", label: "리뷰순" },
 ];
 
-/** 한 줄(3열)만큼만 먼저 보여주고, "추천 더보기"를 누르면 나머지를 한 번에 펼친다. */
-const INITIAL_VISIBLE_COUNT = 3;
+/** 한 줄(3열)만큼만 먼저 보여주고, "추천 더보기"를 누를 때마다 이만큼씩 더 펼친다. */
+const PAGE_SIZE = 3;
 
 export interface OtherRecommendationsPanelProps {
   places: ResultRecommendation[];
@@ -110,13 +110,18 @@ export function OtherRecommendationsPanel({
   onDetail,
 }: OtherRecommendationsPanelProps) {
   const [sortBy, setSortBy] = useState<SortOption>("recommended");
-  const [expanded, setExpanded] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [gridTransport, setGridTransport] = useState<TransportMode>(transport);
 
   const sortedPlaces = useMemo(() => {
     if (sortBy === "recommended") return places;
     if (sortBy === "rating") {
-      return [...places].sort((a, b) => b.rating - a.rating);
+      // 평점 없는(undefined) 카드는 정렬 기준이 없으니 맨 뒤로 보낸다(distanceKm과 동일한 방식).
+      return [...places].sort((a, b) => {
+        if (a.rating == null) return b.rating == null ? 0 : 1;
+        if (b.rating == null) return -1;
+        return b.rating - a.rating;
+      });
     }
     if (sortBy === "reviews") {
       return [...places].sort(
@@ -131,10 +136,8 @@ export function OtherRecommendationsPanel({
     });
   }, [places, sortBy]);
 
-  const visiblePlaces = expanded
-    ? sortedPlaces
-    : sortedPlaces.slice(0, INITIAL_VISIBLE_COUNT);
-  const hasMore = sortedPlaces.length > INITIAL_VISIBLE_COUNT && !expanded;
+  const visiblePlaces = sortedPlaces.slice(0, visibleCount);
+  const hasMore = sortedPlaces.length > visibleCount;
 
   return (
     <div className="flex flex-col gap-4">
@@ -180,14 +183,12 @@ export function OtherRecommendationsPanel({
         })}
       </div>
 
-      {/* sm/lg 뷰포트 브레이크포인트 대신 컨테이너 실제 폭으로 열 개수를
-          정한다 — 카드 하나가 240px보다 좁아지면 자동으로 다음 줄로
-          내려가고, 넓으면(justify-items-stretch) 화면 폭에 꽉 차게 늘어난다.
-          auto-fill이 아니라 auto-fit을 쓴다 — 처음엔 카드가 3개뿐이라
-          (INITIAL_VISIBLE_COUNT), 폭이 4열 들어갈 만큼 넓으면 auto-fill은
-          안 채워진 4번째 트랙을 빈 채로 남겨 오른쪽이 비어 보인다. auto-fit은
-          빈 트랙을 접어서 있는 카드들이 그 자리까지 나눠 채운다. */}
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] justify-items-stretch gap-4">
+      {/* auto-fit(반응형 열 개수)은 카드가 늘어나면(더보기로 6개, 9개...)
+          화면이 넓을 때 한 줄에 4개 이상도 들어가버려서 "한 줄 3열" 설계가
+          깨졌다 — 항상 최대 3열로 고정한다. 카드가 3개 미만일 때는 마지막
+          줄 오른쪽이 비어 보일 수 있지만, 한 줄에 카드가 너무 많아지는 것보다
+          이쪽이 낫다고 판단했다. */}
+      <div className="grid grid-cols-1 justify-items-stretch gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {visiblePlaces.map((place) => (
           <OtherRecommendationCard
             key={place.id}
@@ -205,7 +206,7 @@ export function OtherRecommendationsPanel({
         <Button
           variant="default"
           className="gap-2 self-center rounded-full"
-          onClick={() => setExpanded(true)}
+          onClick={() => setVisibleCount((prev) => prev + PAGE_SIZE)}
         >
           <RotateCw className="size-4" aria-hidden="true" />
           추천 더보기
