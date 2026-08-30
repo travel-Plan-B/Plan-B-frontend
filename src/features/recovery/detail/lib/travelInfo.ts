@@ -74,11 +74,9 @@ export function travelMinutesLabelFor(
 export type TravelInfo = NonNullable<ScheduleItem["travelInfo"]>;
 
 /**
- * 인접한 두 일정 항목 사이의 이동 정보를 계산한다(#95).
- * 임의의 두 좌표 사이 이동시간만 조회하는 API가 백엔드에 아직 없어서(TODO #107,
- * 요청해둔 상태) 실제 도로 경로가 아니라 두 항목의 직선거리(하버사인)와
- * 이동수단별 평균 속도로 추정한다. 해당 API가 생기면 이 함수를 실제 호출로
- * 교체해야 한다.
+ * 인접한 두 일정 항목 사이의 fallback 이동 정보를 계산한다.
+ * 실제 이동시간 조회 전에도 값을 바로 보여주고, 외부 API 호출이 실패해도
+ * 복구 흐름이 막히지 않도록 직선거리와 이동수단별 평균 속도로 추정한다.
  * 좌표가 없는 항목(목데이터 등)은 거리 계산이 불가능하니 목데이터로 대체한다.
  */
 export function computeTravelInfo(

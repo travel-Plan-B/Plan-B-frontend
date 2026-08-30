@@ -3,6 +3,7 @@
 import { Check, SlidersHorizontal, Zap } from "lucide-react";
 import Link from "next/link";
 
+import { SimpleRecoveryStartLink } from "@/features/recovery/simple/SimpleRecoveryStartLink";
 import { Modal } from "@/shared/components/ui/Modal/Modal";
 import { ROUTES } from "@/shared/config/routes";
 
@@ -126,18 +127,28 @@ export function RecoveryTypeModal({ open, onClose }: RecoveryTypeModalProps) {
               </div>
 
               {/* 액션 CTA 버튼: 둘 다 색상 채워진 Solid 버튼 */}
-              <Link
-                href={type.href}
-                onClick={onClose}
-                className={[
-                  "mt-8 flex h-11 w-full items-center justify-center rounded-xl text-sm font-semibold text-white shadow-xs transition-all duration-200 hover:shadow-md active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
-                  isSimple
-                    ? "bg-primary-500 hover:bg-primary-600 active:bg-primary-700 focus-visible:ring-primary-500"
-                    : "bg-purple-600 hover:bg-purple-700 active:bg-purple-800 focus-visible:ring-purple-600",
-                ].join(" ")}
-              >
-                {type.buttonText}
-              </Link>
+              {isSimple ? (
+                <SimpleRecoveryStartLink
+                  onClick={onClose}
+                  className={[
+                    "mt-8 flex h-11 w-full items-center justify-center rounded-xl text-sm font-semibold text-white shadow-xs transition-all duration-200 hover:shadow-md active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
+                    "bg-primary-500 hover:bg-primary-600 active:bg-primary-700 focus-visible:ring-primary-500",
+                  ].join(" ")}
+                >
+                  {type.buttonText}
+                </SimpleRecoveryStartLink>
+              ) : (
+                <Link
+                  href={type.href}
+                  onClick={onClose}
+                  className={[
+                    "mt-8 flex h-11 w-full items-center justify-center rounded-xl text-sm font-semibold text-white shadow-xs transition-all duration-200 hover:shadow-md active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
+                    "bg-purple-600 hover:bg-purple-700 active:bg-purple-800 focus-visible:ring-purple-600",
+                  ].join(" ")}
+                >
+                  {type.buttonText}
+                </Link>
+              )}
             </article>
           );
         })}
