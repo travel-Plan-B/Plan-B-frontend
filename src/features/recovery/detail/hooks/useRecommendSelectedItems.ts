@@ -169,9 +169,7 @@ export function useRecommendSelectedItems() {
     });
 
     if (Object.keys(recommendationsByItemId).length === 0) {
-      toast.error(
-        "추천 결과를 가져오지 못했어요. 콘솔(F12)에서 자세한 오류를 확인해주세요.",
-      );
+      toast.error("추천 정보를 불러오지 못했어요. 잠시 후 다시 시도해주세요.");
       return null;
     }
 

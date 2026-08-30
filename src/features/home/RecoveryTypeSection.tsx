@@ -2,6 +2,7 @@ import { ArrowRight } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
+import { SimpleRecoveryStartLink } from "@/features/recovery/simple/SimpleRecoveryStartLink";
 import { ROUTES } from "@/shared/config/routes";
 
 import { SectionHeading } from "./SectionHeading";
@@ -71,13 +72,22 @@ export function RecoveryTypeSection() {
               >
                 {type.feature}
               </span>
-              <Link
-                href={type.href}
-                className={`mt-auto inline-flex min-h-16 items-center justify-center gap-2 rounded-xl px-7 text-base font-semibold text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${type.button}`}
-              >
-                {type.cta}
-                <ArrowRight className="size-4" />
-              </Link>
+              {type.href === ROUTES.RECOVERY_SIMPLE ? (
+                <SimpleRecoveryStartLink
+                  className={`mt-auto inline-flex min-h-16 items-center justify-center gap-2 rounded-xl px-7 text-base font-semibold text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${type.button}`}
+                >
+                  {type.cta}
+                  <ArrowRight className="size-4" />
+                </SimpleRecoveryStartLink>
+              ) : (
+                <Link
+                  href={type.href}
+                  className={`mt-auto inline-flex min-h-16 items-center justify-center gap-2 rounded-xl px-7 text-base font-semibold text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${type.button}`}
+                >
+                  {type.cta}
+                  <ArrowRight className="size-4" />
+                </Link>
+              )}
             </div>
           </article>
         ))}

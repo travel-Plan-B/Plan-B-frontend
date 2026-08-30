@@ -56,8 +56,8 @@ export function SimpleRecoveryInfoPage() {
   const reason = useSimpleRecoveryStore((state) => state.reason);
   const formData = useSimpleRecoveryStore((state) => state.info);
   const setFormData = useSimpleRecoveryStore((state) => state.setInfo);
-  const setRecommendationResponse = useSimpleRecoveryStore(
-    (state) => state.setRecommendationResponse,
+  const resetRecommendation = useSimpleRecoveryStore(
+    (state) => state.resetRecommendation,
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const submissionLockRef = useRef(false);
@@ -157,14 +157,19 @@ export function SimpleRecoveryInfoPage() {
         submittedAt,
       );
 
-      setRecommendationResponse(null);
+      resetRecommendation();
       const response = await requestSimpleRecommendations(request);
       if (!response.success) {
         throw new Error(
           "추천 요청에 실패했습니다. 잠시 후 다시 시도해 주세요.",
         );
       }
-      setRecommendationResponse(response);
+      const current = useSimpleRecoveryStore.getState();
+      if (current.reason !== reason || current.info !== formData) {
+        toast.info("입력 정보가 변경됐어요. 현재 정보로 다시 요청해 주세요.");
+        return;
+      }
+      current.setRecommendationResponse(response);
       router.push(ROUTES.RECOVERY_SIMPLE_RECOMMEND);
     } catch (error) {
       const message =
