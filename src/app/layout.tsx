@@ -17,8 +17,21 @@ const pretendard = localFont({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://planb-recovery.vercel.app"),
   title: "Plan B | AI 여행 일정 복구",
   description: "틀어진 여행 일정에서 필요한 부분만 AI로 빠르게 복구하세요.",
+  openGraph: {
+    title: "Plan B | AI 여행 일정 복구",
+    description: "틀어진 여행 일정에서 필요한 부분만 AI로 빠르게 복구하세요.",
+    siteName: "Plan B",
+    type: "website",
+    locale: "ko_KR",
+  },
+  twitter: {
+    card: "summary",
+    title: "Plan B | AI 여행 일정 복구",
+    description: "틀어진 여행 일정에서 필요한 부분만 AI로 빠르게 복구하세요.",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
