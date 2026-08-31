@@ -8,7 +8,13 @@
  * 그래서 대중교통만 오디세이(ODsay)를 별도로 호출해서 실제 이동시간을
  * 받는다. 오디세이는 거리를 안 줘서, 대중교통일 때 distanceKm은 null을
  * 돌려주고 호출부가 자체 어림 거리를 쓰게 한다.
+ *
+ * 캐싱/중복호출 방지는 여기서 직접 만들지 않고 TanStack Query(useTravelTimeQuery)에
+ * 맡긴다(#135) — 팀 컨벤션(서버 데이터는 TanStack Query로 관리)에 맞추기 위해,
+ * 예전에 여기 있던 자체 localStorage 캐시 + inFlight Map을 걷어냈다.
  */
+import { useQuery } from "@tanstack/react-query";
+
 import { fetchClient } from "@/shared/lib/api/fetchClient";
 
 export type TravelTransportMode = "car" | "walk" | "transit";
@@ -35,6 +41,8 @@ export interface FetchedTravelTime {
   distanceKm: number | null;
 }
 
+type Coordinate = { lat: number; lng: number };
+
 /*
  * 오디세이(ODsay) 대중교통 길찾기 — 브라우저에서 직접 호출한다.
  *
@@ -54,132 +62,47 @@ export interface FetchedTravelTime {
 const ODSAY_API_KEY = process.env.NEXT_PUBLIC_ODSAY_API_KEY;
 const ODSAY_ENDPOINT = "https://api.odsay.com/v1/api/searchPubTransPathT";
 
-// 대중교통 배차/경로는 하루 안에 잘 안 바뀌어서 24시간 캐시한다 — 짧게
-// 잡을수록 같은 좌표를 다시 조회할 때 무료 티어(하루 30회 제한)를 더 빨리
-// 소진한다.
-const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
-// 오디세이 호출 자체가 실패하면(네트워크 오류, 일시적 서버 오류 등) 실패도
-// 짧게만 캐시한다 — 안 그러면 같은 좌표가 리렌더마다 다시 실패 호출을
-// 시도해서, 오디세이가 잠깐 불안정할 때 하루 한도가 금방 소진될 수 있다.
-const ERROR_CACHE_TTL_MS = 5 * 60 * 1000;
-
-// 예전 서버 프록시는 인메모리 캐시 + 파일 기반 하루 호출 카운터로 관리했다.
-// 지금은 브라우저(사용자별 탭)에서 직접 호출하는 구조라 "전체 사용자 공통
-// 하루 30회"를 정확히 셀 방법이 없다(공유 저장소 없이는 카운터를 못 모음).
-// 대신 localStorage 캐시로 같은 사용자가 같은 좌표를 반복 조회하는 낭비를
-// 막고, 실제 한도 초과는 오디세이가 돌려주는 에러 코드를 그대로 처리해서
-// (아래 NO_ROUTE_ERROR_CODES에 없는 코드 → null 처리) 대응한다.
-const CACHE_STORAGE_KEY = "odsay-transit-cache";
-
-interface CacheEntry {
-  minutes: number | null;
-  expiresAt: number;
-}
-
-type TransitCache = Record<string, CacheEntry>;
-
-function readTransitCache(): TransitCache {
-  try {
-    const raw = localStorage.getItem(CACHE_STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as TransitCache) : {};
-  } catch {
-    // localStorage 접근 불가(프라이빗 모드 등) 또는 파싱 실패 — 캐시 없이 진행.
-    return {};
-  }
-}
-
-function writeTransitCacheEntry(cacheKey: string, entry: CacheEntry) {
-  try {
-    const cache = readTransitCache();
-    cache[cacheKey] = entry;
-    localStorage.setItem(CACHE_STORAGE_KEY, JSON.stringify(cache));
-  } catch {
-    // 저장 실패해도(용량 초과, 프라이빗 모드 등) 조회 결과 자체는 이미 반환됨.
-  }
-}
-
 // 오디세이 API 가이드(lab.odsay.com/guide/guide) 기준 "경로가 진짜 없다"는
-// 에러 코드 — 좌표 조합이 바뀌지 않는 한 다시 불러도 똑같은 결과라
-// CACHE_TTL_MS(24시간)로 오래 캐시해도 안전하다. 그 외 코드(인증 실패, 서버
-// 오류 등)는 일시적일 수 있어 ERROR_CACHE_TTL_MS(5분)로 짧게만 캐시한다.
+// 에러 코드 — 이건 실패가 아니라 정상적인 조회 결과(경로 없음)라 throw하지
+// 않는다. 그 외 코드(인증 실패, 서버 오류 등)는 진짜 에러라 throw해서
+// TanStack Query가 isError로 잡게 한다.
 const NO_ROUTE_ERROR_CODES = new Set(["3", "4", "5", "6", "-98", "-99"]);
 
-// cacheKey별로 지금 진행 중인 오디세이 호출. 같은 좌표로 여러 컴포넌트가
-// 동시에 조회하면(예: 같은 DAY의 여러 카드가 한 번에 렌더) 새로 호출하지
-// 않고 먼저 시작된 호출의 결과를 같이 기다린다.
-const inFlight = new Map<string, Promise<number | null>>();
-
 async function fetchTransitMinutes(
-  origin: { lat: number; lng: number },
-  destination: { lat: number; lng: number },
+  origin: Coordinate,
+  destination: Coordinate,
 ): Promise<number | null> {
-  // 키가 없어도 에러를 던지지 않고 null만 반환 — 호출부가 null을 "실패"로
-  // 보고 직선거리 추정치로 자동 폴백하므로, 화면엔 대충 계산한 값이라도 뜬다.
-  if (!ODSAY_API_KEY) return null;
-
-  const cacheKey = `${origin.lat},${origin.lng}-${destination.lat},${destination.lng}`;
-
-  const cached = readTransitCache()[cacheKey];
-  if (cached && cached.expiresAt > Date.now()) {
-    return cached.minutes;
+  if (!ODSAY_API_KEY) {
+    throw new Error("NEXT_PUBLIC_ODSAY_API_KEY가 설정되지 않았습니다.");
   }
 
-  const existing = inFlight.get(cacheKey);
-  if (existing) return existing;
+  const url = new URL(ODSAY_ENDPOINT);
+  url.searchParams.set("SX", String(origin.lng));
+  url.searchParams.set("SY", String(origin.lat));
+  url.searchParams.set("EX", String(destination.lng));
+  url.searchParams.set("EY", String(destination.lat));
+  url.searchParams.set("apiKey", ODSAY_API_KEY);
+  url.searchParams.set("output", "json");
 
-  const promise = (async () => {
-    const url = new URL(ODSAY_ENDPOINT);
-    url.searchParams.set("SX", String(origin.lng));
-    url.searchParams.set("SY", String(origin.lat));
-    url.searchParams.set("EX", String(destination.lng));
-    url.searchParams.set("EY", String(destination.lat));
-    url.searchParams.set("apiKey", ODSAY_API_KEY);
-    url.searchParams.set("output", "json");
+  const response = await fetch(url);
+  const data = await response.json();
 
-    try {
-      const response = await fetch(url);
-      const data = await response.json();
-
-      // 경로를 못 찾으면 result 대신 error 필드로 온다(오디세이 스펙) — 근데
-      // 인증 실패·서버 오류도 똑같이 error 필드로 와서 code로 "진짜 경로
-      // 없음"과 "일시적 API 오류"를 구분해야 한다.
-      const errorCode: string | undefined = data?.error?.[0]?.code;
-      if (errorCode && !NO_ROUTE_ERROR_CODES.has(errorCode)) {
-        writeTransitCacheEntry(cacheKey, {
-          minutes: null,
-          expiresAt: Date.now() + ERROR_CACHE_TTL_MS,
-        });
-        return null;
-      }
-
-      const totalTime: number | undefined =
-        data?.result?.path?.[0]?.info?.totalTime;
-      const minutes = totalTime ?? null;
-      writeTransitCacheEntry(cacheKey, {
-        minutes,
-        expiresAt: Date.now() + CACHE_TTL_MS,
-      });
-      return minutes;
-    } catch {
-      writeTransitCacheEntry(cacheKey, {
-        minutes: null,
-        expiresAt: Date.now() + ERROR_CACHE_TTL_MS,
-      });
-      return null;
-    }
-  })();
-
-  inFlight.set(cacheKey, promise);
-  try {
-    return await promise;
-  } finally {
-    inFlight.delete(cacheKey);
+  // 경로를 못 찾으면 result 대신 error 필드로 온다(오디세이 스펙) — 근데
+  // 인증 실패·서버 오류도 똑같이 error 필드로 와서 code로 "진짜 경로
+  // 없음"과 "일시적 API 오류"를 구분해야 한다.
+  const errorCode: string | undefined = data?.error?.[0]?.code;
+  if (errorCode && !NO_ROUTE_ERROR_CODES.has(errorCode)) {
+    throw new Error(`오디세이 조회 실패 (code: ${errorCode})`);
   }
+
+  const totalTime: number | undefined =
+    data?.result?.path?.[0]?.info?.totalTime;
+  return totalTime ?? null;
 }
 
 export async function fetchTravelTime(
-  origin: { lat: number; lng: number },
-  destination: { lat: number; lng: number },
+  origin: Coordinate,
+  destination: Coordinate,
   mode: TravelTransportMode,
 ): Promise<FetchedTravelTime | null> {
   if (mode === "transit") {
@@ -195,4 +118,43 @@ export async function fetchTravelTime(
     },
   );
   return { minutes: res.data.travel_minutes, distanceKm: res.data.distance_km };
+}
+
+export const travelTimeKeys = {
+  all: "travelTime",
+  pair: (
+    origin: Coordinate | null,
+    destination: Coordinate | null,
+    mode: TravelTransportMode,
+  ) =>
+    [
+      travelTimeKeys.all,
+      origin?.lat,
+      origin?.lng,
+      destination?.lat,
+      destination?.lng,
+      mode,
+    ] as const,
+};
+
+/**
+ * `origin`/`destination`이 없으면(좌표 없는 목데이터 등) 조회하지 않는다.
+ * 대중교통은 하루 30회 무료 한도가 있어(#130) 24시간 동안은 같은 좌표쌍을
+ * 다시 안 부르고, 그 외(자동차/도보)는 백엔드 자체 API라 한도 걱정 없이
+ * 10분마다 최신화한다. 대중교통은 실패해도(retry: 0) 재시도하지 않는다 —
+ * 재시도할수록 무료 한도를 더 빨리 소진한다.
+ */
+export function useTravelTimeQuery(
+  origin: Coordinate | null,
+  destination: Coordinate | null,
+  mode: TravelTransportMode,
+) {
+  return useQuery({
+    queryKey: travelTimeKeys.pair(origin, destination, mode),
+    queryFn: () =>
+      fetchTravelTime(origin as Coordinate, destination as Coordinate, mode),
+    enabled: origin != null && destination != null,
+    staleTime: mode === "transit" ? 24 * 60 * 60 * 1000 : 10 * 60 * 1000,
+    retry: mode === "transit" ? 0 : 1,
+  });
 }
