@@ -1,7 +1,15 @@
 "use client";
 
+import { ArrowRight } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
+import { Button } from "@/shared/components/ui/Button";
+import {
+  EMPTY_STATE_IMAGES,
+  EmptyState,
+} from "@/shared/components/ui/EmptyState";
+import { ROUTES } from "@/shared/config/routes";
 import { useRecommendSelectedItems } from "../hooks/useRecommendSelectedItems";
 import { useRecoveryDraftStore } from "../store/useRecoveryDraftStore";
 import { useStoredPlacesStore } from "../store/useStoredPlacesStore";
@@ -27,6 +35,7 @@ import { TravelScheduleStep } from "./TravelScheduleStep";
 const MAX_IMPLEMENTED_STEP = 4;
 
 export function RecoveryFlow() {
+  const router = useRouter();
   const {
     step,
     region,
@@ -148,13 +157,25 @@ export function RecoveryFlow() {
           />
         )}
       </div>
-      <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 py-12 text-center min-[1024px]:hidden">
-        <p className="text-base font-semibold text-neutral-900">
-          PC 환경에서만 지원됩니다
-        </p>
-        <p className="text-sm text-neutral-700">
-          더 넓은 화면(1024px 이상)에서 이용해주세요.
-        </p>
+      <div className="flex flex-1 flex-col items-center justify-center px-2 py-8 min-[1024px]:hidden md:px-3">
+        <EmptyState
+          {...EMPTY_STATE_IMAGES.noticeMascot}
+          imageClassName="w-28 md:w-32"
+          title="상세 복구는 넓은 화면에서 이용할 수 있어요"
+          titleClassName="text-base"
+          description="원활한 이용을 위해 데스크톱 환경에서 접속해주세요."
+          descriptionClassName="text-sm"
+          action={
+            <Button
+              size="md"
+              className="mt-2 py-2.5"
+              onClick={() => router.push(ROUTES.RECOVERY_SIMPLE)}
+            >
+              간편 복구로 이용하기
+              <ArrowRight className="size-4" />
+            </Button>
+          }
+        />
       </div>
     </>
   );
