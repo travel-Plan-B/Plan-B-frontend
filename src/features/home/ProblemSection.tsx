@@ -40,18 +40,21 @@ const problems = [
 export function ProblemSection() {
   return (
     <section
-      className="mx-auto w-full max-w-7xl px-6 pt-16 sm:pt-20"
+      className="mx-auto w-full max-w-7xl px-6 pt-10 sm:max-[1200px]:pt-16 min-[1200px]:pt-20"
       aria-labelledby="problem-title"
     >
-      <div id="problem-title">
+      <div
+        id="problem-title"
+        className="[&>header]:mb-6 sm:max-[1200px]:[&>header]:mb-9 min-[1200px]:[&>header]:mb-12"
+      >
         <SectionHeading title="이런 상황에서 필요해요" />
       </div>
-      <div className="grid gap-5 md:grid-cols-3 lg:gap-6">
+      <div className="grid gap-4 sm:max-[1200px]:gap-5 md:max-[1200px]:grid-cols-2 min-[1200px]:grid-cols-3 min-[1200px]:gap-6">
         {problems.map(
           ({ title, lines, imageIcon, style, badgeStyle, badgeVariant }) => (
             <article
               key={title}
-              className={`flex min-h-48 items-center gap-7 rounded-2xl border p-8 shadow-sm lg:px-9 ${style}`}
+              className={`flex min-h-40 items-center gap-7 rounded-2xl border p-6 shadow-sm sm:min-h-48 sm:p-8 lg:px-9 ${style}`}
             >
               {imageIcon ? (
                 <IconBadge

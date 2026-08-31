@@ -1,8 +1,8 @@
 import { Check, Footprints, Sparkles } from "lucide-react";
 import Image from "next/image";
 
-import { RecoveryStartButton } from "./RecoveryStartButton";
 import { HeroRouteOverlay } from "./HeroRouteOverlay";
+import { RecoveryStartButton } from "./RecoveryStartButton";
 
 const recoveredSchedule = [
   { time: "07:00", title: "호텔 조식", active: false },
@@ -121,15 +121,15 @@ export function HeroSection() {
         </div>
 
         <div className="relative z-20 flex min-h-160 items-center px-6 py-16 sm:px-12 lg:h-180 xl:px-16">
-          <div className="max-w-md rounded-2xl bg-white/60 p-6 backdrop-blur-[2px] sm:p-8 lg:bg-transparent lg:p-0 lg:backdrop-blur-none">
+          <div className="max-w-md rounded-2xl bg-white/60 px-4 py-6 backdrop-blur-[2px] sm:p-8 lg:bg-transparent lg:p-0 lg:backdrop-blur-none">
             <h1
               id="hero-title"
-              className="text-[38px] font-extrabold leading-[1.3] tracking-[-.035em] text-neutral-900"
+              className="text-[30px] font-extrabold leading-[1.35] tracking-[-.035em] text-neutral-900 sm:text-[38px] sm:leading-[1.3]"
             >
               여행의 흐름이 끊겨도,
               <br />
-              <span className="text-primary-500">Plan B</span>가 다시
-              이어드려요.
+              <span className="text-primary-500">Plan B</span>가 다시{" "}
+              <span className="whitespace-nowrap">이어드려요.</span>
             </h1>
             <p className="mt-6 max-w-sm text-sm leading-6 text-neutral-700">
               날씨, 휴무, 일정 지연으로 틀어진 일정에서

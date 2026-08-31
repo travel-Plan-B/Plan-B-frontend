@@ -69,7 +69,7 @@ export function RecoveryTypeModal({ open, onClose }: RecoveryTypeModalProps) {
             <article
               key={type.type}
               className={[
-                "group relative flex min-h-[350px] flex-col justify-between rounded-2xl border p-6 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md",
+                "group relative flex min-h-[320px] flex-col justify-between rounded-2xl border p-6 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md sm:min-h-[350px]",
                 isSimple
                   ? "border-primary-400 bg-primary-25/80 hover:border-primary-500"
                   : "border-purple-400 bg-purple-50/60 hover:border-purple-500",
@@ -124,6 +124,11 @@ export function RecoveryTypeModal({ open, onClose }: RecoveryTypeModalProps) {
                     </li>
                   ))}
                 </ul>
+                {!isSimple && (
+                  <span className="mt-5 inline-flex rounded-full bg-purple-100 px-3 py-1 text-xs font-semibold text-purple-700 min-[1200px]:hidden">
+                    PC 전용 · 1200px 이상
+                  </span>
+                )}
               </div>
 
               {/* 액션 CTA 버튼: 둘 다 색상 채워진 Solid 버튼 */}
@@ -138,16 +143,25 @@ export function RecoveryTypeModal({ open, onClose }: RecoveryTypeModalProps) {
                   {type.buttonText}
                 </SimpleRecoveryStartLink>
               ) : (
-                <Link
-                  href={type.href}
-                  onClick={onClose}
-                  className={[
-                    "mt-8 flex h-11 w-full items-center justify-center rounded-xl text-sm font-semibold text-white shadow-xs transition-all duration-200 hover:shadow-md active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
-                    "bg-purple-600 hover:bg-purple-700 active:bg-purple-800 focus-visible:ring-purple-600",
-                  ].join(" ")}
-                >
-                  {type.buttonText}
-                </Link>
+                <>
+                  <button
+                    type="button"
+                    disabled
+                    className="mt-8 flex h-11 w-full cursor-not-allowed items-center justify-center rounded-xl bg-neutral-200 text-sm font-semibold text-neutral-500 min-[1200px]:hidden"
+                  >
+                    {type.buttonText}
+                  </button>
+                  <Link
+                    href={type.href}
+                    onClick={onClose}
+                    className={[
+                      "mt-8 hidden h-11 w-full items-center justify-center rounded-xl text-sm font-semibold text-white shadow-xs transition-all duration-200 hover:shadow-md active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 min-[1200px]:flex",
+                      "bg-purple-600 hover:bg-purple-700 active:bg-purple-800 focus-visible:ring-purple-600",
+                    ].join(" ")}
+                  >
+                    {type.buttonText}
+                  </Link>
+                </>
               )}
             </article>
           );

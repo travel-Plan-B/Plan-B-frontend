@@ -46,11 +46,11 @@ export function RecoveryTypeSection() {
       <div id="type-title">
         <SectionHeading title="상황에 맞는 복구 방식을 선택하세요" />
       </div>
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-5 sm:gap-6 lg:grid-cols-2">
         {recoveryTypes.map((type) => (
           <article
             key={type.title}
-            className={`grid min-h-[368px] grid-cols-[140px_1fr] items-center gap-6 rounded-2xl border p-7 shadow-sm sm:p-9 md:grid-cols-[120px_1fr] lg:grid-cols-[150px_1fr] lg:p-8 xl:grid-cols-[190px_1fr] xl:p-10 ${type.card}`}
+            className={`grid min-h-[320px] grid-cols-[80px_1fr] items-center gap-4 rounded-2xl border p-5 shadow-sm sm:min-h-[368px] sm:grid-cols-[120px_1fr] sm:gap-6 sm:p-9 lg:grid-cols-[150px_1fr] lg:p-8 xl:grid-cols-[190px_1fr] xl:p-10 ${type.card}`}
           >
             <Image
               src={type.image}
@@ -64,29 +64,44 @@ export function RecoveryTypeSection() {
               <h3 className={`text-3xl font-bold ${type.accent}`}>
                 {type.title}
               </h3>
-              <p className="mt-4 text-base leading-8 text-neutral-700">
+              <p className="mt-3 text-base leading-8 text-neutral-700 sm:mt-4">
                 {type.description}
               </p>
               <span
-                className={`mt-5 w-fit rounded-full border border-current bg-white/70 px-4 py-2 text-sm font-semibold ${type.accent}`}
+                className={`mt-3 w-fit rounded-full border border-current bg-white/70 px-4 py-2 text-sm font-semibold sm:mt-5 ${type.accent}`}
               >
                 {type.feature}
               </span>
+              {type.href === ROUTES.RECOVERY_DETAIL && (
+                <span className="mt-2 w-fit rounded-full bg-purple-100 px-3 py-1 text-xs font-semibold text-purple-700 sm:mt-3 min-[1200px]:hidden">
+                  PC 전용 · 1200px 이상
+                </span>
+              )}
               {type.href === ROUTES.RECOVERY_SIMPLE ? (
                 <SimpleRecoveryStartLink
-                  className={`mt-auto inline-flex min-h-16 items-center justify-center gap-2 rounded-xl px-7 text-base font-semibold text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${type.button}`}
+                  className={`mt-5 inline-flex min-h-16 items-center justify-center gap-2 rounded-xl px-7 text-base font-semibold text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 sm:mt-auto ${type.button}`}
                 >
                   {type.cta}
                   <ArrowRight className="size-4" />
                 </SimpleRecoveryStartLink>
               ) : (
-                <Link
-                  href={type.href}
-                  className={`mt-auto inline-flex min-h-16 items-center justify-center gap-2 rounded-xl px-7 text-base font-semibold text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${type.button}`}
-                >
-                  {type.cta}
-                  <ArrowRight className="size-4" />
-                </Link>
+                <>
+                  <button
+                    type="button"
+                    disabled
+                    className="mt-5 inline-flex min-h-16 cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-neutral-200 px-4 text-base font-semibold text-neutral-500 sm:mt-auto min-[1200px]:hidden"
+                  >
+                    {type.cta}
+                    <ArrowRight className="size-4" />
+                  </button>
+                  <Link
+                    href={type.href}
+                    className={`mt-5 hidden min-h-16 items-center justify-center gap-2 rounded-xl px-7 text-base font-semibold text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 sm:mt-auto min-[1200px]:inline-flex ${type.button}`}
+                  >
+                    {type.cta}
+                    <ArrowRight className="size-4" />
+                  </Link>
+                </>
               )}
             </div>
           </article>
