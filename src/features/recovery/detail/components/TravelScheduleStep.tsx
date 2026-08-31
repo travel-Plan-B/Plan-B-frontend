@@ -13,6 +13,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
+import { useQueryClient } from "@tanstack/react-query";
 import { GripVertical, List, MapPin, Map as MapIcon } from "lucide-react";
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { RecoveryPageLayout } from "@/features/recovery/components/RecoveryPageLayout";
@@ -99,6 +100,7 @@ export function TravelScheduleStep({
   // 넘어가는 대신 토스트로 안내한다(#121) — 어떤 항목이 겹치는지는 이미
   // 화면의 빨간 테두리 + 인라인 경고(ScheduleItemRow)로 보이니 토스트는
   // 짧게 "시간을 확인해달라"는 안내만 한다.
+  const queryClient = useQueryClient();
   const [isCheckingConflicts, setIsCheckingConflicts] = useState(false);
   // 충돌 검사(비동기, API 왕복 있음)가 끝나기 전에 사용자가 여행 기간이나
   // 일정을 계속 편집할 수 있다 — 그러면 검사 결과가 이미 낡은 스냅샷이
@@ -189,7 +191,7 @@ export function TravelScheduleStep({
       days.map((day) => [day.day, day.items]),
     );
     setIsCheckingConflicts(true);
-    const found = await checkAllConflicts(visibleItemsByDay);
+    const found = await checkAllConflicts(queryClient, visibleItemsByDay);
     setIsCheckingConflicts(false);
 
     // 검사하는 동안 여행 기간이나 일정이 바뀌었으면 방금 받은 결과는 이미
