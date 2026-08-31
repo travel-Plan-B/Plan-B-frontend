@@ -10,10 +10,10 @@ export function NotFoundActions() {
   const router = useRouter();
 
   return (
-    <div className="flex w-full max-w-xs flex-col gap-3 lg:max-w-none lg:flex-row lg:justify-center lg:gap-6">
+    <div className="flex w-full max-w-xs flex-col gap-3 md:max-w-none md:flex-row md:justify-center md:gap-6">
       <Button
         variant="outline"
-        className="w-full px-6 lg:w-auto"
+        className="w-full px-6 md:w-auto"
         size="sm"
         onClick={() => router.push(ROUTES.HOME)}
       >
@@ -22,7 +22,7 @@ export function NotFoundActions() {
       </Button>
       <Button
         size="sm"
-        className="w-full px-6 lg:w-auto"
+        className="w-full px-6 md:w-auto"
         onClick={() => router.back()}
       >
         <ArrowLeft className="size-4" />

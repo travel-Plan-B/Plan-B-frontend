@@ -10,7 +10,9 @@ export interface EmptyStateProps extends HTMLAttributes<HTMLDivElement> {
   imageAlt?: string;
   imageClassName?: string;
   title: string;
+  titleClassName?: string;
   description?: string;
+  descriptionClassName?: string;
   action?: ReactNode;
 }
 
@@ -37,6 +39,11 @@ export const EMPTY_STATE_IMAGES = {
     imageWidth: 183,
     imageHeight: 220,
   },
+  noticeMascot: {
+    image: "/images/mascot-notice.png",
+    imageWidth: 189,
+    imageHeight: 197,
+  },
 } satisfies Record<string, EmptyStateImageProps>;
 
 export function EmptyState({
@@ -46,7 +53,9 @@ export function EmptyState({
   imageAlt = "",
   imageClassName,
   title,
+  titleClassName,
   description,
+  descriptionClassName,
   action,
   className,
   ...props
@@ -68,10 +77,19 @@ export function EmptyState({
       />
 
       <div className="flex flex-col gap-1">
-        <p className="text-sm font-semibold text-neutral-900">{title}</p>
+        <p
+          className={cn(
+            "text-sm font-semibold text-neutral-900",
+            titleClassName,
+          )}
+        >
+          {title}
+        </p>
 
         {description && (
-          <p className="text-xs text-neutral-700">{description}</p>
+          <p className={cn("text-xs text-neutral-700", descriptionClassName)}>
+            {description}
+          </p>
         )}
       </div>
 
