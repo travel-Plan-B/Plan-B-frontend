@@ -109,7 +109,7 @@ export function Modal({
         aria-labelledby={ariaLabelledBy}
         tabIndex={-1}
         className={cn(
-          "relative w-full max-w-md rounded-2xl bg-white p-6 shadow-lg",
+          "relative max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-6 shadow-lg",
           className,
         )}
       >
@@ -117,7 +117,7 @@ export function Modal({
           type="button"
           onClick={onClose}
           aria-label="닫기"
-          className="absolute top-4 right-4 text-neutral-400 transition-colors hover:text-neutral-600"
+          className="absolute top-2 right-2 grid size-11 place-items-center rounded-lg text-neutral-400 transition-colors hover:text-neutral-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
         >
           <X className="size-5" />
         </button>

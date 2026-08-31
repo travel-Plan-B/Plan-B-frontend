@@ -68,11 +68,11 @@ export function RecoveryComparisonSection() {
         <div id="comparison-title">
           <SectionHeading title="문제 일정만 바꿔도 여행은 계속됩니다" />
         </div>
-        <div className="grid items-center gap-6 md:grid-cols-[1fr_auto_1fr] lg:gap-8">
+        <div className="grid items-center gap-6 lg:grid-cols-[1fr_auto_1fr] lg:gap-8">
           <ScheduleCard type="before" items={before} />
           <div className="grid place-items-center text-neutral-500">
-            <ArrowRight className="hidden size-12 md:block" />
-            <ArrowDown className="size-9 md:hidden" />
+            <ArrowRight className="hidden size-12 lg:block" />
+            <ArrowDown className="size-9 lg:hidden" />
           </div>
           <ScheduleCard type="after" items={after} />
         </div>
