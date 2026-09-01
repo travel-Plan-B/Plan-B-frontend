@@ -100,6 +100,8 @@ export function SimpleRecoveryRecommendPage({
       description="현재 상황과 여행 취향을 반영해 가장 적합한 대체 일정을 찾았어요."
       currentStep={3}
       steps={SIMPLE_RECOVERY_STEPS}
+      headerClassName="flex-col flex-nowrap md:flex-row md:flex-wrap"
+      headingClassName="w-full max-w-none flex-none md:max-w-xl md:flex-1"
     >
       <section className="mt-12" aria-labelledby="schedule-change-title">
         <h2

@@ -382,23 +382,47 @@ function Gallery({ place }: { place: PlaceDetail }) {
       </section>
     );
   }
+
+  const galleryLayout = {
+    2: "md:grid-cols-2 md:grid-rows-1",
+    3: "md:grid-cols-2 md:grid-rows-2",
+    4: "md:grid-cols-3 md:grid-rows-3",
+    5: "md:grid-cols-5 md:grid-rows-2",
+  }[visibleImages.length];
+
+  const primaryImageLayout = {
+    2: "md:col-span-1 md:row-span-1",
+    3: "md:col-span-1 md:row-span-2",
+    4: "md:col-span-2 md:row-span-3",
+    5: "md:col-span-3 md:row-span-2",
+  }[visibleImages.length];
+
   return (
     <section
       aria-label="장소 사진"
-      className="grid h-108 grid-cols-5 grid-rows-2 gap-2 overflow-hidden rounded-2xl max-md:h-80"
+      className={cn(
+        "grid h-80 grid-cols-1 grid-rows-1 gap-2 overflow-hidden rounded-2xl md:h-108",
+        galleryLayout,
+      )}
     >
       {visibleImages.map((imageUrl, index) => (
         <div
           key={imageUrl}
           className={cn(
             "relative overflow-hidden bg-neutral-100",
-            index === 0 ? "col-span-3 row-span-2" : "col-span-1 max-md:hidden",
+            index === 0
+              ? ["col-span-1 row-span-1", primaryImageLayout]
+              : "hidden md:block",
           )}
         >
           <PlaceImage
             imageUrl={imageUrl}
             imageAlt={`${place.name} 사진 ${index + 1}`}
-            sizes={index === 0 ? "(max-width: 768px) 100vw, 720px" : "240px"}
+            sizes={
+              index === 0
+                ? "(max-width: 767px) calc(100vw - 48px), 720px"
+                : "240px"
+            }
             showFallbackLabel={false}
           />
           {index === 0 && (
