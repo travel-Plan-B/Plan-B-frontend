@@ -29,7 +29,7 @@ export function RecoveryTypeCard({
       {...props}
       aria-pressed={selected}
       className={cn(
-        "flex h-100 w-90 cursor-pointer flex-col items-start rounded-2xl border p-9 text-left shadow-lg transition-colors",
+        "flex h-100 w-90 cursor-pointer flex-col items-start rounded-2xl border p-6 text-left shadow-lg transition-colors sm:p-9",
         "focus-visible:border-primary-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30 focus-visible:ring-offset-2",
         "disabled:cursor-not-allowed disabled:opacity-50",
         selected
@@ -44,18 +44,18 @@ export function RecoveryTypeCard({
 
       <span
         className={cn(
-          "mt-6 block text-2xl font-semibold",
+          "mt-4 block text-2xl font-semibold sm:mt-6",
           selected ? "text-primary-700" : "text-neutral-900",
         )}
       >
         {title}
       </span>
 
-      <span className="mt-5 block text-base text-neutral-700">
+      <span className="mt-3 block text-base text-neutral-700 sm:mt-5">
         {description}
       </span>
 
-      <span className="mt-10 mb-5 block w-full border-t border-neutral-200" />
+      <span className="mt-6 mb-4 block w-full border-t border-neutral-200 sm:mt-10 sm:mb-5" />
 
       <span className="block text-base font-semibold text-neutral-700">
         예시

@@ -73,8 +73,8 @@ export function RecoveryTypeSection() {
                 {type.feature}
               </span>
               {type.href === ROUTES.RECOVERY_DETAIL && (
-                <span className="mt-2 w-fit rounded-full bg-purple-100 px-3 py-1 text-xs font-semibold text-purple-700 sm:mt-3 min-[1200px]:hidden">
-                  PC 전용 · 1200px 이상
+                <span className="mt-2 w-fit rounded-full bg-purple-100 px-3 py-1 text-xs font-semibold text-purple-700 sm:mt-3 lg:hidden">
+                  PC 전용 · 1024px 이상
                 </span>
               )}
               {type.href === ROUTES.RECOVERY_SIMPLE ? (
@@ -89,14 +89,14 @@ export function RecoveryTypeSection() {
                   <button
                     type="button"
                     disabled
-                    className="mt-5 inline-flex min-h-16 cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-neutral-200 px-4 text-base font-semibold text-neutral-500 sm:mt-auto min-[1200px]:hidden"
+                    className="mt-5 inline-flex min-h-16 cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-neutral-200 px-4 text-base font-semibold text-neutral-500 sm:mt-auto lg:hidden"
                   >
                     {type.cta}
                     <ArrowRight className="size-4" />
                   </button>
                   <Link
                     href={type.href}
-                    className={`mt-5 hidden min-h-16 items-center justify-center gap-2 rounded-xl px-7 text-base font-semibold text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 sm:mt-auto min-[1200px]:inline-flex ${type.button}`}
+                    className={`mt-5 hidden min-h-16 items-center justify-center gap-2 rounded-xl px-7 text-base font-semibold text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 sm:mt-auto lg:inline-flex ${type.button}`}
                   >
                     {type.cta}
                     <ArrowRight className="size-4" />

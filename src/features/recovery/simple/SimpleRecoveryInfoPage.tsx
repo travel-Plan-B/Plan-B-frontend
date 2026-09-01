@@ -189,6 +189,8 @@ export function SimpleRecoveryInfoPage() {
       description="문제가 생긴 장소와 도착 시간을 바탕으로 대체 일정을 추천해드려요"
       currentStep={2}
       steps={SIMPLE_RECOVERY_STEPS}
+      headerClassName="flex-col flex-nowrap md:flex-row md:flex-wrap"
+      headingClassName="w-full max-w-none flex-none md:max-w-xl md:flex-1"
     >
       <form onSubmit={handleSubmit} className="flex flex-1 flex-col">
         <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">

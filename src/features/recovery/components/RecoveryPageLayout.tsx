@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import { Stepper, type StepperStep } from "@/shared/components/ui/Stepper";
+import { cn } from "@/shared/lib/cn";
 
 export interface RecoveryPageLayoutProps {
   title: string;
@@ -8,6 +9,8 @@ export interface RecoveryPageLayoutProps {
   currentStep: number;
   steps: StepperStep[];
   children: ReactNode;
+  headerClassName?: string;
+  headingClassName?: string;
 }
 
 export function RecoveryPageLayout({
@@ -16,11 +19,23 @@ export function RecoveryPageLayout({
   currentStep,
   steps,
   children,
+  headerClassName,
+  headingClassName,
 }: RecoveryPageLayoutProps) {
   return (
     <section className="flex flex-1 flex-col py-8">
-      <header className="flex flex-wrap items-start justify-between gap-x-6 gap-y-4">
-        <div className="flex min-w-0 max-w-xl flex-1 flex-col gap-2">
+      <header
+        className={cn(
+          "flex flex-wrap items-start justify-between gap-x-6 gap-y-4",
+          headerClassName,
+        )}
+      >
+        <div
+          className={cn(
+            "flex min-w-0 max-w-xl flex-1 flex-col gap-2",
+            headingClassName,
+          )}
+        >
           <h1 className="text-2xl font-bold text-neutral-900">{title}</h1>
           <p className="text-sm text-neutral-700">{description}</p>
         </div>

@@ -64,11 +64,13 @@ export function SimpleRecoverySetupPage() {
       description="다음 목적지를 변경해야 하는 이유를 가장 잘 설명하는 상황을 선택해 주세요"
       currentStep={1}
       steps={SIMPLE_RECOVERY_STEPS}
+      headerClassName="flex-col flex-nowrap md:flex-row md:flex-wrap"
+      headingClassName="w-full max-w-none flex-none md:max-w-xl md:flex-1"
     >
       <div
         role="group"
         aria-label="복구 문제 유형"
-        className="grid grid-cols-1 gap-6 lg:grid-cols-3"
+        className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3"
       >
         {RECOVERY_REASONS.map((reason) => {
           const isSelected = selectedReason === reason.value;
@@ -99,13 +101,13 @@ export function SimpleRecoverySetupPage() {
               example={reason.example}
               selected={isSelected}
               onClick={() => setSelectedReason(reason.value)}
-              className="h-auto min-h-80 w-full lg:h-100"
+              className="h-auto min-h-0 w-full sm:min-h-80 lg:min-h-100"
             />
           );
         })}
       </div>
 
-      <div className="mt-12 flex justify-end">
+      <div className="mt-8 flex justify-end sm:mt-12">
         <Button
           variant="default"
           size="lg"

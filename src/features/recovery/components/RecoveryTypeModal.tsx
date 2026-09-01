@@ -125,8 +125,8 @@ export function RecoveryTypeModal({ open, onClose }: RecoveryTypeModalProps) {
                   ))}
                 </ul>
                 {!isSimple && (
-                  <span className="mt-5 inline-flex rounded-full bg-purple-100 px-3 py-1 text-xs font-semibold text-purple-700 min-[1200px]:hidden">
-                    PC 전용 · 1200px 이상
+                  <span className="mt-5 inline-flex rounded-full bg-purple-100 px-3 py-1 text-xs font-semibold text-purple-700 lg:hidden">
+                    PC 전용 · 1024px 이상
                   </span>
                 )}
               </div>
@@ -147,7 +147,7 @@ export function RecoveryTypeModal({ open, onClose }: RecoveryTypeModalProps) {
                   <button
                     type="button"
                     disabled
-                    className="mt-8 flex h-11 w-full cursor-not-allowed items-center justify-center rounded-xl bg-neutral-200 text-sm font-semibold text-neutral-500 min-[1200px]:hidden"
+                    className="mt-8 flex h-11 w-full cursor-not-allowed items-center justify-center rounded-xl bg-neutral-200 text-sm font-semibold text-neutral-500 lg:hidden"
                   >
                     {type.buttonText}
                   </button>
@@ -155,7 +155,7 @@ export function RecoveryTypeModal({ open, onClose }: RecoveryTypeModalProps) {
                     href={type.href}
                     onClick={onClose}
                     className={[
-                      "mt-8 hidden h-11 w-full items-center justify-center rounded-xl text-sm font-semibold text-white shadow-xs transition-all duration-200 hover:shadow-md active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 min-[1200px]:flex",
+                      "mt-8 hidden h-11 w-full items-center justify-center rounded-xl text-sm font-semibold text-white shadow-xs transition-all duration-200 hover:shadow-md active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 lg:flex",
                       "bg-purple-600 hover:bg-purple-700 active:bg-purple-800 focus-visible:ring-purple-600",
                     ].join(" ")}
                   >
