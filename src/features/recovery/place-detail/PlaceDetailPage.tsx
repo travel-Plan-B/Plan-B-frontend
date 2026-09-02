@@ -16,7 +16,13 @@ import {
   Timer,
 } from "lucide-react";
 import Link from "next/link";
-import type { ComponentType, ReactNode } from "react";
+import {
+  type ComponentType,
+  type ReactNode,
+  type UIEvent,
+  useRef,
+  useState,
+} from "react";
 
 import { Map } from "@/shared/components/ui/Map/Map";
 import { PlaceImage } from "@/shared/components/ui/PlaceImage";
@@ -398,46 +404,116 @@ function Gallery({ place }: { place: PlaceDetail }) {
   }[visibleImages.length];
 
   return (
+    <>
+      <MobileGallery place={place} />
+      <section
+        aria-label="장소 사진"
+        className={cn(
+          "hidden h-108 gap-2 overflow-hidden rounded-2xl md:grid",
+          galleryLayout,
+        )}
+      >
+        {visibleImages.map((imageUrl, index) => (
+          <div
+            key={`${imageUrl}-${index}`}
+            className={cn(
+              "relative overflow-hidden bg-neutral-100",
+              index === 0 && primaryImageLayout,
+            )}
+          >
+            <PlaceImage
+              imageUrl={imageUrl}
+              imageAlt={`${place.name} 사진 ${index + 1}`}
+              sizes={index === 0 ? "720px" : "240px"}
+              showFallbackLabel={false}
+            />
+            {index === visibleImages.length - 1 &&
+              place.imageUrls.length > visibleImages.length && (
+                <span className="absolute right-4 bottom-4 rounded-xl bg-white/95 px-3 py-2 text-sm font-semibold text-neutral-900 shadow-sm">
+                  사진 {place.imageUrls.length}장
+                </span>
+              )}
+          </div>
+        ))}
+      </section>
+    </>
+  );
+}
+
+function MobileGallery({ place }: { place: PlaceDetail }) {
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const lastIndex = place.imageUrls.length - 1;
+
+  const handleScroll = (event: UIEvent<HTMLDivElement>) => {
+    const container = event.currentTarget;
+    if (container.clientWidth === 0) return;
+
+    const nextIndex = Math.min(
+      lastIndex,
+      Math.max(0, Math.round(container.scrollLeft / container.clientWidth)),
+    );
+    setCurrentIndex((previousIndex) =>
+      previousIndex === nextIndex ? previousIndex : nextIndex,
+    );
+  };
+
+  const scrollToImage = (index: number) => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    container.scrollTo({
+      left: container.clientWidth * index,
+      behavior: "smooth",
+    });
+  };
+
+  return (
     <section
       aria-label="장소 사진"
-      className={cn(
-        "grid h-80 grid-cols-1 grid-rows-1 gap-2 overflow-hidden rounded-2xl md:h-108",
-        galleryLayout,
-      )}
+      className="relative h-80 overflow-hidden rounded-2xl bg-neutral-100 md:hidden"
     >
-      {visibleImages.map((imageUrl, index) => (
-        <div
-          key={imageUrl}
-          className={cn(
-            "relative overflow-hidden bg-neutral-100",
-            index === 0
-              ? ["col-span-1 row-span-1", primaryImageLayout]
-              : "hidden md:block",
-          )}
-        >
-          <PlaceImage
-            imageUrl={imageUrl}
-            imageAlt={`${place.name} 사진 ${index + 1}`}
-            sizes={
-              index === 0
-                ? "(max-width: 767px) calc(100vw - 48px), 720px"
-                : "240px"
-            }
-            showFallbackLabel={false}
-          />
-          {index === 0 && (
-            <span className="absolute bottom-3 left-3 rounded-full bg-neutral-900/75 px-3 py-1 text-xs font-semibold text-white">
-              1 / {place.imageUrls.length}
-            </span>
-          )}
-          {index === visibleImages.length - 1 &&
-            place.imageUrls.length > visibleImages.length && (
-              <span className="absolute right-4 bottom-4 rounded-xl bg-white/95 px-3 py-2 text-sm font-semibold text-neutral-900 shadow-sm">
-                사진 {place.imageUrls.length}장
-              </span>
-            )}
-        </div>
-      ))}
+      <div
+        ref={scrollContainerRef}
+        onScroll={handleScroll}
+        className="flex h-full w-full snap-x snap-mandatory overflow-x-auto overscroll-x-contain"
+      >
+        {place.imageUrls.map((imageUrl, index) => (
+          <div
+            key={`${imageUrl}-${index}`}
+            className="relative h-full w-full shrink-0 snap-center"
+          >
+            <PlaceImage
+              imageUrl={imageUrl}
+              imageAlt={`${place.name} 사진 ${index + 1}`}
+              sizes="calc(100vw - 48px)"
+              showFallbackLabel={false}
+            />
+          </div>
+        ))}
+      </div>
+
+      <span className="absolute top-3 right-3 rounded-full bg-neutral-900/75 px-3 py-1 text-xs font-semibold text-white">
+        {currentIndex + 1} / {place.imageUrls.length}
+      </span>
+      <button
+        type="button"
+        aria-label="이전 이미지"
+        disabled={currentIndex === 0}
+        onClick={() => scrollToImage(currentIndex - 1)}
+        className="absolute top-1/2 left-3 grid size-10 -translate-y-1/2 place-items-center rounded-full bg-white/95 text-neutral-900 shadow-sm transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        <ArrowLeft className="size-5" aria-hidden="true" />
+      </button>
+      <button
+        type="button"
+        aria-label="다음 이미지"
+        disabled={currentIndex === lastIndex}
+        onClick={() => scrollToImage(currentIndex + 1)}
+        className="absolute top-1/2 right-3 grid size-10 -translate-y-1/2 place-items-center rounded-full bg-white/95 text-neutral-900 shadow-sm transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        <ArrowRight className="size-5" aria-hidden="true" />
+      </button>
     </section>
   );
 }

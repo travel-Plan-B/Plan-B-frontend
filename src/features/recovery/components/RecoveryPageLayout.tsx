@@ -9,6 +9,8 @@ export interface RecoveryPageLayoutProps {
   currentStep: number;
   steps: StepperStep[];
   children: ReactNode;
+  className?: string;
+  contentClassName?: string;
   headerClassName?: string;
   headingClassName?: string;
 }
@@ -19,11 +21,13 @@ export function RecoveryPageLayout({
   currentStep,
   steps,
   children,
+  className,
+  contentClassName,
   headerClassName,
   headingClassName,
 }: RecoveryPageLayoutProps) {
   return (
-    <section className="flex flex-1 flex-col py-8">
+    <section className={cn("flex flex-1 flex-col py-8", className)}>
       <header
         className={cn(
           "flex flex-wrap items-start justify-between gap-x-6 gap-y-4",
@@ -43,7 +47,9 @@ export function RecoveryPageLayout({
         <Stepper steps={steps} currentStep={currentStep} />
       </header>
 
-      <div className="mt-8 flex flex-1 flex-col">{children}</div>
+      <div className={cn("mt-8 flex flex-1 flex-col", contentClassName)}>
+        {children}
+      </div>
     </section>
   );
 }

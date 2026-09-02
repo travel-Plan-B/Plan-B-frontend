@@ -3,6 +3,7 @@ import Image from "next/image";
 
 import { HeroRouteOverlay } from "./HeroRouteOverlay";
 import { RecoveryStartButton } from "./RecoveryStartButton";
+import { StatusMark } from "@/shared/components/ui/StatusMark";
 
 const recoveredSchedule = [
   { time: "07:00", title: "호텔 조식", active: false },
@@ -44,9 +45,7 @@ function HeroRecoveredSchedule() {
             <time className="w-14 text-neutral-600">{item.time}</time>
             <span className="font-semibold">{item.title}</span>
             {item.active && (
-              <span className="ml-auto grid size-5 place-items-center rounded-full bg-primary-500 text-white">
-                <Check className="size-3" />
-              </span>
+              <StatusMark status="success" className="ml-auto size-5" />
             )}
           </li>
         ))}

@@ -1,4 +1,6 @@
-import { ArrowDown, ArrowRight, Check, X } from "lucide-react";
+import { ArrowDown, ArrowRight } from "lucide-react";
+
+import { StatusMark } from "@/shared/components/ui/StatusMark";
 
 import { SectionHeading } from "./SectionHeading";
 
@@ -24,7 +26,7 @@ function ScheduleCard({
 }) {
   const isBefore = type === "before";
   return (
-    <article className="min-h-[360px] rounded-2xl border border-neutral-200 bg-white p-8 shadow-md sm:p-10">
+    <article className="min-h-[360px] rounded-2xl border border-neutral-200 bg-white p-6 shadow-md sm:p-10">
       <p
         className={`mb-6 text-base font-bold ${isBefore ? "text-rose-600" : "text-primary-600"}`}
       >
@@ -34,22 +36,17 @@ function ScheduleCard({
         {items.map((item) => (
           <li
             key={item.time}
-            className={`flex min-h-16 items-center rounded-xl px-4 text-base lg:px-5 lg:text-lg ${item.changed ? (isBefore ? "bg-rose-50 text-rose-600" : "bg-primary-50 text-primary-700") : "text-neutral-800"}`}
+            className={`flex min-h-16 items-center rounded-xl px-3 text-base sm:px-4 lg:px-5 lg:text-lg ${item.changed ? (isBefore ? "bg-rose-50 text-rose-600" : "bg-primary-50 text-primary-700") : "text-neutral-800"}`}
           >
-            <span className="w-20 text-sm text-neutral-600 lg:w-24 lg:text-base">
+            <span className="w-16 shrink-0 text-sm text-neutral-600 sm:w-20 lg:w-24 lg:text-base">
               {item.time}
             </span>
-            <span className="font-medium">{item.title}</span>
+            <span className="whitespace-nowrap font-medium">{item.title}</span>
             {item.changed && (
-              <span
-                className={`ml-auto grid size-6 place-items-center rounded-full text-white ${isBefore ? "bg-rose-500" : "bg-primary-500"}`}
-              >
-                {isBefore ? (
-                  <X className="size-4" />
-                ) : (
-                  <Check className="size-4" />
-                )}
-              </span>
+              <StatusMark
+                status={isBefore ? "error" : "success"}
+                className="ml-auto"
+              />
             )}
           </li>
         ))}
