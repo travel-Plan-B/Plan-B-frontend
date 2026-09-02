@@ -9,6 +9,7 @@ export interface RecoveryTypeCardProps extends Omit<
   icon: ReactNode;
   title: string;
   description: string;
+  mobileDescription?: string;
   example: string;
   selected?: boolean;
 }
@@ -17,6 +18,7 @@ export function RecoveryTypeCard({
   icon,
   title,
   description,
+  mobileDescription,
   example,
   selected = false,
   className,
@@ -29,38 +31,45 @@ export function RecoveryTypeCard({
       {...props}
       aria-pressed={selected}
       className={cn(
-        "flex h-100 w-90 cursor-pointer flex-col items-start rounded-2xl border p-6 text-left shadow-lg transition-colors sm:p-9",
+        "flex h-auto w-full cursor-pointer flex-col items-start rounded-2xl border p-5 text-left shadow-md transition-all lg:p-9 lg:shadow-lg",
         "focus-visible:border-primary-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30 focus-visible:ring-offset-2",
         "disabled:cursor-not-allowed disabled:opacity-50",
         selected
-          ? "border-primary-500 bg-primary-25"
+          ? "border-primary-500 bg-primary-25 shadow-lg"
           : "border-neutral-200 bg-white hover:border-neutral-400 hover:bg-neutral-50",
         className,
       )}
     >
-      <span aria-hidden="true" className="shrink-0">
-        {icon}
+      <span className="flex w-full items-start gap-4 lg:block">
+        <span aria-hidden="true" className="shrink-0">
+          {icon}
+        </span>
+
+        <span className="min-w-0 flex-1">
+          <span
+            className={cn(
+              "block text-xl font-semibold lg:mt-6 lg:text-2xl",
+              selected ? "text-primary-700" : "text-neutral-900",
+            )}
+          >
+            {title}
+          </span>
+
+          <span className="mt-2 block text-sm leading-5 text-neutral-700 lg:hidden">
+            {mobileDescription ?? description}
+          </span>
+          <span className="mt-5 hidden text-base leading-6 text-neutral-700 lg:block">
+            {description}
+          </span>
+        </span>
       </span>
 
-      <span
-        className={cn(
-          "mt-4 block text-2xl font-semibold sm:mt-6",
-          selected ? "text-primary-700" : "text-neutral-900",
-        )}
-      >
-        {title}
-      </span>
+      <span className="mt-10 mb-5 hidden w-full border-t border-neutral-200 lg:block" />
 
-      <span className="mt-3 block text-base text-neutral-700 sm:mt-5">
-        {description}
-      </span>
-
-      <span className="mt-6 mb-4 block w-full border-t border-neutral-200 sm:mt-10 sm:mb-5" />
-
-      <span className="block text-base font-semibold text-neutral-700">
+      <span className="hidden text-base font-semibold text-neutral-700 lg:block">
         예시
       </span>
-      <span className="mt-1 block text-base font-medium text-neutral-900">
+      <span className="mt-1 hidden text-base font-medium text-neutral-900 lg:block">
         {example}
       </span>
     </button>
